@@ -1,0 +1,12 @@
+# macOS
+.DS_Store
+
+# Xcode / build artifacts
+build/
+DerivedData/
+*.xcuserstate
+xcuserdata/
+*.xcscmblueprint
+
+# Local brainstorming / scratch (not for the public repo)
+.superpowers/

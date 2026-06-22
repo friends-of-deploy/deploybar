@@ -1,0 +1,14 @@
+{
+  "teams": [
+    {
+      "id": "team_AAAAAAAAAAAAAAAAAAAAAAAA",
+      "slug": "acme-personal",
+      "name": "Jane Developer"
+    },
+    {
+      "id": "team_BBBBBBBBBBBBBBBBBBBBBBBB",
+      "slug": "acme",
+      "name": "Acme"
+    }
+  ]
+}

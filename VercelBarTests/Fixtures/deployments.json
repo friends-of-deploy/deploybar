@@ -1,0 +1,95 @@
+{
+  "deployments": [
+    {
+      "uid": "dpl_1111111111111111111111",
+      "name": "web-app",
+      "state": "READY",
+      "target": "production",
+      "url": "web-app-a1b2c3d4-acme.vercel.app",
+      "inspectorUrl": "https://vercel.com/acme/web-app/AAAAAAAAAAAAAAAAAAAA",
+      "createdAt": 1700000300000,
+      "buildingAt": 1700000301000,
+      "ready": 1700000345000,
+      "creator": {
+        "username": "jane-dev"
+      },
+      "meta": {
+        "githubCommitOrg": "acme",
+        "githubCommitRepo": "web-app",
+        "githubCommitSha": "a1b2c3d",
+        "githubCommitRef": "main",
+        "githubCommitMessage": "feat: add empty-state illustration",
+        "githubCommitAuthorName": "Jane Developer"
+      }
+    },
+    {
+      "uid": "dpl_2222222222222222222222",
+      "name": "dashboard",
+      "state": "READY",
+      "target": "production",
+      "url": "dashboard-e5f6g7h8-acme.vercel.app",
+      "inspectorUrl": "https://vercel.com/acme/dashboard/BBBBBBBBBBBBBBBBBBBB",
+      "createdAt": 1700000200000,
+      "buildingAt": 1700000201000,
+      "ready": 1700000260000,
+      "creator": {
+        "username": "jane-dev"
+      },
+      "meta": {
+        "githubCommitOrg": "acme",
+        "githubCommitRepo": "dashboard",
+        "githubCommitSha": "e5f6g7h",
+        "githubCommitRef": "main",
+        "githubCommitMessage": "fix: handle expired session redirect",
+        "githubCommitAuthorName": "Jane Developer"
+      }
+    },
+    {
+      "uid": "dpl_3333333333333333333333",
+      "name": "api",
+      "state": "ERROR",
+      "target": "production",
+      "url": "api-i9j0k1l2-acme.vercel.app",
+      "inspectorUrl": "https://vercel.com/acme/api/CCCCCCCCCCCCCCCCCCCC",
+      "createdAt": 1700000100000,
+      "buildingAt": 1700000101000,
+      "ready": null,
+      "creator": {
+        "username": "jane-dev"
+      },
+      "meta": {
+        "githubCommitOrg": "acme",
+        "githubCommitRepo": "api",
+        "githubCommitSha": "i9j0k1l",
+        "githubCommitRef": "main",
+        "githubCommitMessage": "chore: bump dependencies",
+        "githubCommitAuthorName": "Jane Developer"
+      }
+    },
+    {
+      "uid": "dpl_4444444444444444444444",
+      "name": "blog",
+      "state": "BUILDING",
+      "target": "production",
+      "url": "blog-m3n4o5p6-acme.vercel.app",
+      "inspectorUrl": "https://vercel.com/acme/blog/DDDDDDDDDDDDDDDDDDDD",
+      "createdAt": 1700000050000,
+      "buildingAt": 1700000051000,
+      "ready": null,
+      "creator": {
+        "username": "jane-dev"
+      },
+      "meta": {
+        "githubCommitOrg": "acme",
+        "githubCommitRepo": "blog",
+        "githubCommitSha": "m3n4o5p",
+        "githubCommitRef": "main",
+        "githubCommitMessage": "post: announcing v2",
+        "githubCommitAuthorName": "Jane Developer"
+      }
+    }
+  ],
+  "pagination": {
+    "count": 4
+  }
+}

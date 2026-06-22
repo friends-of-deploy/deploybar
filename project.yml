@@ -1,0 +1,55 @@
+name: VercelBar
+options:
+  bundleIdPrefix: io.eightlines.vercelbar
+  deploymentTarget:
+    macOS: "14.0"
+  createIntermediateGroups: true
+
+settings:
+  base:
+    SWIFT_VERSION: "5.0"
+    SWIFT_STRICT_CONCURRENCY: minimal
+
+targets:
+  VercelBar:
+    type: application
+    platform: macOS
+    sources:
+      - VercelBar
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: io.eightlines.vercelbar.VercelBar
+        INFOPLIST_KEY_LSUIElement: "YES"
+        INFOPLIST_KEY_CFBundleDisplayName: VercelBar
+        GENERATE_INFOPLIST_FILE: "YES"
+        MARKETING_VERSION: "1.0"
+        CURRENT_PROJECT_VERSION: "1"
+        CODE_SIGN_STYLE: Automatic
+        CODE_SIGNING_ALLOWED: "NO"
+
+  VercelBarTests:
+    type: bundle.unit-test
+    platform: macOS
+    sources:
+      - path: VercelBarTests
+        excludes:
+          - Fixtures
+      - path: VercelBarTests/Fixtures
+        buildPhase: resources
+    dependencies:
+      - target: VercelBar
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: io.eightlines.vercelbar.VercelBarTests
+        CODE_SIGNING_ALLOWED: "NO"
+
+schemes:
+  VercelBar:
+    build:
+      targets:
+        VercelBar: all
+    test:
+      targets:
+        - VercelBarTests
+    run:
+      config: Debug

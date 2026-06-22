@@ -1,0 +1,214 @@
+{
+  "projects": [
+    {
+      "id": "prj_aaaaaaaaaaaaaaaaaaaaaaaa",
+      "name": "web-app",
+      "framework": "nextjs",
+      "nodeVersion": "24.x",
+      "link": {
+        "type": "github",
+        "org": "acme",
+        "repo": "web-app",
+        "productionBranch": "main"
+      },
+      "env": [
+        {},
+        {},
+        {},
+        {},
+        {},
+        {},
+        {},
+        {},
+        {}
+      ],
+      "crons": {
+        "definitions": []
+      },
+      "webAnalytics": {
+        "id": "wa_111"
+      },
+      "latestDeployments": [
+        {
+          "url": "web-app-a1b2c3d4-acme.vercel.app",
+          "readyState": "READY",
+          "target": "production",
+          "createdAt": 1700000300000
+        }
+      ],
+      "targets": {
+        "production": {
+          "url": "web-app-a1b2c3d4-acme.vercel.app",
+          "alias": [
+            "web-app.example.com",
+            "web-app-acme.vercel.app",
+            "web-app-git-main-acme.vercel.app"
+          ]
+        }
+      }
+    },
+    {
+      "id": "prj_bbbbbbbbbbbbbbbbbbbbbbbb",
+      "name": "dashboard",
+      "framework": "nextjs",
+      "nodeVersion": "24.x",
+      "link": {
+        "type": "github",
+        "org": "acme",
+        "repo": "dashboard",
+        "productionBranch": "main"
+      },
+      "env": [
+        {},
+        {},
+        {},
+        {},
+        {},
+        {},
+        {},
+        {},
+        {},
+        {},
+        {},
+        {}
+      ],
+      "crons": {
+        "definitions": []
+      },
+      "webAnalytics": {
+        "id": "wa_222"
+      },
+      "latestDeployments": [
+        {
+          "url": "dashboard-e5f6g7h8-acme.vercel.app",
+          "readyState": "READY",
+          "target": "production",
+          "createdAt": 1700000200000
+        }
+      ],
+      "targets": {
+        "production": {
+          "url": "dashboard-e5f6g7h8-acme.vercel.app",
+          "alias": [
+            "app.example.com",
+            "dashboard-acme.vercel.app",
+            "dashboard-git-main-acme.vercel.app"
+          ]
+        }
+      }
+    },
+    {
+      "id": "prj_cccccccccccccccccccccccc",
+      "name": "api",
+      "framework": null,
+      "nodeVersion": "24.x",
+      "link": {
+        "type": "github",
+        "org": "acme",
+        "repo": "api",
+        "productionBranch": "main"
+      },
+      "env": [
+        {},
+        {},
+        {},
+        {},
+        {},
+        {},
+        {},
+        {},
+        {},
+        {},
+        {},
+        {},
+        {},
+        {},
+        {},
+        {},
+        {},
+        {},
+        {},
+        {},
+        {},
+        {},
+        {},
+        {},
+        {},
+        {},
+        {},
+        {},
+        {},
+        {},
+        {},
+        {},
+        {},
+        {}
+      ],
+      "crons": {
+        "definitions": [
+          {},
+          {}
+        ]
+      },
+      "webAnalytics": {
+        "id": null
+      },
+      "latestDeployments": [
+        {
+          "url": "api-i9j0k1l2-acme.vercel.app",
+          "readyState": "ERROR",
+          "target": "production",
+          "createdAt": 1700000100000
+        }
+      ],
+      "targets": {
+        "production": {
+          "url": "api-i9j0k1l2-acme.vercel.app",
+          "alias": [
+            "api-acme.vercel.app",
+            "api-git-main-acme.vercel.app"
+          ]
+        }
+      }
+    },
+    {
+      "id": "prj_dddddddddddddddddddddddd",
+      "name": "blog",
+      "framework": "nextjs",
+      "nodeVersion": "24.x",
+      "link": {
+        "type": "github",
+        "org": "acme",
+        "repo": "blog",
+        "productionBranch": "main"
+      },
+      "env": [],
+      "crons": {
+        "definitions": []
+      },
+      "webAnalytics": {
+        "id": "wa_444"
+      },
+      "latestDeployments": [
+        {
+          "url": "blog-m3n4o5p6-acme.vercel.app",
+          "readyState": "BUILDING",
+          "target": "production",
+          "createdAt": 1700000050000
+        }
+      ],
+      "targets": {
+        "production": {
+          "url": "blog-m3n4o5p6-acme.vercel.app",
+          "alias": [
+            "blog-acme.vercel.app",
+            "blog-git-main-acme.vercel.app"
+          ]
+        }
+      }
+    }
+  ],
+  "pagination": {
+    "count": 4
+  }
+}
