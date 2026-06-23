@@ -62,16 +62,6 @@ final class SettingsStore {
         }
     }
 
-    // Per-project notifications: opt-out model (all projects enabled by default).
-    func isProjectEnabled(_ name: String) -> Bool {
-        !(defaults.stringArray(forKey: Keys.disabledProjects) ?? []).contains(name)
-    }
-    func setProject(_ name: String, enabled: Bool) {
-        var disabled = Set(defaults.stringArray(forKey: Keys.disabledProjects) ?? [])
-        if enabled { disabled.remove(name) } else { disabled.insert(name) }
-        defaults.set(Array(disabled), forKey: Keys.disabledProjects)
-    }
-
     // MARK: - Follow API
 
     var autoFollowNewProjects: Bool {

@@ -74,14 +74,14 @@ private struct NotificationSettingsTab: View {
             }
 
             Section {
-                if store.projects.isEmpty {
+                if store.sourcedProjects.isEmpty {
                     Text("No projects loaded yet.")
                         .foregroundStyle(.secondary)
                 } else {
-                    ForEach(store.projects) { project in
-                        Toggle(project.name, isOn: Binding(
-                            get: { settings.isProjectEnabled(project.name) },
-                            set: { settings.setProject(project.name, enabled: $0) }))
+                    ForEach(store.sourcedProjects) { sp in
+                        Toggle(sp.project.name, isOn: Binding(
+                            get: { settings.isFollowed(sp.key) },
+                            set: { settings.setFollowed(sp.key, $0) }))
                     }
                 }
             } header: {
