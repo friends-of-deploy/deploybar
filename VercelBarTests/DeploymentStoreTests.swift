@@ -12,7 +12,7 @@ final class DeploymentStoreTests: XCTestCase {
             return (data, HTTPURLResponse(url: req.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!)
         }
         let settings = SettingsStore(defaults: UserDefaults(suiteName: UUID().uuidString)!)
-        return DeploymentStore(client: client, settings: settings, scopeName: "test")
+        return DeploymentStore(client: client, settings: settings, scopeName: "test", reloadToken: { nil })
     }
 
     private func fixture(_ name: String) throws -> Data {
@@ -49,7 +49,7 @@ final class DeploymentStoreTests: XCTestCase {
             (Data("{}".utf8), HTTPURLResponse(url: req.url!, statusCode: 401, httpVersion: nil, headerFields: nil)!)
         }
         return DeploymentStore(client: client, settings: SettingsStore(defaults: UserDefaults(suiteName: UUID().uuidString)!),
-                               scopeName: "test", authRetryBackoff: .zero)
+                               scopeName: "test", reloadToken: { nil }, authRetryBackoff: .zero)
     }
 
     func test_singleUnauthorizedDoesNotShowLoggedOut() async {
@@ -80,7 +80,7 @@ final class DeploymentStoreTests: XCTestCase {
             let data = isDeployments ? depData : Data(#"{"projects":[]}"#.utf8)
             return (data, HTTPURLResponse(url: req.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!)
         }
-        let store = DeploymentStore(client: client, settings: SettingsStore(defaults: UserDefaults(suiteName: UUID().uuidString)!), scopeName: "test")
+        let store = DeploymentStore(client: client, settings: SettingsStore(defaults: UserDefaults(suiteName: UUID().uuidString)!), scopeName: "test", reloadToken: { nil })
         await store.poll()
         let countAfterGood = store.deployments.count
         XCTAssertGreaterThan(countAfterGood, 0)
@@ -89,6 +89,38 @@ final class DeploymentStoreTests: XCTestCase {
         await store.poll()
         XCTAssertEqual(store.deployments.count, countAfterGood, "keeps last-known data")
         XCTAssertNotNil(store.errorMessage, "shows stale indicator")
+    }
+
+    func test_rotatedTokenRecoversWithoutLoggedOut() async throws {
+        // The CLI rotated its token: the cached "stale" token 401s, but a fresh
+        // token on disk authorizes. The store must reload it and recover in-poll —
+        // no banner, no loggedOut icon, even though auth.json "changed".
+        let depData = try fixture("deployments")
+        let staleToken = "stale", freshToken = "fresh"
+        // The stubbed transport authorizes only the rotated token. Shared by the
+        // initial client and any client `refreshTokenIfChanged` rebuilds, so the
+        // injected transport survives a token swap.
+        let fetch: VercelClient.Fetch = { req in
+            let authorized = req.value(forHTTPHeaderField: "Authorization") == "Bearer \(freshToken)"
+            guard authorized else {
+                return (Data("{}".utf8), HTTPURLResponse(url: req.url!, statusCode: 401, httpVersion: nil, headerFields: nil)!)
+            }
+            let isDeployments = req.url!.path.contains("deployments")
+            let data = isDeployments ? depData : Data(#"{"projects":[]}"#.utf8)
+            return (data, HTTPURLResponse(url: req.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!)
+        }
+        let store = DeploymentStore(
+            client: VercelClient(credentials: VercelCredentials(token: staleToken, teamId: nil), fetch: fetch),
+            settings: SettingsStore(defaults: UserDefaults(suiteName: UUID().uuidString)!),
+            scopeName: "test",
+            makeClient: { VercelClient(credentials: $0, fetch: fetch) },
+            reloadToken: { freshToken },          // disk now holds the rotated token
+            authRetryBackoff: .zero
+        )
+        await store.poll()
+        XCTAssertFalse(store.deployments.isEmpty, "recovers using the rotated token")
+        XCTAssertNil(store.errorMessage)
+        XCTAssertNotEqual(store.iconState, .loggedOut)
     }
 
     func test_successfulPollClearsLoggedOutIcon() async throws {
@@ -104,7 +136,7 @@ final class DeploymentStoreTests: XCTestCase {
             return (data, HTTPURLResponse(url: req.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!)
         }
         let store = DeploymentStore(client: client, settings: SettingsStore(defaults: UserDefaults(suiteName: UUID().uuidString)!),
-                                    scopeName: "test", authRetryBackoff: .zero)
+                                    scopeName: "test", reloadToken: { nil }, authRetryBackoff: .zero)
         for _ in 0..<5 { await store.poll() }
         XCTAssertEqual(store.iconState, .loggedOut)
         authed = true

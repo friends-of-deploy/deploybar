@@ -23,11 +23,16 @@ final class DeploymentStore {
     @ObservationIgnored private var isPollInFlight = false
     @ObservationIgnored private var isLoggedOut = false
     @ObservationIgnored private var consecutiveAuthFailures = 0
-    @ObservationIgnored private let baseToken: String
+    @ObservationIgnored private var baseToken: String
     @ObservationIgnored private(set) var currentTeamId: String?
     @ObservationIgnored private let makeClient: (VercelCredentials) -> VercelClient
-    @ObservationIgnored private let teamsClient: TeamsClient
-    @ObservationIgnored private let userClient: UserClient
+    @ObservationIgnored private var teamsClient: TeamsClient
+    @ObservationIgnored private var userClient: UserClient
+
+    /// Re-reads the CLI token from disk. The Vercel CLI rotates the token in
+    /// `auth.json` periodically; this lets us pick up a fresh token without a
+    /// relaunch. Returns nil when the credentials can't be read (logged out).
+    @ObservationIgnored private let reloadToken: () -> String?
 
     /// Backoff before the in-poll auth retry. Production uses 0.8s; tests pass 0.
     @ObservationIgnored private let authRetryBackoff: Duration
@@ -36,6 +41,7 @@ final class DeploymentStore {
          makeClient: @escaping (VercelCredentials) -> VercelClient = { VercelClient(credentials: $0) },
          teamsClient: TeamsClient? = nil,
          userClient: UserClient? = nil,
+         reloadToken: @escaping () -> String? = { try? TokenProvider().credentials().token },
          authRetryBackoff: Duration = .milliseconds(800)) {
         self.client = client
         self.settings = settings
@@ -46,7 +52,20 @@ final class DeploymentStore {
         self.makeClient = makeClient
         self.teamsClient = teamsClient ?? TeamsClient(token: client.credentials.token)
         self.userClient = userClient ?? UserClient(token: client.credentials.token)
+        self.reloadToken = reloadToken
         self.authRetryBackoff = authRetryBackoff
+    }
+
+    /// Pull a fresh token from disk and, if it changed, rebuild the clients
+    /// around it. Returns true when a *new* token was adopted — the caller
+    /// should retry the failed request before treating the 401 as a real logout.
+    private func refreshTokenIfChanged() -> Bool {
+        guard let fresh = reloadToken(), !fresh.isEmpty, fresh != baseToken else { return false }
+        baseToken = fresh
+        client = makeClient(VercelCredentials(token: fresh, teamId: currentTeamId))
+        teamsClient = TeamsClient(token: fresh)
+        userClient = UserClient(token: fresh)
+        return true
     }
 
     /// Switch the active team at runtime. `teamId == nil` means personal scope.
@@ -57,6 +76,9 @@ final class DeploymentStore {
         currentTeamId = teamId
         self.scopeName = scopeName
         settings.selectedTeamId = teamId ?? "__personal__"
+        // Pick up a freshly-rotated CLI token if there is one, so the new scope's
+        // client never starts from a stale token.
+        if let fresh = reloadToken(), !fresh.isEmpty { baseToken = fresh }
         client = makeClient(VercelCredentials(token: baseToken, teamId: teamId))
         previousSnapshots = nil          // silent re-seed for the new team
         deployments = []
@@ -142,15 +164,20 @@ final class DeploymentStore {
     private static let authFailureThreshold = 3
 
     /// Fetch deployments + projects, retrying once on a transient auth failure
-    /// after a short backoff before giving the error back to `poll()`.
+    /// before giving the error back to `poll()`. The retry first re-reads the
+    /// CLI token from disk — the most common cause of a 401 here is the CLI
+    /// having rotated its token out from under our cached copy — and falls back
+    /// to a short backoff when the on-disk token is unchanged.
     private func fetchWithRetry() async throws -> ([Deployment], [Project]) {
         do {
             async let deps = client.deployments(limit: 100)
             async let projs = client.projects()
             return try await (deps, projs)
         } catch VercelClientError.unauthorized {
-            // One quick in-poll retry smooths over momentary 401s.
-            try? await Task.sleep(for: authRetryBackoff)
+            // Pick up a rotated token immediately; otherwise wait out a momentary blip.
+            if !refreshTokenIfChanged() {
+                try? await Task.sleep(for: authRetryBackoff)
+            }
             async let deps = client.deployments(limit: 100)
             async let projs = client.projects()
             return try await (deps, projs)
