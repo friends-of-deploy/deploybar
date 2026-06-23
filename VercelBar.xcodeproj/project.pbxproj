@@ -47,6 +47,7 @@
 		A3DD8827686A4921A1F6ADBF /* NotificationGatingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = CE9E064C3518F5B8E9A41F4B /* NotificationGatingTests.swift */; };
 		A5B800CA1CFEA886272B4614 /* AccountModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0FE187C45BACCB806A4EC2D /* AccountModelTests.swift */; };
 		A662861D769735D1826B58C2 /* ProjectRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4961B64BB2982EB0DAA298FB /* ProjectRow.swift */; };
+		A755BDC3EB61787642621C3A /* SourcedItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 84964D2DB275AD5A2E5697D3 /* SourcedItem.swift */; };
 		B595376854B4663A7102167E /* Pasteboard.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA651924A9648591BF0269BA /* Pasteboard.swift */; };
 		BD73DFAD5D401F9DFC2D07EE /* projects.json in Resources */ = {isa = PBXBuildFile; fileRef = 5B22CA2AE5E8487C8EFADF2A /* projects.json */; };
 		C062EB0E4DE984C5FF8B806F /* TeamsClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = A851593303CEF20307379166 /* TeamsClient.swift */; };
@@ -125,6 +126,7 @@
 		768B042EB983F6B8F7F3A76D /* ScopeSwitchTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScopeSwitchTests.swift; sourceTree = "<group>"; };
 		76B4F85167ED10EC0B5DE9E8 /* FaviconURL.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FaviconURL.swift; sourceTree = "<group>"; };
 		775A1D4FFF8382B61745F647 /* Deployment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Deployment.swift; sourceTree = "<group>"; };
+		84964D2DB275AD5A2E5697D3 /* SourcedItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SourcedItem.swift; sourceTree = "<group>"; };
 		84D15BD686BC46F6775C99F2 /* IconActionButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IconActionButton.swift; sourceTree = "<group>"; };
 		8590BB79F9DA896FABB6AF54 /* TeamsClientTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TeamsClientTests.swift; sourceTree = "<group>"; };
 		8A450BB242A7B0AABBA855DF /* Scope.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Scope.swift; sourceTree = "<group>"; };
@@ -203,6 +205,7 @@
 				5E917C2BA3DC485D3034120B /* ProjectFollow.swift */,
 				A31752095CEE56890750D36A /* Provider.swift */,
 				8A450BB242A7B0AABBA855DF /* Scope.swift */,
+				84964D2DB275AD5A2E5697D3 /* SourcedItem.swift */,
 				310852F8B25E514523E73C85 /* StateTransition.swift */,
 				750DD644D04F7E79D6475930 /* Team.swift */,
 				65B0731462FDF40135F02E65 /* VercelUser.swift */,
@@ -439,6 +442,7 @@
 				65D0482F555B46D8D5E2A2FE /* ScopeResolver.swift in Sources */,
 				2DF7DB7B6277EA2259B82014 /* SettingsStore.swift in Sources */,
 				2009B8D20017FABAD7ACA0E8 /* SettingsView.swift in Sources */,
+				A755BDC3EB61787642621C3A /* SourcedItem.swift in Sources */,
 				4A3380D31DCE51779C4344BD /* StateBadge.swift in Sources */,
 				7C238F7972A9E8FF862476C1 /* StateTransition.swift in Sources */,
 				D03F813421067EBBCB3293D7 /* StatusDot.swift in Sources */,

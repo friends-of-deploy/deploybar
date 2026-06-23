@@ -81,3 +81,14 @@ extension AccountModelTests {
         XCTAssertFalse(ScopeFilter.scope(accountId: id, teamId: "t").matches(account: acct, teamId: nil))
     }
 }
+
+extension AccountModelTests {
+    func test_sourcedProject_keyAndId() throws {
+        let acct = Account.vercelCLI(id: UUID(), label: "cli")
+        let json = #"{"id":"prj_1","name":"web"}"#
+        let project = try JSONDecoder().decode(Project.self, from: Data(json.utf8))
+        let sp = SourcedProject(project: project, account: acct)
+        XCTAssertEqual(sp.id, "\(acct.id.uuidString)|prj_1")
+        XCTAssertEqual(sp.key, ProjectKey(provider: .vercel, accountId: acct.id, projectId: "prj_1"))
+    }
+}
