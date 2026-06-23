@@ -11,10 +11,6 @@ struct PopoverView: View {
 
             TabSelector(selection: $tab)
 
-            if let err = store.errorMessage {
-                ErrorBanner(message: err)
-            }
-
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: 0) {
                     switch tab {
@@ -22,7 +18,12 @@ struct PopoverView: View {
                         if store.deployments.isEmpty {
                             EmptyListPlaceholder(label: "No deployments")
                         } else {
-                            ForEach(store.deployments) { DeploymentRow(deployment: $0) }
+                            ForEach(store.deployments) { deployment in
+                                DeploymentRow(
+                                    deployment: deployment,
+                                    faviconHost: DeploymentFavicon.host(for: deployment, in: store.projects)
+                                )
+                            }
                         }
                     case .projects:
                         if store.projects.isEmpty {
@@ -36,7 +37,7 @@ struct PopoverView: View {
             .frame(height: 320)
 
             Divider()
-            StatusBar(deployments: store.deployments)
+            StatusBar(deployments: store.deployments, errorMessage: store.errorMessage)
         }
         .frame(width: 380)
     }
@@ -158,6 +159,7 @@ private struct TabButton: View {
 
 private struct StatusBar: View {
     let deployments: [Deployment]
+    let errorMessage: String?
 
     private var ready: Int { deployments.filter { $0.state == .ready }.count }
     private var building: Int { deployments.filter { $0.state == .building || $0.state == .queued }.count }
@@ -165,9 +167,17 @@ private struct StatusBar: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            count(.green, ready, "ready")
-            count(.orange, building, "building")
-            count(.red, failed, "failed")
+            if let errorMessage {
+                Label(errorMessage, systemImage: "exclamationmark.triangle.fill")
+                    .foregroundStyle(.orange)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+                    .help(errorMessage)
+            } else {
+                count(.green, ready, "ready")
+                count(.orange, building, "building")
+                count(.red, failed, "failed")
+            }
             Spacer()
         }
         .font(.caption)
@@ -185,19 +195,6 @@ private struct StatusBar: View {
 }
 
 // MARK: - Shared subviews
-
-private struct ErrorBanner: View {
-    let message: String
-
-    var body: some View {
-        Text(message)
-            .font(.caption)
-            .foregroundStyle(.orange)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.horizontal, 12)
-            .padding(.top, 6)
-    }
-}
 
 private struct EmptyListPlaceholder: View {
     let label: String
