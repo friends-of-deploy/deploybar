@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		03CED12F0E093E33215F5A6D /* DeploymentTimingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BCA1332AE7185767760371F6 /* DeploymentTimingTests.swift */; };
 		0896B269E22BEDAC3A345507 /* BuildEvent.swift in Sources */ = {isa = PBXBuildFile; fileRef = E0E30F1F917C342BBEC24BC5 /* BuildEvent.swift */; };
+		14ED70063730DF742B4A041B /* Provider.swift in Sources */ = {isa = PBXBuildFile; fileRef = A31752095CEE56890750D36A /* Provider.swift */; };
 		1C07C2D7417E4271F8731CAF /* TokenProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 25DB342BB5C5EF627C8E5F00 /* TokenProvider.swift */; };
 		1C3FC4EAB1821C39F9027C5D /* user.json in Resources */ = {isa = PBXBuildFile; fileRef = 35FCCC61B368A07A2A83721A /* user.json */; };
 		2002FBBD2050CEE20CD4DED8 /* TokenProviderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A1C60AF9B9432E4A13755E0 /* TokenProviderTests.swift */; };
@@ -41,6 +42,7 @@
 		86447525671092727EE93F6C /* teams.json in Resources */ = {isa = PBXBuildFile; fileRef = 71B87E8B8024EA89FC993D89 /* teams.json */; };
 		9C6866384F0F3C7466DE51C0 /* FaviconURL.swift in Sources */ = {isa = PBXBuildFile; fileRef = 76B4F85167ED10EC0B5DE9E8 /* FaviconURL.swift */; };
 		A3DD8827686A4921A1F6ADBF /* NotificationGatingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = CE9E064C3518F5B8E9A41F4B /* NotificationGatingTests.swift */; };
+		A5B800CA1CFEA886272B4614 /* AccountModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0FE187C45BACCB806A4EC2D /* AccountModelTests.swift */; };
 		A662861D769735D1826B58C2 /* ProjectRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4961B64BB2982EB0DAA298FB /* ProjectRow.swift */; };
 		B595376854B4663A7102167E /* Pasteboard.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA651924A9648591BF0269BA /* Pasteboard.swift */; };
 		BD73DFAD5D401F9DFC2D07EE /* projects.json in Resources */ = {isa = PBXBuildFile; fileRef = 5B22CA2AE5E8487C8EFADF2A /* projects.json */; };
@@ -125,7 +127,9 @@
 		9C1405E663DFE1AB04FFE677 /* LinkBuilderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LinkBuilderTests.swift; sourceTree = "<group>"; };
 		9FFD1192F179F291AA0FBDAF /* PointingHandCursor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PointingHandCursor.swift; sourceTree = "<group>"; };
 		A0814DA98F46D7F680A0F3E8 /* VercelBar.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = VercelBar.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		A31752095CEE56890750D36A /* Provider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Provider.swift; sourceTree = "<group>"; };
 		A851593303CEF20307379166 /* TeamsClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TeamsClient.swift; sourceTree = "<group>"; };
+		B0FE187C45BACCB806A4EC2D /* AccountModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountModelTests.swift; sourceTree = "<group>"; };
 		BADF02E64BB7FB74ED3065BB /* DeploymentFaviconTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeploymentFaviconTests.swift; sourceTree = "<group>"; };
 		BC5847EAB1ECCBCA5D12EE55 /* StatusDot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatusDot.swift; sourceTree = "<group>"; };
 		BCA1332AE7185767760371F6 /* DeploymentTimingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeploymentTimingTests.swift; sourceTree = "<group>"; };
@@ -150,6 +154,7 @@
 		10E49C52E5208300ECDAFC84 /* VercelBarTests */ = {
 			isa = PBXGroup;
 			children = (
+				B0FE187C45BACCB806A4EC2D /* AccountModelTests.swift */,
 				22AB59718D8C4F12DB9FD09F /* BuildErrorReportTests.swift */,
 				6A4D18D271A2B8FC170F9F67 /* DeploymentDecodingTests.swift */,
 				BADF02E64BB7FB74ED3065BB /* DeploymentFaviconTests.swift */,
@@ -183,6 +188,7 @@
 				E0E30F1F917C342BBEC24BC5 /* BuildEvent.swift */,
 				775A1D4FFF8382B61745F647 /* Deployment.swift */,
 				2D994A04FCD299AD4509667B /* Project.swift */,
+				A31752095CEE56890750D36A /* Provider.swift */,
 				310852F8B25E514523E73C85 /* StateTransition.swift */,
 				750DD644D04F7E79D6475930 /* Team.swift */,
 				65B0731462FDF40135F02E65 /* VercelUser.swift */,
@@ -410,6 +416,7 @@
 				7B92392DDEFCE9376D6B38CD /* PopoverView.swift in Sources */,
 				D427C9E35F8FE1E3C6412AD5 /* Project.swift in Sources */,
 				A662861D769735D1826B58C2 /* ProjectRow.swift in Sources */,
+				14ED70063730DF742B4A041B /* Provider.swift in Sources */,
 				65D0482F555B46D8D5E2A2FE /* ScopeResolver.swift in Sources */,
 				2DF7DB7B6277EA2259B82014 /* SettingsStore.swift in Sources */,
 				2009B8D20017FABAD7ACA0E8 /* SettingsView.swift in Sources */,
@@ -431,6 +438,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				A5B800CA1CFEA886272B4614 /* AccountModelTests.swift in Sources */,
 				C77275A2D77C23BA88536104 /* BuildErrorReportTests.swift in Sources */,
 				7A4B3B229FC65F9CFE905F71 /* DeploymentDecodingTests.swift in Sources */,
 				608158A4B696FED5B7F56CA9 /* DeploymentFaviconTests.swift in Sources */,
