@@ -1,5 +1,6 @@
 import Foundation
 import Security
+import os
 
 protocol CredentialStore {
     func token(for account: String) -> String?
@@ -45,7 +46,12 @@ struct KeychainCredentialStore: CredentialStore {
         if updated == errSecItemNotFound {
             var add = baseQuery(account)
             add[kSecValueData as String] = data
-            SecItemAdd(add as CFDictionary, nil)
+            let added = SecItemAdd(add as CFDictionary, nil)
+            if added != errSecSuccess {
+                os_log("keychain setToken add failed: %d", added)
+            }
+        } else if updated != errSecSuccess {
+            os_log("keychain setToken update failed: %d", updated)
         }
     }
 

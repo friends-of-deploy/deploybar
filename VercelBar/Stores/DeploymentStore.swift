@@ -28,9 +28,14 @@ final class DeploymentStore {
 
     /// Derived from `sourceErrors`: none → nil; one → its message; many → summary.
     var errorMessage: String? {
-        if isLoggedOut { return "Not logged in — run `vercel login`" }
+        // Only show the CLI-specific "run vercel login" copy when a CLI account
+        // actually exists; otherwise fall through to the sourceErrors-derived message
+        // (which tells the user to reconnect the keychain token account instead).
+        if isLoggedOut, accountStore.cliAccount != nil {
+            return "Not logged in — run `vercel login`"
+        }
         switch sourceErrors.count {
-        case 0:  return nil
+        case 0:  return isLoggedOut ? (sourceErrors.values.first ?? "Not signed in") : nil
         case 1:  return sourceErrors.values.first
         default: return "\(sourceErrors.count) accounts couldn't refresh"
         }
@@ -365,6 +370,12 @@ final class DeploymentStore {
             (consecutiveAuthFailures[$0.account.id] ?? 0) >= Self.authFailureThreshold
         }
         isLoggedOut = freshSuccessCount == 0 && allAuthFailing
+
+        // Prune per-account state for accounts that are no longer connected,
+        // preventing unbounded growth when accounts are removed.
+        let liveIds = Set(accountStore.accounts.map(\.id))
+        lastGood = lastGood.filter { liveIds.contains($0.key) }
+        consecutiveAuthFailures = consecutiveAuthFailures.filter { liveIds.contains($0.key) }
     }
 
     /// Apply the follow filter + active ScopeFilter to the unfiltered merge.
