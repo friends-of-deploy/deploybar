@@ -4,7 +4,7 @@ import os
 
 enum NotificationGate {
     static func shouldNotify(_ t: StateTransition, settings: SettingsStore) -> Bool {
-        guard settings.isProjectEnabled(t.project) else { return false }
+        guard settings.isFollowed(t.key) else { return false }
         switch t.event {
         case .failure:  return settings.notifyOnFailure
         case .success:  return settings.notifyOnSuccess

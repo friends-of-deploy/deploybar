@@ -9,8 +9,12 @@ final class NotificationGatingTests: XCTestCase {
         s.notifyOnStarted = started; s.notifyOnCanceled = canceled
         return s
     }
+    private static let accountId = UUID()
+    private func key(_ projectId: String = "p") -> ProjectKey {
+        ProjectKey(provider: .vercel, accountId: Self.accountId, projectId: projectId)
+    }
     private func t(_ event: DeploymentEvent, project: String = "p") -> StateTransition {
-        StateTransition(uid: "1", project: project, event: event)
+        StateTransition(uid: "1", project: project, key: key(project), event: event)
     }
 
     func test_failureFiresByDefault() {
@@ -36,12 +40,12 @@ final class NotificationGatingTests: XCTestCase {
     }
     func test_perProjectOptOutBlocksEvenEnabledEvent() {
         let s = settings()
-        s.setProject("p", enabled: false)
+        s.setFollowed(key("p"), false)
         XCTAssertFalse(NotificationGate.shouldNotify(t(.failure, project: "p"), settings: s))
     }
     func test_perProjectOptOutDoesNotAffectOtherProjects() {
         let s = settings()
-        s.setProject("other", enabled: false)
+        s.setFollowed(key("other"), false)
         XCTAssertTrue(NotificationGate.shouldNotify(t(.failure, project: "p"), settings: s))
     }
 }

@@ -50,6 +50,7 @@
 		A5B800CA1CFEA886272B4614 /* AccountModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0FE187C45BACCB806A4EC2D /* AccountModelTests.swift */; };
 		A662861D769735D1826B58C2 /* ProjectRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4961B64BB2982EB0DAA298FB /* ProjectRow.swift */; };
 		A755BDC3EB61787642621C3A /* SourcedItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 84964D2DB275AD5A2E5697D3 /* SourcedItem.swift */; };
+		B35761A9E6E80D4BDAE8F0B3 /* AggregationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 865539FD6A7DE81982D93FD5 /* AggregationTests.swift */; };
 		B595376854B4663A7102167E /* Pasteboard.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA651924A9648591BF0269BA /* Pasteboard.swift */; };
 		BD73DFAD5D401F9DFC2D07EE /* projects.json in Resources */ = {isa = PBXBuildFile; fileRef = 5B22CA2AE5E8487C8EFADF2A /* projects.json */; };
 		C062EB0E4DE984C5FF8B806F /* TeamsClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = A851593303CEF20307379166 /* TeamsClient.swift */; };
@@ -136,6 +137,7 @@
 		84964D2DB275AD5A2E5697D3 /* SourcedItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SourcedItem.swift; sourceTree = "<group>"; };
 		84D15BD686BC46F6775C99F2 /* IconActionButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IconActionButton.swift; sourceTree = "<group>"; };
 		8590BB79F9DA896FABB6AF54 /* TeamsClientTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TeamsClientTests.swift; sourceTree = "<group>"; };
+		865539FD6A7DE81982D93FD5 /* AggregationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AggregationTests.swift; sourceTree = "<group>"; };
 		8A450BB242A7B0AABBA855DF /* Scope.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Scope.swift; sourceTree = "<group>"; };
 		8B70AB9D6E098BC0B77E77A5 /* LinkBuilder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LinkBuilder.swift; sourceTree = "<group>"; };
 		909B86C65FCA8F1A24ACBF64 /* CredentialStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CredentialStore.swift; sourceTree = "<group>"; };
@@ -178,6 +180,7 @@
 			children = (
 				B0FE187C45BACCB806A4EC2D /* AccountModelTests.swift */,
 				5A9DFC99E1966F3DE054BED9 /* AccountStoreTests.swift */,
+				865539FD6A7DE81982D93FD5 /* AggregationTests.swift */,
 				22AB59718D8C4F12DB9FD09F /* BuildErrorReportTests.swift */,
 				D3519715DEEEB8F83E33061D /* CredentialStoreTests.swift */,
 				6A4D18D271A2B8FC170F9F67 /* DeploymentDecodingTests.swift */,
@@ -480,6 +483,7 @@
 			files = (
 				A5B800CA1CFEA886272B4614 /* AccountModelTests.swift in Sources */,
 				C7D5CF9B9FD399BD332EA03A /* AccountStoreTests.swift in Sources */,
+				B35761A9E6E80D4BDAE8F0B3 /* AggregationTests.swift in Sources */,
 				C77275A2D77C23BA88536104 /* BuildErrorReportTests.swift in Sources */,
 				C32501748C010A55FF05059D /* CredentialStoreTests.swift in Sources */,
 				7A4B3B229FC65F9CFE905F71 /* DeploymentDecodingTests.swift in Sources */,

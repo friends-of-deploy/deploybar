@@ -37,6 +37,12 @@ final class DeploymentStore {
     /// Backoff before the in-poll auth retry. Production uses 0.8s; tests pass 0.
     @ObservationIgnored private let authRetryBackoff: Duration
 
+    /// Stable id used to build `ProjectKey`s for the single legacy scope.
+    @ObservationIgnored private let legacyAccountId = UUID()
+    private func legacyKey(forProjectName name: String) -> ProjectKey {
+        ProjectKey(provider: .vercel, accountId: legacyAccountId, projectId: name)
+    }
+
     init(client: VercelClient, settings: SettingsStore, scopeName: String,
          makeClient: @escaping (VercelCredentials) -> VercelClient = { VercelClient(credentials: $0) },
          teamsClient: TeamsClient? = nil,
@@ -146,7 +152,7 @@ final class DeploymentStore {
         do {
             let (d, p) = try await fetchWithRetry()
 
-            let snapshots = d.map(DeploymentSnapshot.init)
+            let snapshots = d.map { DeploymentSnapshot($0, key: legacyKey(forProjectName: $0.name)) }
             let transitions = DeploymentDiffer.transitions(previous: previousSnapshots, current: snapshots)
             notifier.handle(transitions)
             previousSnapshots = snapshots

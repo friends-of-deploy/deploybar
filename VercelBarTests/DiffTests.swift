@@ -2,8 +2,9 @@ import XCTest
 @testable import VercelBar
 
 final class DiffTests: XCTestCase {
+    private static let key = ProjectKey(provider: .vercel, accountId: UUID(), projectId: "proj")
     private func dep(_ uid: String, _ state: String) -> DeploymentSnapshot {
-        DeploymentSnapshot(uid: uid, name: "proj", state: DeploymentState(apiValue: state))
+        DeploymentSnapshot(uid: uid, name: "proj", state: DeploymentState(apiValue: state), key: Self.key)
     }
 
     func test_firstPollIsSilent() {
@@ -13,7 +14,7 @@ final class DiffTests: XCTestCase {
 
     func test_buildToReadyEmitsSuccess() {
         let t = DeploymentDiffer.transitions(previous: [dep("1", "BUILDING")], current: [dep("1", "READY")])
-        XCTAssertEqual(t, [StateTransition(uid: "1", project: "proj", event: .success)])
+        XCTAssertEqual(t, [StateTransition(uid: "1", project: "proj", key: Self.key, event: .success)])
     }
 
     func test_buildToErrorEmitsFailure() {
