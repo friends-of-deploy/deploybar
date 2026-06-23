@@ -13,6 +13,10 @@ final class SettingsStore {
         static let pollInterval     = "pollIntervalSeconds"
         static let disabledProjects = "disabledProjects"
         static let selectedTeamId   = "selectedTeamId"
+        static let followedKeys     = "followedProjectKeys"
+        static let unfollowedKeys   = "unfollowedProjectKeys"
+        static let autoFollowNew    = "autoFollowNewProjects"
+        static let didMigrateFollow = "didMigrateFollowData"
     }
 
     init(defaults: UserDefaults = .standard) {
@@ -23,6 +27,7 @@ final class SettingsStore {
             Keys.notifyOnStarted:  false,
             Keys.notifyOnCanceled: false,
             Keys.pollInterval:     30,
+            Keys.autoFollowNew:    true,
         ])
     }
 
@@ -57,13 +62,49 @@ final class SettingsStore {
         }
     }
 
-    // Per-project notifications: opt-out model (all projects enabled by default).
-    func isProjectEnabled(_ name: String) -> Bool {
-        !(defaults.stringArray(forKey: Keys.disabledProjects) ?? []).contains(name)
+    // MARK: - Follow API
+
+    var autoFollowNewProjects: Bool {
+        get { defaults.bool(forKey: Keys.autoFollowNew) }
+        set { defaults.set(newValue, forKey: Keys.autoFollowNew) }
     }
-    func setProject(_ name: String, enabled: Bool) {
-        var disabled = Set(defaults.stringArray(forKey: Keys.disabledProjects) ?? [])
-        if enabled { disabled.remove(name) } else { disabled.insert(name) }
-        defaults.set(Array(disabled), forKey: Keys.disabledProjects)
+
+    private func storedSet(_ key: String) -> Set<String> {
+        Set(defaults.stringArray(forKey: key) ?? [])
+    }
+    private func store(_ set: Set<String>, _ key: String) {
+        defaults.set(Array(set), forKey: key)
+    }
+
+    func isFollowed(_ key: ProjectKey) -> Bool {
+        let s = key.storageString
+        if storedSet(Keys.unfollowedKeys).contains(s) { return false }
+        if storedSet(Keys.followedKeys).contains(s) { return true }
+        return autoFollowNewProjects
+    }
+
+    func setFollowed(_ key: ProjectKey, _ followed: Bool) {
+        let s = key.storageString
+        var followedSet = storedSet(Keys.followedKeys)
+        var unfollowedSet = storedSet(Keys.unfollowedKeys)
+        if followed { followedSet.insert(s); unfollowedSet.remove(s) }
+        else        { unfollowedSet.insert(s); followedSet.remove(s) }
+        store(followedSet, Keys.followedKeys)
+        store(unfollowedSet, Keys.unfollowedKeys)
+    }
+
+    /// One-time import of the old `disabledProjects` (name-keyed) into the new
+    /// unfollowed set under the CLI account. Idempotent via a guard flag.
+    func migrateLegacyFollowData(cliAccountId: UUID) {
+        guard !defaults.bool(forKey: Keys.didMigrateFollow) else { return }
+        let legacyNames = defaults.stringArray(forKey: Keys.disabledProjects) ?? []
+        var unfollowedSet = storedSet(Keys.unfollowedKeys)
+        for name in legacyNames {
+            let key = ProjectKey(provider: .vercel, accountId: cliAccountId, projectId: name)
+            unfollowedSet.insert(key.storageString)
+        }
+        store(unfollowedSet, Keys.unfollowedKeys)
+        defaults.removeObject(forKey: Keys.disabledProjects)
+        defaults.set(true, forKey: Keys.didMigrateFollow)
     }
 }

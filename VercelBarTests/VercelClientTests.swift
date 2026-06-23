@@ -70,3 +70,20 @@ final class VercelClientTests: XCTestCase {
         catch { XCTAssertEqual((error as? URLError)?.code, .notConnectedToInternet) }
     }
 }
+
+extension VercelClientTests {
+    func test_vercelClient_conformsToProviderProtocol() async throws {
+        let client: DeploymentProviderClient = VercelClient(
+            credentials: VercelCredentials(token: "x", teamId: nil)
+        ) { req in
+            let isDeployments = req.url!.path.contains("deployments")
+            let body = isDeployments ? #"{"deployments":[]}"# : #"{"projects":[]}"#
+            return (Data(body.utf8),
+                    HTTPURLResponse(url: req.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!)
+        }
+        let deps = try await client.deployments(limit: 5)
+        let projs = try await client.projects()
+        XCTAssertTrue(deps.isEmpty)
+        XCTAssertTrue(projs.isEmpty)
+    }
+}

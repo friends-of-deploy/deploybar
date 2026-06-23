@@ -15,22 +15,37 @@ struct PopoverView: View {
                 LazyVStack(alignment: .leading, spacing: 0) {
                     switch tab {
                     case .deployments:
-                        if store.deployments.isEmpty {
+                        if store.sourcedDeployments.isEmpty {
                             EmptyListPlaceholder(label: "No deployments")
                         } else {
-                            ForEach(store.deployments) { deployment in
-                                DeploymentRow(
-                                    deployment: deployment,
-                                    faviconHost: DeploymentFavicon.host(for: deployment, in: store.projects),
-                                    copyError: { await store.copyBuildError(for: $0) }
-                                )
+                            let allProjects = store.sourcedProjects.map(\.project)
+                            ForEach(store.sourcedDeployments) { sourced in
+                                HStack(spacing: 0) {
+                                    DeploymentRow(
+                                        deployment: sourced.deployment,
+                                        faviconHost: DeploymentFavicon.host(for: sourced.deployment, in: allProjects),
+                                        copyError: { await store.copyBuildError(for: $0) }
+                                    )
+                                    if store.connectedAccounts.count > 1 {
+                                        SourceBadge(account: sourced.account)
+                                            .padding(.trailing, 14)
+                                    }
+                                }
                             }
                         }
                     case .projects:
-                        if store.projects.isEmpty {
+                        if store.sourcedProjects.isEmpty {
                             EmptyListPlaceholder(label: "No projects")
                         } else {
-                            ForEach(store.projects) { ProjectRow(project: $0, scopeName: store.scopeName) }
+                            ForEach(store.sourcedProjects) { sourced in
+                                HStack(spacing: 0) {
+                                    ProjectRow(project: sourced.project, scopeName: store.scopeName)
+                                    if store.connectedAccounts.count > 1 {
+                                        SourceBadge(account: sourced.account)
+                                            .padding(.trailing, 14)
+                                    }
+                                }
+                            }
                         }
                     }
                 }
@@ -56,7 +71,7 @@ enum PopoverTab: CaseIterable {
     }
 }
 
-// MARK: - Top bar (team switcher + actions)
+// MARK: - Top bar (filter dropdown + actions)
 
 private struct TopBar: View {
     @Bindable var store: DeploymentStore
@@ -64,7 +79,7 @@ private struct TopBar: View {
 
     var body: some View {
         HStack(spacing: 8) {
-            teamMenu
+            filterMenu
             Spacer()
             Button(action: openSettings) {
                 Image(systemName: "gearshape")
@@ -84,38 +99,71 @@ private struct TopBar: View {
         .background(.quaternary.opacity(0.4))
     }
 
-    private var teamMenu: some View {
+    private var filterLabel: String {
+        switch store.filter {
+        case .all:
+            return String(localized: "All", comment: "Filter: show all sources")
+        case .provider(let p):
+            return p.displayName
+        case .account(let id):
+            return store.account(id)?.label ?? String(localized: "Account", comment: "Fallback account filter label")
+        case .scope(let id, let team):
+            return store.scopeName(accountId: id, teamId: team) ?? String(localized: "Scope", comment: "Fallback scope filter label")
+        }
+    }
+
+    private var filterMenu: some View {
         Menu {
-            Button { switchTo(nil, name: "personal") } label: {
-                if store.currentTeamId == nil {
-                    Label("Personal", systemImage: "checkmark")
+            // "All" at the top
+            Button {
+                store.setFilter(.all)
+            } label: {
+                if store.filter == .all {
+                    Label(String(localized: "All", comment: "Filter: show all sources"), systemImage: "checkmark")
                 } else {
-                    Text("Personal")
+                    Text(String(localized: "All", comment: "Filter: show all sources"))
                 }
             }
-            if !store.teams.isEmpty {
-                Divider()
-                ForEach(store.teams) { team in
-                    let name = team.slug ?? team.name ?? team.id
-                    Button { switchTo(team.id, name: name) } label: {
-                        if store.currentTeamId == team.id {
-                            Label(name, systemImage: "checkmark")
-                        } else {
-                            Text(name)
+
+            // Per-provider sections
+            ForEach(Provider.allCases, id: \.self) { provider in
+                Section(provider.displayName) {
+                    if provider.isImplemented {
+                        let accounts = store.connectedAccounts.filter { $0.provider == provider }
+                        ForEach(accounts) { account in
+                            let scopes = store.scopes(for: account)
+                            ForEach(scopes) { scope in
+                                let isActive = store.filter == .scope(accountId: account.id, teamId: scope.teamId)
+                                Button {
+                                    store.setFilter(.scope(accountId: account.id, teamId: scope.teamId))
+                                } label: {
+                                    let name = store.scopeName(accountId: account.id, teamId: scope.teamId) ?? account.label
+                                    if isActive {
+                                        Label(name, systemImage: "checkmark")
+                                    } else {
+                                        Text(name)
+                                    }
+                                }
+                            }
                         }
+                    } else {
+                        Text(String(localized: "\(provider.displayName) — coming soon", comment: "Placeholder for unimplemented provider"))
+                            .foregroundStyle(.secondary)
                     }
                 }
             }
+
+            Divider()
+
+            Button(String(localized: "Manage accounts…", comment: "Opens account settings")) {
+                openSettings()
+            }
         } label: {
-            Text("▲ \(store.scopeName)").fontWeight(.bold)
+            Text("▲ \(filterLabel)").fontWeight(.bold)
         }
         .menuStyle(.borderlessButton)
         .fixedSize()
         .pointingHandCursor()
-    }
-
-    private func switchTo(_ teamId: String?, name: String) {
-        Task { await store.switchScope(teamId: teamId, scopeName: name) }
     }
 }
 

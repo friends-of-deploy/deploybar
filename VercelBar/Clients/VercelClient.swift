@@ -2,8 +2,8 @@ import Foundation
 
 enum VercelClientError: Error, Equatable { case unauthorized, http(Int) }
 
-struct VercelClient {
-    typealias Fetch = (URLRequest) async throws -> (Data, URLResponse)
+struct VercelClient: Sendable {
+    typealias Fetch = @Sendable (URLRequest) async throws -> (Data, URLResponse)
 
     private static let decoder = JSONDecoder()
 
