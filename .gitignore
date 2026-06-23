@@ -10,3 +10,6 @@ xcuserdata/
 
 # Local brainstorming / scratch (not for the public repo)
 .superpowers/
+
+# Local design specs / brainstorming (not for the public repo)
+docs/superpowers/
