@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!--
+	VercelBar is intentionally NOT sandboxed: it reads the Vercel CLI's
+	session files under ~/Library/Application Support/com.vercel.cli/,
+	which live outside the app's own container. App Sandbox would block this.
+
+	Hardened Runtime (required for notarization) is enabled via the build
+	settings (ENABLE_HARDENED_RUNTIME). No runtime exceptions are needed.
+	-->
+</dict>
+</plist>

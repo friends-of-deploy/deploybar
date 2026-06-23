@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- Developer ID distribution: signed for direct download (not the App Store). -->
+	<key>method</key>
+	<string>developer-id</string>
+
+	<!-- Use the manual signing identity imported into the CI keychain. -->
+	<key>signingStyle</key>
+	<string>manual</string>
+
+	<!-- Notarization is performed as a separate notarytool step in CI,
+	     so we don't ask xcodebuild to upload here. -->
+	<key>destination</key>
+	<string>export</string>
+
+	<!-- TEAM_ID is substituted in CI from the APPLE_TEAM_ID secret. -->
+	<key>teamID</key>
+	<string>__TEAM_ID__</string>
+</dict>
+</plist>

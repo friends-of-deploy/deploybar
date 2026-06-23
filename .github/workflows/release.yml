@@ -1,0 +1,151 @@
+name: Release
+
+# Triggered by pushing a version tag, e.g.:  git tag v1.0.0 && git push origin v1.0.0
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write   # needed to create the GitHub Release and upload the .dmg
+
+jobs:
+  release:
+    name: Build, sign, notarize & publish
+    runs-on: macos-14
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Derive version from tag
+        id: version
+        run: echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+
+      - name: Select latest Xcode
+        run: |
+          latest="$(ls -d /Applications/Xcode_*.app 2>/dev/null | sort -V | tail -1)"
+          if [ -n "$latest" ]; then sudo xcode-select -s "$latest"; fi
+          xcodebuild -version
+
+      - name: Install tooling
+        run: brew install xcodegen create-dmg
+
+      - name: Generate Xcode project
+        run: xcodegen generate
+
+      - name: Import Developer ID signing certificate
+        env:
+          DEVELOPER_ID_CERT_P12: ${{ secrets.DEVELOPER_ID_CERT_P12 }}
+          CERT_PASSWORD: ${{ secrets.CERT_PASSWORD }}
+          KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
+        run: |
+          set -euo pipefail
+          KEYCHAIN="$RUNNER_TEMP/signing.keychain-db"
+          echo "$DEVELOPER_ID_CERT_P12" | base64 --decode > "$RUNNER_TEMP/cert.p12"
+
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
+          security import "$RUNNER_TEMP/cert.p12" -k "$KEYCHAIN" \
+            -P "$CERT_PASSWORD" -T /usr/bin/codesign -T /usr/bin/security
+          security set-key-partition-list -S apple-tool:,apple:,codesign: \
+            -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
+          # Make the temp keychain searchable while keeping the login keychain.
+          security list-keychains -d user -s "$KEYCHAIN" "login.keychain-db"
+          rm -f "$RUNNER_TEMP/cert.p12"
+
+      - name: Archive (Release)
+        env:
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          set -euo pipefail
+          xcodebuild archive \
+            -project VercelBar.xcodeproj \
+            -scheme VercelBar \
+            -configuration Release \
+            -destination 'generic/platform=macOS' \
+            -archivePath "$RUNNER_TEMP/VercelBar.xcarchive" \
+            DEVELOPMENT_TEAM="$APPLE_TEAM_ID" \
+            "CODE_SIGN_IDENTITY=Developer ID Application"
+
+      - name: Export signed .app
+        env:
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          set -euo pipefail
+          sed "s/__TEAM_ID__/$APPLE_TEAM_ID/" .github/release/ExportOptions.plist > "$RUNNER_TEMP/ExportOptions.plist"
+          xcodebuild -exportArchive \
+            -archivePath "$RUNNER_TEMP/VercelBar.xcarchive" \
+            -exportPath "$RUNNER_TEMP/export" \
+            -exportOptionsPlist "$RUNNER_TEMP/ExportOptions.plist"
+
+      - name: Build .dmg
+        id: dmg
+        run: |
+          set -euo pipefail
+          VERSION="${{ steps.version.outputs.version }}"
+          DMG="$RUNNER_TEMP/VercelBar-$VERSION.dmg"
+          create-dmg \
+            --volname "VercelBar $VERSION" \
+            --window-size 540 380 \
+            --icon-size 100 \
+            --icon "VercelBar.app" 140 190 \
+            --app-drop-link 400 190 \
+            "$DMG" \
+            "$RUNNER_TEMP/export/VercelBar.app"
+          echo "path=$DMG" >> "$GITHUB_OUTPUT"
+
+      - name: Notarize & staple
+        env:
+          NOTARY_KEY_ID: ${{ secrets.NOTARY_KEY_ID }}
+          NOTARY_ISSUER_ID: ${{ secrets.NOTARY_ISSUER_ID }}
+          NOTARY_KEY_P8: ${{ secrets.NOTARY_KEY_P8 }}
+        run: |
+          set -euo pipefail
+          echo "$NOTARY_KEY_P8" | base64 --decode > "$RUNNER_TEMP/notary.p8"
+          xcrun notarytool submit "${{ steps.dmg.outputs.path }}" \
+            --key "$RUNNER_TEMP/notary.p8" \
+            --key-id "$NOTARY_KEY_ID" \
+            --issuer "$NOTARY_ISSUER_ID" \
+            --wait
+          xcrun stapler staple "${{ steps.dmg.outputs.path }}"
+          rm -f "$RUNNER_TEMP/notary.p8"
+
+      - name: Compute SHA-256
+        id: sha
+        run: |
+          SHA="$(shasum -a 256 "${{ steps.dmg.outputs.path }}" | awk '{print $1}')"
+          echo "sha256=$SHA" >> "$GITHUB_OUTPUT"
+          echo "### Cask values" >> "$GITHUB_STEP_SUMMARY"
+          echo '```ruby' >> "$GITHUB_STEP_SUMMARY"
+          echo "version \"${{ steps.version.outputs.version }}\"" >> "$GITHUB_STEP_SUMMARY"
+          echo "sha256 \"$SHA\"" >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ${{ steps.dmg.outputs.path }}
+          generate_release_notes: true
+
+      # --- Optional: auto-bump the Homebrew cask in RadnoK/homebrew-tap ---
+      # Requires a TAP_REPO_TOKEN secret (a PAT with `contents:write` on the tap repo).
+      # Remove this step if you prefer to update the cask by hand.
+      - name: Bump Homebrew cask
+        if: ${{ secrets.TAP_REPO_TOKEN != '' }}
+        env:
+          GH_TOKEN: ${{ secrets.TAP_REPO_TOKEN }}
+          VERSION: ${{ steps.version.outputs.version }}
+          SHA256: ${{ steps.sha.outputs.sha256 }}
+        run: |
+          set -euo pipefail
+          git clone "https://x-access-token:$GH_TOKEN@github.com/RadnoK/homebrew-tap.git" tap
+          cd tap
+          CASK="Casks/vercelbar.rb"
+          sed -i '' -E "s/version \"[^\"]*\"/version \"$VERSION\"/" "$CASK"
+          sed -i '' -E "s/sha256 \"[^\"]*\"/sha256 \"$SHA256\"/" "$CASK"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git commit -am "vercelbar $VERSION"
+          git push
