@@ -29,6 +29,7 @@
 		65C0947A11820556D80AC350 /* VercelUser.swift in Sources */ = {isa = PBXBuildFile; fileRef = 65B0731462FDF40135F02E65 /* VercelUser.swift */; };
 		65D0482F555B46D8D5E2A2FE /* ScopeResolver.swift in Sources */ = {isa = PBXBuildFile; fileRef = 913D23F6BF613FF46716F049 /* ScopeResolver.swift */; };
 		69D98E0F1CDAD69024B2F24C /* deployments.json in Resources */ = {isa = PBXBuildFile; fileRef = 4C06065585D29CCF378FC567 /* deployments.json */; };
+		7083C60931A7FAF4117702F7 /* Account.swift in Sources */ = {isa = PBXBuildFile; fileRef = CAC3AF0ECB353DD95AAA35DB /* Account.swift */; };
 		77C19C02237C6A72B7B7996B /* DeploymentRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 03EF4267084111D7EF69295C /* DeploymentRow.swift */; };
 		7982C65E6B04F224B5A31F8B /* TeamsLoadingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1B194521B2080A0E7777FACF /* TeamsLoadingTests.swift */; };
 		79FF24BF64C461CA0DC98829 /* MenuBarIcon.swift in Sources */ = {isa = PBXBuildFile; fileRef = 96124D4C6C5421EDCE856202 /* MenuBarIcon.swift */; };
@@ -135,6 +136,7 @@
 		BCA1332AE7185767760371F6 /* DeploymentTimingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeploymentTimingTests.swift; sourceTree = "<group>"; };
 		BDC72A79097A42913BC8BA5A /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		CA651924A9648591BF0269BA /* Pasteboard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Pasteboard.swift; sourceTree = "<group>"; };
+		CAC3AF0ECB353DD95AAA35DB /* Account.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Account.swift; sourceTree = "<group>"; };
 		CBFFA64F70040EDBE7CAB821 /* DeploymentStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeploymentStoreTests.swift; sourceTree = "<group>"; };
 		CE9E064C3518F5B8E9A41F4B /* NotificationGatingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationGatingTests.swift; sourceTree = "<group>"; };
 		D1508EC08F607CACA6343503 /* Tooltip.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Tooltip.swift; sourceTree = "<group>"; };
@@ -185,6 +187,7 @@
 		187C3ADB8C589000F3958909 /* Models */ = {
 			isa = PBXGroup;
 			children = (
+				CAC3AF0ECB353DD95AAA35DB /* Account.swift */,
 				E0E30F1F917C342BBEC24BC5 /* BuildEvent.swift */,
 				775A1D4FFF8382B61745F647 /* Deployment.swift */,
 				2D994A04FCD299AD4509667B /* Project.swift */,
@@ -396,6 +399,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				7083C60931A7FAF4117702F7 /* Account.swift in Sources */,
 				0896B269E22BEDAC3A345507 /* BuildEvent.swift in Sources */,
 				F64889057D7D62EE61C979DB /* CopyBuildErrorButton.swift in Sources */,
 				340CCEB9C07732D831E757C4 /* Deployment.swift in Sources */,

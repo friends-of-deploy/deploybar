@@ -19,3 +19,25 @@ final class AccountModelTests: XCTestCase {
         XCTAssertEqual(try JSONDecoder().decode(Provider.self, from: data), .vercel)
     }
 }
+
+extension AccountModelTests {
+    func test_account_codableRoundTrip() throws {
+        let acct = Account(id: UUID(), provider: .vercel, label: "alice",
+                           source: .keychain(account: "kc-1"))
+        let data = try JSONEncoder().encode(acct)
+        XCTAssertEqual(try JSONDecoder().decode(Account.self, from: data), acct)
+    }
+
+    func test_account_cliIsReadOnly() {
+        let cli = Account.vercelCLI(id: UUID(), label: "from CLI")
+        XCTAssertTrue(cli.isReadOnly)
+        XCTAssertEqual(cli.source, .vercelCLI)
+        XCTAssertEqual(cli.provider, .vercel)
+    }
+
+    func test_account_keychainNotReadOnly() {
+        let acct = Account(id: UUID(), provider: .vercel, label: "bob",
+                           source: .keychain(account: "kc-2"))
+        XCTAssertFalse(acct.isReadOnly)
+    }
+}
