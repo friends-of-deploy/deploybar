@@ -45,6 +45,7 @@
 		82FDE05524D2BD3056D4A4D1 /* UserClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 427ADB591BE80ECFEA984A9A /* UserClient.swift */; };
 		831270BC3F2DEFAA8B70C401 /* SettingsStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6B656E8FCA4B2EEAE658E87A /* SettingsStoreTests.swift */; };
 		86447525671092727EE93F6C /* teams.json in Resources */ = {isa = PBXBuildFile; fileRef = 71B87E8B8024EA89FC993D89 /* teams.json */; };
+		90D1B1487DCA070FF1C687C4 /* SourceBadge.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B488E5898C8B85634CBC259 /* SourceBadge.swift */; };
 		9C6866384F0F3C7466DE51C0 /* FaviconURL.swift in Sources */ = {isa = PBXBuildFile; fileRef = 76B4F85167ED10EC0B5DE9E8 /* FaviconURL.swift */; };
 		A3DD8827686A4921A1F6ADBF /* NotificationGatingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = CE9E064C3518F5B8E9A41F4B /* NotificationGatingTests.swift */; };
 		A5B800CA1CFEA886272B4614 /* AccountModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0FE187C45BACCB806A4EC2D /* AccountModelTests.swift */; };
@@ -112,6 +113,7 @@
 		466C9D16098CE32810BFDA85 /* VercelBarApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VercelBarApp.swift; sourceTree = "<group>"; };
 		47980AE97E9B034E99F9FD09 /* LaunchAtLogin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LaunchAtLogin.swift; sourceTree = "<group>"; };
 		4961B64BB2982EB0DAA298FB /* ProjectRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProjectRow.swift; sourceTree = "<group>"; };
+		4B488E5898C8B85634CBC259 /* SourceBadge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SourceBadge.swift; sourceTree = "<group>"; };
 		4B8E1646018A41E4B657FCD1 /* AccountStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountStore.swift; sourceTree = "<group>"; };
 		4C06065585D29CCF378FC567 /* deployments.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = deployments.json; sourceTree = "<group>"; };
 		4CF99D857F6976983FC10058 /* DeploymentStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeploymentStore.swift; sourceTree = "<group>"; };
@@ -267,6 +269,7 @@
 				22C9A241E241D1FB807D4FC9 /* PopoverView.swift */,
 				4961B64BB2982EB0DAA298FB /* ProjectRow.swift */,
 				BDC72A79097A42913BC8BA5A /* SettingsView.swift */,
+				4B488E5898C8B85634CBC259 /* SourceBadge.swift */,
 				F7A6F11DBF884301ED5AE479 /* StateBadge.swift */,
 				BC5847EAB1ECCBCA5D12EE55 /* StatusDot.swift */,
 				D1508EC08F607CACA6343503 /* Tooltip.swift */,
@@ -462,6 +465,7 @@
 				65D0482F555B46D8D5E2A2FE /* ScopeResolver.swift in Sources */,
 				2DF7DB7B6277EA2259B82014 /* SettingsStore.swift in Sources */,
 				2009B8D20017FABAD7ACA0E8 /* SettingsView.swift in Sources */,
+				90D1B1487DCA070FF1C687C4 /* SourceBadge.swift in Sources */,
 				A755BDC3EB61787642621C3A /* SourcedItem.swift in Sources */,
 				4A3380D31DCE51779C4344BD /* StateBadge.swift in Sources */,
 				7C238F7972A9E8FF862476C1 /* StateTransition.swift in Sources */,

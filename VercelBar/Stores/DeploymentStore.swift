@@ -36,12 +36,9 @@ final class DeploymentStore {
         }
     }
 
-    /// Number of accounts that contributed rows on the last successful poll
-    /// (for badge gating). Counts distinct account ids across merged data.
-    var connectedSourceCount: Int {
-        Set(sourcedDeployments.map(\.account.id))
-            .union(sourcedProjects.map(\.account.id)).count
-    }
+    /// Number of connected accounts regardless of the active display filter.
+    /// Use this for badge gating so the badges don't disappear when a filter is active.
+    var connectedSourceCount: Int { accountStore.accounts.count }
 
     // MARK: Dependencies
     @ObservationIgnored private let accountStore: AccountStore
@@ -181,6 +178,33 @@ final class DeploymentStore {
     func setFilter(_ filter: ScopeFilter) {
         self.filter = filter
         applyDisplayFilter()
+    }
+
+    // MARK: - Filter dropdown helpers (read-only; view-facing)
+
+    /// All connected accounts (mirrors AccountStore.accounts).
+    var connectedAccounts: [Account] { accountStore.accounts }
+
+    /// The scopes belonging to a given account (from `availableScopes`).
+    func scopes(for account: Account) -> [Scope] {
+        availableScopes.filter { $0.account.id == account.id }
+    }
+
+    /// Look up an account by UUID.
+    func account(_ id: UUID) -> Account? {
+        accountStore.accounts.first { $0.id == id }
+    }
+
+    /// Human-readable name for a scope, e.g. the team name or "personal".
+    func scopeName(accountId: UUID, teamId: String?) -> String? {
+        guard let acct = account(accountId) else { return nil }
+        if let tid = teamId {
+            if let team = teams.first(where: { $0.id == tid }) {
+                return team.slug ?? team.name ?? tid
+            }
+            return tid
+        }
+        return acct.label
     }
 
     // MARK: - Icon state
