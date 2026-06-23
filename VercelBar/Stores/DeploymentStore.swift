@@ -399,6 +399,17 @@ final class DeploymentStore {
         followed(account: sp.account, projectId: sp.project.id, projectName: sp.project.name)
     }
 
+    /// Sets follow state for a project, keeping the legacy CLI name-key in sync
+    /// so a re-enable actually un-hides a previously name-muted CLI project.
+    func setFollowed(_ sp: SourcedProject, _ followed: Bool) {
+        let idKey = ProjectKey(provider: sp.account.provider, accountId: sp.account.id, projectId: sp.project.id)
+        settings.setFollowed(idKey, followed)
+        if sp.account.source == .vercelCLI {
+            let nameKey = ProjectKey(provider: .vercel, accountId: sp.account.id, projectId: sp.project.name)
+            settings.setFollowed(nameKey, followed)
+        }
+    }
+
     /// Core follow check. Explicit id-based key is the primary; for the CLI account
     /// ONLY, also honor a legacy name-based key (Task 8 stored old mutes by name).
     /// If either key says unfollowed, treat as unfollowed.

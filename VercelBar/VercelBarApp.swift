@@ -30,7 +30,7 @@ struct VercelBarApp: App {
         .menuBarExtraStyle(.window)
 
         Settings {
-            SettingsView(settings: settings, store: store)
+            SettingsView(settings: settings, store: store, accountStore: accountStore)
         }
     }
 }

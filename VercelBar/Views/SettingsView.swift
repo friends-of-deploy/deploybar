@@ -3,17 +3,21 @@ import SwiftUI
 struct SettingsView: View {
     let settings: SettingsStore
     let store: DeploymentStore
+    let accountStore: AccountStore
 
     var body: some View {
         TabView {
             GeneralSettingsTab(settings: settings, store: store)
-                .tabItem { Label("General", systemImage: "gearshape") }
+                .tabItem { Label(String(localized: "General", comment: "Settings tab title"), systemImage: "gearshape") }
 
-            NotificationSettingsTab(settings: settings, store: store)
-                .tabItem { Label("Notifications", systemImage: "bell") }
+            NotificationSettingsTab(settings: settings)
+                .tabItem { Label(String(localized: "Notifications", comment: "Settings tab title"), systemImage: "bell") }
 
-            AccountSettingsTab(store: store)
-                .tabItem { Label("Account", systemImage: "person.crop.circle") }
+            ProjectsSettingsTab(settings: settings, store: store)
+                .tabItem { Label(String(localized: "Projects", comment: "Settings tab title"), systemImage: "square.stack.3d.up") }
+
+            AccountsSettingsTab(accountStore: accountStore)
+                .tabItem { Label(String(localized: "Accounts", comment: "Settings tab title"), systemImage: "person.2.crop.square.stack") }
         }
         .frame(width: 460)
     }
@@ -29,7 +33,7 @@ private struct GeneralSettingsTab: View {
     var body: some View {
         Form {
             Section {
-                Picker("Refresh status", selection: intervalBinding) {
+                Picker(String(localized: "Refresh status", comment: "Poll interval picker label"), selection: intervalBinding) {
                     Text("Every 10 seconds").tag(10)
                     Text("Every 30 seconds").tag(30)
                     Text("Every minute").tag(60)
@@ -40,7 +44,7 @@ private struct GeneralSettingsTab: View {
             }
 
             Section {
-                Toggle("Launch at login", isOn: Binding(
+                Toggle(String(localized: "Launch at login", comment: "Launch at login toggle"), isOn: Binding(
                     get: { launchAtLogin },
                     set: { launchAtLogin = $0; LaunchAtLogin.set($0) }))
             }
@@ -60,17 +64,44 @@ private struct GeneralSettingsTab: View {
 
 private struct NotificationSettingsTab: View {
     let settings: SettingsStore
+
+    var body: some View {
+        Form {
+            Section {
+                Toggle(String(localized: "Failed deployments", comment: "Notification toggle"), isOn: bind(\.notifyOnFailure))
+                Toggle(String(localized: "Successful deployments", comment: "Notification toggle"), isOn: bind(\.notifyOnSuccess))
+                Toggle(String(localized: "Started deployments", comment: "Notification toggle"), isOn: bind(\.notifyOnStarted))
+                Toggle(String(localized: "Canceled deployments", comment: "Notification toggle"), isOn: bind(\.notifyOnCanceled))
+            } header: {
+                Text("Notify me about")
+            }
+        }
+        .formStyle(.grouped)
+        .scrollDisabled(true)
+        .frame(height: 220)
+    }
+
+    private func bind(_ keyPath: ReferenceWritableKeyPath<SettingsStore, Bool>) -> Binding<Bool> {
+        Binding(get: { settings[keyPath: keyPath] }, set: { settings[keyPath: keyPath] = $0 })
+    }
+}
+
+// MARK: - Projects (follow)
+
+private struct ProjectsSettingsTab: View {
+    let settings: SettingsStore
     let store: DeploymentStore
 
     var body: some View {
         Form {
             Section {
-                Toggle("Failed deployments", isOn: bind(\.notifyOnFailure))
-                Toggle("Successful deployments", isOn: bind(\.notifyOnSuccess))
-                Toggle("Started deployments", isOn: bind(\.notifyOnStarted))
-                Toggle("Canceled deployments", isOn: bind(\.notifyOnCanceled))
-            } header: {
-                Text("Notify me about")
+                Toggle(
+                    String(localized: "Automatically follow new projects", comment: "Auto-follow toggle"),
+                    isOn: Binding(
+                        get: { settings.autoFollowNewProjects },
+                        set: { settings.autoFollowNewProjects = $0 }
+                    )
+                )
             }
 
             Section {
@@ -80,49 +111,89 @@ private struct NotificationSettingsTab: View {
                 } else {
                     ForEach(store.sourcedProjects) { sp in
                         Toggle(sp.project.name, isOn: Binding(
-                            get: { settings.isFollowed(sp.key) },
-                            set: { settings.setFollowed(sp.key, $0) }))
+                            get: { store.isFollowed(sp) },
+                            set: { store.setFollowed(sp, $0) }
+                        ))
                     }
                 }
             } header: {
                 Text("Projects")
             } footer: {
-                Text("Turn off a project to silence all of its notifications.")
+                Text("Unfollowed projects are hidden from the menu and never notify.")
             }
         }
         .formStyle(.grouped)
         .frame(height: 360)
     }
-
-    private func bind(_ keyPath: ReferenceWritableKeyPath<SettingsStore, Bool>) -> Binding<Bool> {
-        Binding(get: { settings[keyPath: keyPath] }, set: { settings[keyPath: keyPath] = $0 })
-    }
 }
 
-// MARK: - Account
+// MARK: - Accounts
 
-private struct AccountSettingsTab: View {
-    let store: DeploymentStore
+private struct AccountsSettingsTab: View {
+    let accountStore: AccountStore
+
+    @State private var newProvider: Provider = Provider.allCases.first(where: \.isImplemented) ?? .vercel
+    @State private var newLabel: String = ""
+    @State private var newToken: String = ""
 
     var body: some View {
         Form {
+            ForEach(Provider.allCases.filter { provider in
+                accountStore.accounts.contains { $0.provider == provider }
+            }, id: \.self) { provider in
+                Section {
+                    ForEach(accountStore.accounts.filter { $0.provider == provider }) { account in
+                        HStack {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(account.label)
+                                Text(account.isReadOnly
+                                     ? String(localized: "From Vercel CLI", comment: "CLI account source caption")
+                                     : String(localized: "Token", comment: "Keychain account source caption"))
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                            Spacer()
+                            if !account.isReadOnly {
+                                Button(String(localized: "Remove", comment: "Remove account button")) {
+                                    accountStore.removeAccount(account)
+                                }
+                                .foregroundStyle(.red)
+                            }
+                        }
+                    }
+                } header: {
+                    Text(provider.displayName)
+                }
+            }
+
             Section {
-                if let user = store.user {
-                    LabeledContent("Username", value: user.username)
-                    if let name = user.name { LabeledContent("Name", value: name) }
-                    if let email = user.email { LabeledContent("Email", value: email) }
-                } else {
-                    LabeledContent("Account") {
-                        Text("Not connected").foregroundStyle(.secondary)
+                Picker(String(localized: "Provider", comment: "Add account provider picker"), selection: $newProvider) {
+                    ForEach(Provider.allCases.filter(\.isImplemented), id: \.self) { provider in
+                        Text(provider.displayName).tag(provider)
                     }
                 }
-                LabeledContent("Team", value: store.scopeName)
+                TextField(
+                    String(localized: "Label (optional)", comment: "Add account label field"),
+                    text: $newLabel
+                )
+                SecureField(
+                    String(localized: "Token", comment: "Add account token field"),
+                    text: $newToken
+                )
+                Button(String(localized: "Add", comment: "Add account button")) {
+                    let resolvedLabel = newLabel.isEmpty ? newProvider.displayName : newLabel
+                    accountStore.addKeychainAccount(provider: newProvider, label: resolvedLabel, token: newToken)
+                    newLabel = ""
+                    newToken = ""
+                }
+                .disabled(newToken.isEmpty)
+            } header: {
+                Text("Add account")
             } footer: {
                 Text("VercelBar reuses your Vercel CLI login. Run `vercel login` in Terminal to sign in.")
             }
         }
         .formStyle(.grouped)
-        .scrollDisabled(true)
-        .frame(height: 220)
+        .frame(height: 420)
     }
 }
