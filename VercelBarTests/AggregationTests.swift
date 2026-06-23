@@ -114,4 +114,62 @@ extension AggregationTests {
         XCTAssertTrue(store.sourcedProjects.contains { $0.account.id == b.id })
         XCTAssertTrue(store.sourcedDeployments.contains { $0.deployment.uid == "db" })
     }
+
+    /// Directive 4: the CLI-only legacy name-keyed mute. A NAME-keyed unfollow must
+    /// exclude the CLI project even though the id-keyed entry was never set — and it
+    /// must NOT leak to a keychain account whose project id/name match those values.
+    func test_cliLegacyNameFallback_mutesCLIButNotKeychain() async {
+        // AccountStore creates a `.vercelCLI` account when detectCLI is true.
+        let accountStore = AccountStore(defaults: UserDefaults(suiteName: UUID().uuidString)!,
+                                        credentials: InMemoryCredentialStore(),
+                                        detectCLI: { true },
+                                        reloadCLIToken: { "cli-token" })
+        let cli = accountStore.cliAccount!
+        let kc = accountStore.addKeychainAccount(provider: .vercel, label: "Acct KC", token: "tok-kc")
+        let settings = SettingsStore(defaults: UserDefaults(suiteName: UUID().uuidString)!)
+
+        // CLI project: id ("cli-proj-id") DIFFERS from name ("cliweb").
+        let cliDep = Fixtures.deployment(uid: "cd", name: "cliweb", createdAt: 2)
+        let cliProj = Fixtures.project(id: "cli-proj-id", name: "cliweb")
+        // Keychain project: id == name == "cliweb" (matches the muted NAME value).
+        let kcDep = Fixtures.deployment(uid: "kd", name: "cliweb", createdAt: 1)
+        let kcProj = Fixtures.project(id: "cliweb", name: "cliweb")
+
+        let store = DeploymentStore(
+            accountStore: accountStore,
+            settings: settings,
+            makeClient: { account, _ in
+                if account.source == .vercelCLI {
+                    return StubClient(deps: [cliDep], projs: [cliProj], error: nil)
+                } else {
+                    return StubClient(deps: [kcDep], projs: [kcProj], error: nil)
+                }
+            },
+            reloadToken: { "cli-token" },
+            authRetryBackoff: .zero
+        )
+
+        // Sanity: both projects show before any mute.
+        await store.poll()
+        XCTAssertTrue(store.sourcedProjects.contains { $0.account.id == cli.id })
+        XCTAssertTrue(store.sourcedProjects.contains { $0.account.id == kc.id })
+
+        // NAME-keyed unfollow under the CLI account id (the id-keyed entry is never set).
+        let nameKey = ProjectKey(provider: .vercel, accountId: cli.id, projectId: "cliweb")
+        settings.setFollowed(nameKey, false)
+        await store.poll()
+
+        // (a) CLI branch: name fallback excludes the CLI project + its deployment.
+        XCTAssertFalse(store.sourcedProjects.contains { $0.account.id == cli.id },
+                       "CLI project muted by its NAME-keyed legacy key")
+        XCTAssertFalse(store.sourcedDeployments.contains { $0.account.id == cli.id },
+                       "CLI deployment muted by its NAME-keyed legacy key")
+
+        // (b) Keychain early-return: the name-keyed mute does NOT leak to the
+        // keychain account even though its project id/name == "cliweb".
+        XCTAssertTrue(store.sourcedProjects.contains { $0.account.id == kc.id },
+                      "keychain project unaffected by the CLI name fallback")
+        XCTAssertTrue(store.sourcedDeployments.contains { $0.account.id == kc.id },
+                      "keychain deployment unaffected by the CLI name fallback")
+    }
 }

@@ -387,12 +387,10 @@ final class DeploymentStore {
     }
 
     /// The notification key for a deployment: id-based when the project is known;
-    /// otherwise the name (matches the legacy/CLI key).
+    /// otherwise the name (matches the legacy/CLI key). Reuses `projectId(for:)`
+    /// so there is a single project lookup.
     private func deploymentKey(for sd: SourcedDeployment) -> ProjectKey {
-        if let proj = unfilteredProjects.first(where: {
-            $0.account.id == sd.account.id && $0.project.name == sd.deployment.name
-        }) { return proj.key }
-        return ProjectKey(provider: sd.account.provider, accountId: sd.account.id, projectId: sd.deployment.name)
+        ProjectKey(provider: sd.account.provider, accountId: sd.account.id, projectId: projectId(for: sd))
     }
 
     // MARK: - Per-scope fetch + auth handling
