@@ -106,7 +106,7 @@ private struct ProjectsSettingsTab: View {
 
             Section {
                 if store.sourcedProjects.isEmpty {
-                    Text("No projects loaded yet.")
+                    Text(String(localized: "No projects loaded yet.", comment: "Projects tab empty state"))
                         .foregroundStyle(.secondary)
                 } else {
                     ForEach(store.sourcedProjects) { sp in
@@ -117,9 +117,9 @@ private struct ProjectsSettingsTab: View {
                     }
                 }
             } header: {
-                Text("Projects")
+                Text(String(localized: "Projects", comment: "Projects tab section header"))
             } footer: {
-                Text("Unfollowed projects are hidden from the menu and never notify.")
+                Text(String(localized: "Unfollowed projects are hidden from the menu and never notify.", comment: "Projects tab footer"))
             }
         }
         .formStyle(.grouped)
@@ -188,9 +188,9 @@ private struct AccountsSettingsTab: View {
                 }
                 .disabled(newToken.isEmpty)
             } header: {
-                Text("Add account")
+                Text(String(localized: "Add account", comment: "Accounts tab add-account section header"))
             } footer: {
-                Text("VercelBar reuses your Vercel CLI login. Run `vercel login` in Terminal to sign in.")
+                Text(String(localized: "VercelBar reuses your Vercel CLI login. Run `vercel login` in Terminal to sign in.", comment: "Accounts tab CLI login guidance footer"))
             }
         }
         .formStyle(.grouped)
