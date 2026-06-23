@@ -14,14 +14,14 @@ enum DeploymentState: String {
         }
     }
 
-    /// Human-readable label for badges and status text.
+    /// Human-readable, localized label for badges and status text.
     var label: String {
         switch self {
-        case .ready:    return "Ready"
-        case .building: return "Building"
-        case .queued:   return "Queued"
-        case .error:    return "Error"
-        case .canceled: return "Canceled"
+        case .ready:    return String(localized: "Ready", comment: "Deployment state badge")
+        case .building: return String(localized: "Building", comment: "Deployment state badge")
+        case .queued:   return String(localized: "Queued", comment: "Deployment state badge")
+        case .error:    return String(localized: "Error", comment: "Deployment state badge")
+        case .canceled: return String(localized: "Canceled", comment: "Deployment state badge")
         case .unknown:  return "—"
         }
     }

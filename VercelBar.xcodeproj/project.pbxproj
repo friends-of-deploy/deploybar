@@ -53,10 +53,12 @@
 		D196290BD9C34833F4F202FF /* DiffTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4D69DA023EBAFCE848185E50 /* DiffTests.swift */; };
 		D23C06192806C75EED434464 /* ScopeSwitchTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 768B042EB983F6B8F7F3A76D /* ScopeSwitchTests.swift */; };
 		D427C9E35F8FE1E3C6412AD5 /* Project.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2D994A04FCD299AD4509667B /* Project.swift */; };
+		D96D8143EED87ACD2A5A6C43 /* LocalizationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 52A479E4AD09AE8A89F11E40 /* LocalizationTests.swift */; };
 		DF5B574EAB2CD5E5848B83D5 /* FaviconURLTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2E7AEAC412F86E91243E02FC /* FaviconURLTests.swift */; };
 		E03F5B9FEE557FA7575A96DA /* PointingHandCursor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9FFD1192F179F291AA0FBDAF /* PointingHandCursor.swift */; };
 		E2BA0DF0247CC5C68060EA5E /* FaviconView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 529868D0C34D769B9D10D9CE /* FaviconView.swift */; };
 		E9A967F2CF41AF62C42BB95E /* Team.swift in Sources */ = {isa = PBXBuildFile; fileRef = 750DD644D04F7E79D6475930 /* Team.swift */; };
+		EB58570CFDCF54BBD73BD549 /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = 736A407D2B8CED25548982D6 /* Localizable.xcstrings */; };
 		EBF2DA47DB399B4DC4362DE9 /* ScopeResolverTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 330517009B6A4BF8BC54154E /* ScopeResolverTests.swift */; };
 		EFB2023B755B48B0073A2E7C /* LinkBuilderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9C1405E663DFE1AB04FFE677 /* LinkBuilderTests.swift */; };
 		F025BD35F1650D8C4D5A9066 /* ScaffoldTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = DC4B20C8E705AAF379080CA1 /* ScaffoldTests.swift */; };
@@ -101,6 +103,7 @@
 		4D69DA023EBAFCE848185E50 /* DiffTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiffTests.swift; sourceTree = "<group>"; };
 		4F48D1D724446FB640E9B796 /* VercelClientTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VercelClientTests.swift; sourceTree = "<group>"; };
 		529868D0C34D769B9D10D9CE /* FaviconView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FaviconView.swift; sourceTree = "<group>"; };
+		52A479E4AD09AE8A89F11E40 /* LocalizationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalizationTests.swift; sourceTree = "<group>"; };
 		5A3AB910F8FFCAEEF8113A5F /* UserLoadingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserLoadingTests.swift; sourceTree = "<group>"; };
 		5B22CA2AE5E8487C8EFADF2A /* projects.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = projects.json; sourceTree = "<group>"; };
 		65B0731462FDF40135F02E65 /* VercelUser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VercelUser.swift; sourceTree = "<group>"; };
@@ -109,6 +112,7 @@
 		6B656E8FCA4B2EEAE658E87A /* SettingsStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsStoreTests.swift; sourceTree = "<group>"; };
 		6B87ABDB628BB31016796190 /* VercelBarTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = VercelBarTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		71B87E8B8024EA89FC993D89 /* teams.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = teams.json; sourceTree = "<group>"; };
+		736A407D2B8CED25548982D6 /* Localizable.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = Localizable.xcstrings; sourceTree = "<group>"; };
 		750DD644D04F7E79D6475930 /* Team.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Team.swift; sourceTree = "<group>"; };
 		768B042EB983F6B8F7F3A76D /* ScopeSwitchTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScopeSwitchTests.swift; sourceTree = "<group>"; };
 		76B4F85167ED10EC0B5DE9E8 /* FaviconURL.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FaviconURL.swift; sourceTree = "<group>"; };
@@ -154,6 +158,7 @@
 				4D69DA023EBAFCE848185E50 /* DiffTests.swift */,
 				2E7AEAC412F86E91243E02FC /* FaviconURLTests.swift */,
 				9C1405E663DFE1AB04FFE677 /* LinkBuilderTests.swift */,
+				52A479E4AD09AE8A89F11E40 /* LocalizationTests.swift */,
 				CE9E064C3518F5B8E9A41F4B /* NotificationGatingTests.swift */,
 				D4B038932BD95FA3DE223832 /* ProjectDecodingTests.swift */,
 				213AEC4FD85A225768FB79F8 /* RowPrimaryActionTests.swift */,
@@ -260,6 +265,7 @@
 		F9625FC22CDF738D4080519A /* VercelBar */ = {
 			isa = PBXGroup;
 			children = (
+				736A407D2B8CED25548982D6 /* Localizable.xcstrings */,
 				466C9D16098CE32810BFDA85 /* VercelBarApp.swift */,
 				FE8F174C37CC17374E6E7CC3 /* Clients */,
 				187C3ADB8C589000F3958909 /* Models */,
@@ -309,6 +315,7 @@
 			buildConfigurationList = 0C14AE027459AB594C884136 /* Build configuration list for PBXNativeTarget "VercelBar" */;
 			buildPhases = (
 				588F5D5EA5D058D26986B62E /* Sources */,
+				89F00680440DF9A104C8D51E /* Resources */,
 			);
 			buildRules = (
 			);
@@ -341,6 +348,7 @@
 			knownRegions = (
 				Base,
 				en,
+				pl,
 			);
 			mainGroup = CA336A55543E6D0363C99991;
 			minimizedProjectReferenceProxies = 1;
@@ -356,6 +364,14 @@
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
+		89F00680440DF9A104C8D51E /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				EB58570CFDCF54BBD73BD549 /* Localizable.xcstrings in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		FB9B69629C15CAF825DCF66F /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -423,6 +439,7 @@
 				D196290BD9C34833F4F202FF /* DiffTests.swift in Sources */,
 				DF5B574EAB2CD5E5848B83D5 /* FaviconURLTests.swift in Sources */,
 				EFB2023B755B48B0073A2E7C /* LinkBuilderTests.swift in Sources */,
+				D96D8143EED87ACD2A5A6C43 /* LocalizationTests.swift in Sources */,
 				A3DD8827686A4921A1F6ADBF /* NotificationGatingTests.swift in Sources */,
 				CCCD70F231611CF3CB7F95AF /* ProjectDecodingTests.swift in Sources */,
 				80B2D7A57DC8E09D2CDDC1F9 /* RowPrimaryActionTests.swift in Sources */,
@@ -476,6 +493,7 @@
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDevelopmentRegion = en;
 				INFOPLIST_KEY_CFBundleDisplayName = VercelBar;
 				INFOPLIST_KEY_LSUIElement = YES;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -618,6 +636,7 @@
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDevelopmentRegion = en;
 				INFOPLIST_KEY_CFBundleDisplayName = VercelBar;
 				INFOPLIST_KEY_LSUIElement = YES;
 				LD_RUNPATH_SEARCH_PATHS = (

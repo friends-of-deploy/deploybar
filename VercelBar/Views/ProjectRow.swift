@@ -47,7 +47,7 @@ struct ProjectRow: View {
             if project.cronCount > 0 {
                 MetaItem(
                     symbol: "clock.arrow.circlepath",
-                    text: "\(project.cronCount) cron\(project.cronCount == 1 ? "" : "s")"
+                    text: String(localized: "\(project.cronCount) crons", comment: "Cron job count on a project; pluralized")
                 )
             }
         }
@@ -71,13 +71,13 @@ struct ProjectRow: View {
     private var lastDeployText: String? {
         switch project.latestState {
         case .building, .queued:
-            return "building…"
+            return String(localized: "building…", comment: "Build in progress")
         case .ready, .error, .canceled, .unknown:
             guard let created = project.latestCreatedAt else { return nil }
             let when = DeploymentTiming.relative(epochMs: created)
             switch project.latestState {
-            case .ready: return "✓ deployed \(when)"
-            case .error: return "⚠ failed \(when)"
+            case .ready: return String(localized: "✓ deployed \(when)", comment: "Last successful deploy time")
+            case .error: return String(localized: "⚠ failed \(when)", comment: "Last failed deploy time")
             default:     return when
             }
         }
@@ -92,14 +92,14 @@ struct ProjectRow: View {
                 IconActionButton(
                     systemImage: "globe",
                     url: prod,
-                    help: "Open production site"
+                    help: String(localized: "Open production site", comment: "Action tooltip")
                 )
             }
             if let repo = LinkBuilder.githubRepo(org: project.repoOrg, repo: project.repoName) {
                 IconActionButton(
                     systemImage: "chevron.left.forwardslash.chevron.right",
                     url: repo,
-                    help: "Open repository"
+                    help: String(localized: "Open repository", comment: "Action tooltip")
                 )
             }
 
@@ -138,7 +138,7 @@ struct ProjectRow: View {
         }
         .menuStyle(.borderlessButton)
         .fixedSize()
-        .tooltip("More actions")
+        .tooltip(String(localized: "More actions", comment: "Overflow menu tooltip"))
         .pointingHandCursor()
     }
 }

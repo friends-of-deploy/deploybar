@@ -57,7 +57,9 @@ struct DeploymentRow: View {
     }
 
     private var primaryHelp: String {
-        deployment.state == .error ? "Open build logs" : "Open deployment"
+        deployment.state == .error
+            ? String(localized: "Open build logs", comment: "Action tooltip")
+            : String(localized: "Open deployment", comment: "Action tooltip")
     }
 
     private func openPrimary() {
@@ -88,7 +90,8 @@ struct DeploymentRow: View {
     // MARK: - Timing line (started + build duration)
 
     private var timing: String {
-        let started = "started \(DeploymentTiming.relative(epochMs: deployment.createdAt))"
+        let when = DeploymentTiming.relative(epochMs: deployment.createdAt)
+        let started = String(localized: "started \(when)", comment: "When a deployment started, e.g. 'started 3m ago'")
         return "\(started) · \(DeploymentTiming.buildPhase(deployment))"
     }
 
@@ -103,14 +106,14 @@ struct DeploymentRow: View {
                 IconActionButton(
                     systemImage: "arrow.up.forward.app",
                     url: live,
-                    help: "Open deployment"
+                    help: String(localized: "Open deployment", comment: "Action tooltip")
                 )
             }
             if let logs = deployment.inspectorUrl.flatMap(URL.init(string:)) {
                 IconActionButton(
                     systemImage: "doc.text.magnifyingglass",
                     url: logs,
-                    help: "Open build logs"
+                    help: String(localized: "Open build logs", comment: "Action tooltip")
                 )
             }
             if let commit = LinkBuilder.githubCommit(
@@ -121,7 +124,7 @@ struct DeploymentRow: View {
                 IconActionButton(
                     systemImage: "chevron.left.forwardslash.chevron.right",
                     url: commit,
-                    help: "Open commit on the repository"
+                    help: String(localized: "Open commit on the repository", comment: "Action tooltip")
                 )
             }
         }
@@ -136,7 +139,7 @@ enum DeploymentTiming {
     static func relative(epochMs: Double) -> String {
         let date = Date(timeIntervalSince1970: epochMs / 1000)
         let seconds = Date().timeIntervalSince(date)
-        if seconds < 60 { return "just now" }
+        if seconds < 60 { return String(localized: "just now", comment: "Relative time, under a minute ago") }
         let f = RelativeDateTimeFormatter()
         f.unitsStyle = .abbreviated
         return f.localizedString(for: date, relativeTo: Date())
@@ -146,10 +149,11 @@ enum DeploymentTiming {
     static func buildPhase(_ d: Deployment) -> String {
         switch d.state {
         case .building, .queued:
-            return "building…"
+            return String(localized: "building…", comment: "Build in progress")
         case .ready, .error, .canceled, .unknown:
             if let building = d.buildingAt, let ready = d.ready, ready > building {
-                return "built in \(duration(seconds: (ready - building) / 1000))"
+                let dur = duration(seconds: (ready - building) / 1000)
+                return String(localized: "built in \(dur)", comment: "Completed build duration, e.g. 'built in 56s'")
             }
             return ""
         }

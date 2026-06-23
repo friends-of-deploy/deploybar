@@ -39,10 +39,10 @@ struct NotificationManager {
 
     private func title(for e: DeploymentEvent) -> String {
         switch e {
-        case .failure:  return "Deployment failed"
-        case .success:  return "Deployment ready"
-        case .started:  return "Deployment started"
-        case .canceled: return "Deployment canceled"
+        case .failure:  return String(localized: "Deployment failed", comment: "Notification title")
+        case .success:  return String(localized: "Deployment ready", comment: "Notification title")
+        case .started:  return String(localized: "Deployment started", comment: "Notification title")
+        case .canceled: return String(localized: "Deployment canceled", comment: "Notification title")
         }
     }
 }

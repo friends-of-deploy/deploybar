@@ -50,8 +50,8 @@ enum PopoverTab: CaseIterable {
     case deployments, projects
     var title: String {
         switch self {
-        case .deployments: return "Deployments"
-        case .projects:    return "Projects"
+        case .deployments: return String(localized: "Deployments", comment: "Tab title")
+        case .projects:    return String(localized: "Projects", comment: "Tab title")
         }
     }
 }
@@ -69,12 +69,12 @@ private struct TopBar: View {
             Button(action: openSettings) {
                 Image(systemName: "gearshape")
             }
-            .tooltip("Settings")
+            .tooltip(String(localized: "Settings", comment: "Button tooltip"))
             .pointingHandCursor()
             Button { NSApplication.shared.terminate(nil) } label: {
                 Image(systemName: "power")
             }
-            .tooltip("Quit VercelBar")
+            .tooltip(String(localized: "Quit VercelBar", comment: "Button tooltip"))
             .pointingHandCursor()
         }
         .buttonStyle(.borderless)
@@ -185,7 +185,7 @@ private struct StatusBar: View {
 // MARK: - Shared subviews
 
 private struct EmptyListPlaceholder: View {
-    let label: String
+    let label: LocalizedStringKey
 
     var body: some View {
         Text(label)

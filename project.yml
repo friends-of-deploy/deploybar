@@ -4,6 +4,10 @@ options:
   deploymentTarget:
     macOS: "14.0"
   createIntermediateGroups: true
+  developmentLanguage: en
+  knownRegions:
+    - en
+    - pl
 
 settings:
   base:
@@ -21,6 +25,7 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: io.eightlines.vercelbar.VercelBar
         INFOPLIST_KEY_LSUIElement: "YES"
         INFOPLIST_KEY_CFBundleDisplayName: VercelBar
+        INFOPLIST_KEY_CFBundleDevelopmentRegion: en
         GENERATE_INFOPLIST_FILE: "YES"
         MARKETING_VERSION: "1.0"
         CURRENT_PROJECT_VERSION: "1"
