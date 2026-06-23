@@ -58,4 +58,26 @@ extension AccountModelTests {
     func test_projectKey_rejectsMalformedString() {
         XCTAssertNil(ProjectKey(storageString: "garbage"))
     }
+
+    func test_scope_id_personalVsTeam() {
+        let acct = Account.vercelCLI(id: UUID(), label: "cli")
+        let personal = Scope(account: acct, teamId: nil, teamName: nil)
+        let team = Scope(account: acct, teamId: "team_1", teamName: "acme")
+        XCTAssertTrue(personal.id.hasSuffix("personal"))
+        XCTAssertTrue(team.id.hasSuffix("team_1"))
+        XCTAssertEqual(personal.displayName, "personal")
+        XCTAssertEqual(team.displayName, "acme")
+    }
+
+    func test_scopeFilter_matching() {
+        let id = UUID()
+        let acct = Account(id: id, provider: .vercel, label: "x", source: .keychain(account: "k"))
+        XCTAssertTrue(ScopeFilter.all.matches(account: acct, teamId: "t"))
+        XCTAssertTrue(ScopeFilter.provider(.vercel).matches(account: acct, teamId: nil))
+        XCTAssertFalse(ScopeFilter.provider(.github).matches(account: acct, teamId: nil))
+        XCTAssertTrue(ScopeFilter.account(id).matches(account: acct, teamId: "t"))
+        XCTAssertFalse(ScopeFilter.account(UUID()).matches(account: acct, teamId: "t"))
+        XCTAssertTrue(ScopeFilter.scope(accountId: id, teamId: "t").matches(account: acct, teamId: "t"))
+        XCTAssertFalse(ScopeFilter.scope(accountId: id, teamId: "t").matches(account: acct, teamId: nil))
+    }
 }

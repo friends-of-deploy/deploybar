@@ -25,6 +25,7 @@
 		40C90A06193604C1B8E2A1C7 /* TeamModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = EB33FF84026FB6BBAEB9D97A /* TeamModelTests.swift */; };
 		4A3380D31DCE51779C4344BD /* StateBadge.swift in Sources */ = {isa = PBXBuildFile; fileRef = F7A6F11DBF884301ED5AE479 /* StateBadge.swift */; };
 		4BA30CDDAC6613BB111EF2ED /* LaunchAtLogin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 47980AE97E9B034E99F9FD09 /* LaunchAtLogin.swift */; };
+		553FBB00A02741C50D708C59 /* Scope.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8A450BB242A7B0AABBA855DF /* Scope.swift */; };
 		608158A4B696FED5B7F56CA9 /* DeploymentFaviconTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BADF02E64BB7FB74ED3065BB /* DeploymentFaviconTests.swift */; };
 		6373589B10BD568107B71B2E /* VercelBarApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 466C9D16098CE32810BFDA85 /* VercelBarApp.swift */; };
 		65C0947A11820556D80AC350 /* VercelUser.swift in Sources */ = {isa = PBXBuildFile; fileRef = 65B0731462FDF40135F02E65 /* VercelUser.swift */; };
@@ -126,6 +127,7 @@
 		775A1D4FFF8382B61745F647 /* Deployment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Deployment.swift; sourceTree = "<group>"; };
 		84D15BD686BC46F6775C99F2 /* IconActionButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IconActionButton.swift; sourceTree = "<group>"; };
 		8590BB79F9DA896FABB6AF54 /* TeamsClientTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TeamsClientTests.swift; sourceTree = "<group>"; };
+		8A450BB242A7B0AABBA855DF /* Scope.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Scope.swift; sourceTree = "<group>"; };
 		8B70AB9D6E098BC0B77E77A5 /* LinkBuilder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LinkBuilder.swift; sourceTree = "<group>"; };
 		909B86C65FCA8F1A24ACBF64 /* CredentialStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CredentialStore.swift; sourceTree = "<group>"; };
 		913D23F6BF613FF46716F049 /* ScopeResolver.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScopeResolver.swift; sourceTree = "<group>"; };
@@ -200,6 +202,7 @@
 				2D994A04FCD299AD4509667B /* Project.swift */,
 				5E917C2BA3DC485D3034120B /* ProjectFollow.swift */,
 				A31752095CEE56890750D36A /* Provider.swift */,
+				8A450BB242A7B0AABBA855DF /* Scope.swift */,
 				310852F8B25E514523E73C85 /* StateTransition.swift */,
 				750DD644D04F7E79D6475930 /* Team.swift */,
 				65B0731462FDF40135F02E65 /* VercelUser.swift */,
@@ -432,6 +435,7 @@
 				2F6E681BC4BE1D98D3B138D6 /* ProjectFollow.swift in Sources */,
 				A662861D769735D1826B58C2 /* ProjectRow.swift in Sources */,
 				14ED70063730DF742B4A041B /* Provider.swift in Sources */,
+				553FBB00A02741C50D708C59 /* Scope.swift in Sources */,
 				65D0482F555B46D8D5E2A2FE /* ScopeResolver.swift in Sources */,
 				2DF7DB7B6277EA2259B82014 /* SettingsStore.swift in Sources */,
 				2009B8D20017FABAD7ACA0E8 /* SettingsView.swift in Sources */,
