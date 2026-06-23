@@ -36,8 +36,10 @@ struct PopoverView: View {
             }
             .frame(height: 320)
 
-            Divider()
-            StatusBar(deployments: store.deployments, errorMessage: store.errorMessage)
+            if let error = store.errorMessage {
+                Divider()
+                StatusBar(message: error)
+            }
         }
         .frame(width: 380)
     }
@@ -67,10 +69,12 @@ private struct TopBar: View {
                 Image(systemName: "gearshape")
             }
             .help("Settings")
+            .pointingHandCursor()
             Button { NSApplication.shared.terminate(nil) } label: {
                 Image(systemName: "power")
             }
             .help("Quit VercelBar")
+            .pointingHandCursor()
         }
         .buttonStyle(.borderless)
         .imageScale(.medium)
@@ -106,6 +110,7 @@ private struct TopBar: View {
         }
         .menuStyle(.borderlessButton)
         .fixedSize()
+        .pointingHandCursor()
     }
 
     private func switchTo(_ teamId: String?, name: String) {
@@ -152,45 +157,27 @@ private struct TabButton: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .pointingHandCursor()
     }
 }
 
-// MARK: - Bottom status bar
+// MARK: - Bottom status bar (errors/warnings only)
 
 private struct StatusBar: View {
-    let deployments: [Deployment]
-    let errorMessage: String?
-
-    private var ready: Int { deployments.filter { $0.state == .ready }.count }
-    private var building: Int { deployments.filter { $0.state == .building || $0.state == .queued }.count }
-    private var failed: Int { deployments.filter { $0.state == .error }.count }
+    let message: String
 
     var body: some View {
         HStack(spacing: 12) {
-            if let errorMessage {
-                Label(errorMessage, systemImage: "exclamationmark.triangle.fill")
-                    .foregroundStyle(.orange)
-                    .lineLimit(1)
-                    .truncationMode(.tail)
-                    .help(errorMessage)
-            } else {
-                count(.green, ready, "ready")
-                count(.orange, building, "building")
-                count(.red, failed, "failed")
-            }
+            Label(message, systemImage: "exclamationmark.triangle.fill")
+                .foregroundStyle(.orange)
+                .lineLimit(1)
+                .truncationMode(.tail)
+                .help(message)
             Spacer()
         }
         .font(.caption)
-        .foregroundStyle(.secondary)
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
-    }
-
-    private func count(_ color: Color, _ n: Int, _ label: String) -> some View {
-        HStack(spacing: 4) {
-            Circle().fill(color).frame(width: 7, height: 7)
-            Text("\(n) \(label)")
-        }
     }
 }
 
