@@ -13,6 +13,18 @@ enum DeploymentState: String {
         default: self = .unknown
         }
     }
+
+    /// Human-readable label for badges and status text.
+    var label: String {
+        switch self {
+        case .ready:    return "Ready"
+        case .building: return "Building"
+        case .queued:   return "Queued"
+        case .error:    return "Error"
+        case .canceled: return "Canceled"
+        case .unknown:  return "—"
+        }
+    }
 }
 
 struct DeploymentsResponse: Decodable {

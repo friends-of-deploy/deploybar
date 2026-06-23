@@ -6,25 +6,25 @@ struct ProjectRow: View {
     @State private var hovering = false
 
     var body: some View {
-        HStack(spacing: 12) {
-            // Status dot + favicon cluster
-            HStack(spacing: 6) {
-                StatusDot(state: project.latestState)
-                FaviconView(host: project.faviconHost)
-                    .frame(width: 18, height: 18)
-            }
+        HStack(alignment: .top, spacing: 12) {
+            FaviconView(host: project.faviconHost)
+                .frame(width: 18, height: 18)
+                .padding(.top, 1)
 
             VStack(alignment: .leading, spacing: 4) {
                 Text(project.name)
                     .font(.body)
                     .fontWeight(.semibold)
-
-                chips
+                metaLine
+                lastDeployLine
             }
 
-            Spacer()
+            Spacer(minLength: 8)
 
-            actions
+            VStack(alignment: .trailing, spacing: 6) {
+                StateBadge(state: project.latestState)
+                actions
+            }
         }
         .padding(.vertical, 11)
         .padding(.horizontal, 14)
@@ -34,49 +34,73 @@ struct ProjectRow: View {
         .onHover { hovering = $0 }
     }
 
-    // MARK: - Stat chips
+    // MARK: - Metadata line (icon + value pairs)
 
-    @ViewBuilder private var chips: some View {
-        HStack(spacing: 5) {
-            if let fw = project.framework {
-                StatChip(text: fw)
-            }
+    @ViewBuilder private var metaLine: some View {
+        HStack(spacing: 12) {
             if let branch = project.productionBranch {
-                StatChip(text: branch)
+                MetaItem(symbol: "arrow.triangle.branch", text: branch)
             }
-            StatChip(text: "\(project.envCount) env")
-            if let node = project.nodeVersion {
-                StatChip(text: "node \(node)")
+            if let fw = project.framework {
+                MetaItem(symbol: "cube", text: fw)
             }
             if project.cronCount > 0 {
-                StatChip(text: "\(project.cronCount) cron\(project.cronCount == 1 ? "" : "s")")
+                MetaItem(
+                    symbol: "clock.arrow.circlepath",
+                    text: "\(project.cronCount) cron\(project.cronCount == 1 ? "" : "s")"
+                )
             }
         }
+        .font(.callout)
+        .foregroundStyle(.secondary)
         .lineLimit(1)
+        .truncationMode(.tail)
+    }
+
+    // MARK: - Last-deploy line
+
+    @ViewBuilder private var lastDeployLine: some View {
+        if let text = lastDeployText {
+            Text(text)
+                .font(.caption)
+                .foregroundStyle(.tertiary)
+                .lineLimit(1)
+        }
+    }
+
+    private var lastDeployText: String? {
+        switch project.latestState {
+        case .building, .queued:
+            return "building…"
+        case .ready, .error, .canceled, .unknown:
+            guard let created = project.latestCreatedAt else { return nil }
+            let when = DeploymentTiming.relative(epochMs: created)
+            switch project.latestState {
+            case .ready: return "✓ deployed \(when)"
+            case .error: return "⚠ failed \(when)"
+            default:     return when
+            }
+        }
     }
 
     // MARK: - Actions
 
     @ViewBuilder private var actions: some View {
-        HStack(spacing: 8) {
-            // Inline: production site, env vars, repository
+        HStack(spacing: 2) {
+            // Inline: production site, repository
             if let prod = LinkBuilder.liveURL(host: project.productionURL) {
-                Link(destination: prod) {
-                    Image(systemName: "globe")
-                }
-                .help("Open production site")
-            }
-            if let env = LinkBuilder.projectEnv(scope: scopeName, project: project.name) {
-                Link(destination: env) {
-                    Image(systemName: "key.fill")
-                }
-                .help("Edit environment variables")
+                IconActionButton(
+                    systemImage: "globe",
+                    url: prod,
+                    help: "Open production site"
+                )
             }
             if let repo = LinkBuilder.githubRepo(org: project.repoOrg, repo: project.repoName) {
-                Link(destination: repo) {
-                    Image(systemName: "arrow.triangle.branch")
-                }
-                .help("Open repository")
+                IconActionButton(
+                    systemImage: "chevron.left.forwardslash.chevron.right",
+                    url: repo,
+                    help: "Open repository"
+                )
             }
 
             // Overflow menu: analytics (conditional), settings, dashboard
@@ -88,6 +112,11 @@ struct ProjectRow: View {
 
     @ViewBuilder private var overflowMenu: some View {
         Menu {
+            if let env = LinkBuilder.projectEnv(scope: scopeName, project: project.name) {
+                Link(destination: env) {
+                    Label("Environment variables", systemImage: "key.fill")
+                }
+            }
             if project.hasAnalytics,
                let analytics = LinkBuilder.projectAnalytics(scope: scopeName, project: project.name) {
                 Link(destination: analytics) {
@@ -109,6 +138,21 @@ struct ProjectRow: View {
         }
         .menuStyle(.borderlessButton)
         .fixedSize()
-        .help("More actions")
+        .tooltip("More actions")
+        .pointingHandCursor()
+    }
+}
+
+/// A small SF Symbol paired with a value, used on the project metadata line.
+private struct MetaItem: View {
+    let symbol: String
+    let text: String
+
+    var body: some View {
+        HStack(spacing: 4) {
+            Image(systemName: symbol)
+                .imageScale(.small)
+            Text(text)
+        }
     }
 }

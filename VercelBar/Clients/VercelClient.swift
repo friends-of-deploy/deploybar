@@ -27,6 +27,15 @@ struct VercelClient {
         return try Self.decoder.decode(ProjectsResponse.self, from: data).projects
     }
 
+    /// The build log lines for a deployment, oldest first. Used to extract the
+    /// failure output of an errored deployment for copying to the clipboard.
+    func buildEvents(deploymentId: String) async throws -> [BuildEvent] {
+        // `builds=1` includes build-step output; the response is a JSON array of events.
+        let data = try await get(path: "/v3/deployments/\(deploymentId)/events",
+                                 query: [URLQueryItem(name: "builds", value: "1")])
+        return try Self.decoder.decode([BuildEvent].self, from: data)
+    }
+
     private func get(path: String, query: [URLQueryItem]) async throws -> Data {
         var comps = URLComponents(string: "https://api.vercel.com\(path)")!
         var items = query

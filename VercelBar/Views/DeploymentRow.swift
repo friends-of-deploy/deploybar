@@ -5,6 +5,9 @@ struct DeploymentRow: View {
     /// Brandable favicon host resolved from the deployment's project (the
     /// deployment's own hashed URL has no favicon). See `DeploymentFavicon`.
     let faviconHost: String?
+    /// Fetches the build log for a failed deployment and copies a paste-ready
+    /// error report to the clipboard. Returns true on success.
+    let copyError: (Deployment) async -> Bool
     @State private var hovering = false
 
     var body: some View {
@@ -42,7 +45,7 @@ struct DeploymentRow: View {
         .background(hovering ? Color.primary.opacity(0.06) : Color.clear)
         .onHover { hovering = $0 }
         .onTapGesture { openPrimary() }
-        .help(primaryHelp)
+        .pointingHandCursor()
     }
 
     // MARK: - Primary row action (ready → open site, failed → open logs)
@@ -92,28 +95,34 @@ struct DeploymentRow: View {
     // MARK: - Actions
 
     @ViewBuilder private var actions: some View {
-        HStack(spacing: 8) {
+        HStack(spacing: 2) {
+            if deployment.state == .error {
+                CopyBuildErrorButton(deployment: deployment, copyError: copyError)
+            }
             if let live = LinkBuilder.liveURL(host: deployment.url) {
-                Link(destination: live) {
-                    Image(systemName: "arrow.up.forward.app")
-                }
-                .help("Open deployment")
+                IconActionButton(
+                    systemImage: "arrow.up.forward.app",
+                    url: live,
+                    help: "Open deployment"
+                )
             }
             if let logs = deployment.inspectorUrl.flatMap(URL.init(string:)) {
-                Link(destination: logs) {
-                    Image(systemName: "doc.text.magnifyingglass")
-                }
-                .help("Open build logs")
+                IconActionButton(
+                    systemImage: "doc.text.magnifyingglass",
+                    url: logs,
+                    help: "Open build logs"
+                )
             }
             if let commit = LinkBuilder.githubCommit(
                 org: deployment.commitOrg,
                 repo: deployment.commitRepo,
                 sha: deployment.commitSha
             ) {
-                Link(destination: commit) {
-                    Image(systemName: "arrow.triangle.branch")
-                }
-                .help("Open commit on the repository")
+                IconActionButton(
+                    systemImage: "chevron.left.forwardslash.chevron.right",
+                    url: commit,
+                    help: "Open commit on the repository"
+                )
             }
         }
         .foregroundStyle(.secondary)

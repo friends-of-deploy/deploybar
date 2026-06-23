@@ -99,6 +99,19 @@ final class DeploymentStore {
         return .ready
     }
 
+    /// Fetch the failed deployment's build log and copy a context-rich error
+    /// report to the clipboard, ready to paste into an AI. Returns true on
+    /// success; on failure leaves the clipboard untouched and returns false.
+    @discardableResult
+    func copyBuildError(for deployment: Deployment) async -> Bool {
+        guard let events = try? await client.buildEvents(deploymentId: deployment.uid) else {
+            return false
+        }
+        let report = BuildErrorReport.make(for: deployment, events: events)
+        Pasteboard.copy(report)
+        return true
+    }
+
     func loadTeams() async {
         if let fetched = try? await teamsClient.teams() {
             self.teams = fetched

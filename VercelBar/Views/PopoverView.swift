@@ -21,7 +21,8 @@ struct PopoverView: View {
                             ForEach(store.deployments) { deployment in
                                 DeploymentRow(
                                     deployment: deployment,
-                                    faviconHost: DeploymentFavicon.host(for: deployment, in: store.projects)
+                                    faviconHost: DeploymentFavicon.host(for: deployment, in: store.projects),
+                                    copyError: { await store.copyBuildError(for: $0) }
                                 )
                             }
                         }
@@ -68,12 +69,12 @@ private struct TopBar: View {
             Button(action: openSettings) {
                 Image(systemName: "gearshape")
             }
-            .help("Settings")
+            .tooltip("Settings")
             .pointingHandCursor()
             Button { NSApplication.shared.terminate(nil) } label: {
                 Image(systemName: "power")
             }
-            .help("Quit VercelBar")
+            .tooltip("Quit VercelBar")
             .pointingHandCursor()
         }
         .buttonStyle(.borderless)
@@ -172,7 +173,7 @@ private struct StatusBar: View {
                 .foregroundStyle(.orange)
                 .lineLimit(1)
                 .truncationMode(.tail)
-                .help(message)
+                .tooltip(message)
             Spacer()
         }
         .font(.caption)
