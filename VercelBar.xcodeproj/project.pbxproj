@@ -10,6 +10,7 @@
 		03CED12F0E093E33215F5A6D /* DeploymentTimingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BCA1332AE7185767760371F6 /* DeploymentTimingTests.swift */; };
 		0896B269E22BEDAC3A345507 /* BuildEvent.swift in Sources */ = {isa = PBXBuildFile; fileRef = E0E30F1F917C342BBEC24BC5 /* BuildEvent.swift */; };
 		14ED70063730DF742B4A041B /* Provider.swift in Sources */ = {isa = PBXBuildFile; fileRef = A31752095CEE56890750D36A /* Provider.swift */; };
+		19B5F40443E37BC7B895F7BD /* AccountStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B8E1646018A41E4B657FCD1 /* AccountStore.swift */; };
 		1C07C2D7417E4271F8731CAF /* TokenProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 25DB342BB5C5EF627C8E5F00 /* TokenProvider.swift */; };
 		1C3FC4EAB1821C39F9027C5D /* user.json in Resources */ = {isa = PBXBuildFile; fileRef = 35FCCC61B368A07A2A83721A /* user.json */; };
 		2002FBBD2050CEE20CD4DED8 /* TokenProviderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A1C60AF9B9432E4A13755E0 /* TokenProviderTests.swift */; };
@@ -55,6 +56,7 @@
 		C320244830D56E9DF5FE91CB /* DeploymentStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = CBFFA64F70040EDBE7CAB821 /* DeploymentStoreTests.swift */; };
 		C32501748C010A55FF05059D /* CredentialStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3519715DEEEB8F83E33061D /* CredentialStoreTests.swift */; };
 		C77275A2D77C23BA88536104 /* BuildErrorReportTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 22AB59718D8C4F12DB9FD09F /* BuildErrorReportTests.swift */; };
+		C7D5CF9B9FD399BD332EA03A /* AccountStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A9DFC99E1966F3DE054BED9 /* AccountStoreTests.swift */; };
 		CCCD70F231611CF3CB7F95AF /* ProjectDecodingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D4B038932BD95FA3DE223832 /* ProjectDecodingTests.swift */; };
 		D03F813421067EBBCB3293D7 /* StatusDot.swift in Sources */ = {isa = PBXBuildFile; fileRef = BC5847EAB1ECCBCA5D12EE55 /* StatusDot.swift */; };
 		D1667E241654FCA9EEF0F63E /* LinkBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8B70AB9D6E098BC0B77E77A5 /* LinkBuilder.swift */; };
@@ -109,6 +111,7 @@
 		466C9D16098CE32810BFDA85 /* VercelBarApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VercelBarApp.swift; sourceTree = "<group>"; };
 		47980AE97E9B034E99F9FD09 /* LaunchAtLogin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LaunchAtLogin.swift; sourceTree = "<group>"; };
 		4961B64BB2982EB0DAA298FB /* ProjectRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProjectRow.swift; sourceTree = "<group>"; };
+		4B8E1646018A41E4B657FCD1 /* AccountStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountStore.swift; sourceTree = "<group>"; };
 		4C06065585D29CCF378FC567 /* deployments.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = deployments.json; sourceTree = "<group>"; };
 		4CF99D857F6976983FC10058 /* DeploymentStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeploymentStore.swift; sourceTree = "<group>"; };
 		4D69DA023EBAFCE848185E50 /* DiffTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiffTests.swift; sourceTree = "<group>"; };
@@ -116,6 +119,7 @@
 		529868D0C34D769B9D10D9CE /* FaviconView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FaviconView.swift; sourceTree = "<group>"; };
 		52A479E4AD09AE8A89F11E40 /* LocalizationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalizationTests.swift; sourceTree = "<group>"; };
 		5A3AB910F8FFCAEEF8113A5F /* UserLoadingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserLoadingTests.swift; sourceTree = "<group>"; };
+		5A9DFC99E1966F3DE054BED9 /* AccountStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountStoreTests.swift; sourceTree = "<group>"; };
 		5B22CA2AE5E8487C8EFADF2A /* projects.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = projects.json; sourceTree = "<group>"; };
 		5E917C2BA3DC485D3034120B /* ProjectFollow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProjectFollow.swift; sourceTree = "<group>"; };
 		65B0731462FDF40135F02E65 /* VercelUser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VercelUser.swift; sourceTree = "<group>"; };
@@ -173,6 +177,7 @@
 			isa = PBXGroup;
 			children = (
 				B0FE187C45BACCB806A4EC2D /* AccountModelTests.swift */,
+				5A9DFC99E1966F3DE054BED9 /* AccountStoreTests.swift */,
 				22AB59718D8C4F12DB9FD09F /* BuildErrorReportTests.swift */,
 				D3519715DEEEB8F83E33061D /* CredentialStoreTests.swift */,
 				6A4D18D271A2B8FC170F9F67 /* DeploymentDecodingTests.swift */,
@@ -269,6 +274,7 @@
 		8F1CA47D32079C69C4EC93B2 /* Stores */ = {
 			isa = PBXGroup;
 			children = (
+				4B8E1646018A41E4B657FCD1 /* AccountStore.swift */,
 				D3545AE8E2ED36C604261CA5 /* DeploymentDiffer.swift */,
 				4CF99D857F6976983FC10058 /* DeploymentStore.swift */,
 				F9AD3BD4C97F01F5F78655C3 /* SettingsStore.swift */,
@@ -424,6 +430,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				7083C60931A7FAF4117702F7 /* Account.swift in Sources */,
+				19B5F40443E37BC7B895F7BD /* AccountStore.swift in Sources */,
 				0896B269E22BEDAC3A345507 /* BuildEvent.swift in Sources */,
 				F64889057D7D62EE61C979DB /* CopyBuildErrorButton.swift in Sources */,
 				DA4DD48CC96DC990E9821642 /* CredentialStore.swift in Sources */,
@@ -472,6 +479,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				A5B800CA1CFEA886272B4614 /* AccountModelTests.swift in Sources */,
+				C7D5CF9B9FD399BD332EA03A /* AccountStoreTests.swift in Sources */,
 				C77275A2D77C23BA88536104 /* BuildErrorReportTests.swift in Sources */,
 				C32501748C010A55FF05059D /* CredentialStoreTests.swift in Sources */,
 				7A4B3B229FC65F9CFE905F71 /* DeploymentDecodingTests.swift in Sources */,
