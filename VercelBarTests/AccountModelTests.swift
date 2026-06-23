@@ -40,4 +40,22 @@ extension AccountModelTests {
                            source: .keychain(account: "kc-2"))
         XCTAssertFalse(acct.isReadOnly)
     }
+
+    func test_projectKey_storageRoundTrip() {
+        let id = UUID()
+        let key = ProjectKey(provider: .vercel, accountId: id, projectId: "prj_abc")
+        let parsed = ProjectKey(storageString: key.storageString)
+        XCTAssertEqual(parsed, key)
+    }
+
+    func test_projectKey_distinguishesAccounts() {
+        let a = ProjectKey(provider: .vercel, accountId: UUID(), projectId: "same")
+        let b = ProjectKey(provider: .vercel, accountId: UUID(), projectId: "same")
+        XCTAssertNotEqual(a, b)               // same project name, different account → different key
+        XCTAssertNotEqual(a.storageString, b.storageString)
+    }
+
+    func test_projectKey_rejectsMalformedString() {
+        XCTAssertNil(ProjectKey(storageString: "garbage"))
+    }
 }
