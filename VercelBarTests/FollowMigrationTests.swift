@@ -23,10 +23,11 @@ final class FollowMigrationTests: XCTestCase {
         let d = UserDefaults(suiteName: UUID().uuidString)!
         d.set(["x"], forKey: "disabledProjects")
         let s = SettingsStore(defaults: d)
-        s.migrateLegacyFollowData(cliAccountId: UUID())
-        // Re-running with a different account must NOT re-import (already migrated).
+        s.migrateLegacyFollowData(cliAccountId: UUID())   // first call; consumes disabledProjects, sets guard
+        d.set(["x"], forKey: "disabledProjects")           // re-arm legacy data
         let other = UUID()
-        s.migrateLegacyFollowData(cliAccountId: other)
+        s.migrateLegacyFollowData(cliAccountId: other)     // second call must be a no-op due to the guard
+        // If the guard works, "x" was NOT imported under `other`, so auto-follow (default on) makes it followed:
         XCTAssertTrue(s.isFollowed(ProjectKey(provider: .vercel, accountId: other, projectId: "x")))
     }
 }

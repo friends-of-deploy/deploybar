@@ -72,7 +72,7 @@ final class SettingsStore {
         defaults.set(Array(disabled), forKey: Keys.disabledProjects)
     }
 
-    // MARK: – Follow API
+    // MARK: - Follow API
 
     var autoFollowNewProjects: Bool {
         get { defaults.bool(forKey: Keys.autoFollowNew) }
