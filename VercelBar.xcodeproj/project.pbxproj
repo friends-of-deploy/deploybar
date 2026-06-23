@@ -59,6 +59,7 @@
 		D1667E241654FCA9EEF0F63E /* LinkBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8B70AB9D6E098BC0B77E77A5 /* LinkBuilder.swift */; };
 		D196290BD9C34833F4F202FF /* DiffTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4D69DA023EBAFCE848185E50 /* DiffTests.swift */; };
 		D23C06192806C75EED434464 /* ScopeSwitchTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 768B042EB983F6B8F7F3A76D /* ScopeSwitchTests.swift */; };
+		D2E4902368D517FDBDC7183C /* DeploymentProviderClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD4E85D267C484D15B854B84 /* DeploymentProviderClient.swift */; };
 		D427C9E35F8FE1E3C6412AD5 /* Project.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2D994A04FCD299AD4509667B /* Project.swift */; };
 		D96D8143EED87ACD2A5A6C43 /* LocalizationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 52A479E4AD09AE8A89F11E40 /* LocalizationTests.swift */; };
 		DA4DD48CC96DC990E9821642 /* CredentialStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 909B86C65FCA8F1A24ACBF64 /* CredentialStore.swift */; };
@@ -147,6 +148,7 @@
 		CA651924A9648591BF0269BA /* Pasteboard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Pasteboard.swift; sourceTree = "<group>"; };
 		CAC3AF0ECB353DD95AAA35DB /* Account.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Account.swift; sourceTree = "<group>"; };
 		CBFFA64F70040EDBE7CAB821 /* DeploymentStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeploymentStoreTests.swift; sourceTree = "<group>"; };
+		CD4E85D267C484D15B854B84 /* DeploymentProviderClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeploymentProviderClient.swift; sourceTree = "<group>"; };
 		CE9E064C3518F5B8E9A41F4B /* NotificationGatingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationGatingTests.swift; sourceTree = "<group>"; };
 		D1508EC08F607CACA6343503 /* Tooltip.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Tooltip.swift; sourceTree = "<group>"; };
 		D3519715DEEEB8F83E33061D /* CredentialStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CredentialStoreTests.swift; sourceTree = "<group>"; };
@@ -303,6 +305,7 @@
 		FE8F174C37CC17374E6E7CC3 /* Clients */ = {
 			isa = PBXGroup;
 			children = (
+				CD4E85D267C484D15B854B84 /* DeploymentProviderClient.swift */,
 				913D23F6BF613FF46716F049 /* ScopeResolver.swift */,
 				A851593303CEF20307379166 /* TeamsClient.swift */,
 				25DB342BB5C5EF627C8E5F00 /* TokenProvider.swift */,
@@ -421,6 +424,7 @@
 				340CCEB9C07732D831E757C4 /* Deployment.swift in Sources */,
 				FEA4FB28D722884E66FAF4F9 /* DeploymentDiffer.swift in Sources */,
 				F8F1C7210CFCE7D4D6424389 /* DeploymentFavicon.swift in Sources */,
+				D2E4902368D517FDBDC7183C /* DeploymentProviderClient.swift in Sources */,
 				77C19C02237C6A72B7B7996B /* DeploymentRow.swift in Sources */,
 				298D9E6CB2C08E8D1CC597F6 /* DeploymentStore.swift in Sources */,
 				FF211ADE4AA5B98A9D514FD4 /* FaviconCache.swift in Sources */,
