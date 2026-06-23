@@ -2,6 +2,9 @@ import SwiftUI
 
 struct DeploymentRow: View {
     let deployment: Deployment
+    /// Brandable favicon host resolved from the deployment's project (the
+    /// deployment's own hashed URL has no favicon). See `DeploymentFavicon`.
+    let faviconHost: String?
     @State private var hovering = false
 
     var body: some View {
@@ -9,7 +12,7 @@ struct DeploymentRow: View {
             // Status dot + favicon cluster
             HStack(spacing: 6) {
                 StatusDot(state: deployment.state)
-                FaviconView(host: deployment.url)
+                FaviconView(host: faviconHost)
                     .frame(width: 18, height: 18)
             }
 
