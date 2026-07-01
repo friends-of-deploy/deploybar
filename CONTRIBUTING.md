@@ -1,4 +1,4 @@
-# Contributing to VercelBar
+# Contributing to DeployBar
 
 Thank you for your interest in contributing! Whether it's a bug fix, a new feature, or a documentation improvement, contributions are very welcome.
 
@@ -14,10 +14,10 @@ Thank you for your interest in contributing! Whether it's a bug fix, a new featu
 Clone the repo and regenerate the Xcode project:
 
 ```sh
-git clone https://github.com/radnok/vercelbar.git
-cd vercelbar
+git clone https://github.com/friends-of-deploy/deploybar.git
+cd deploybar
 xcodegen generate
-open VercelBar.xcodeproj
+open DeployBar.xcodeproj
 ```
 
 > **Source of truth**: `project.yml` defines the project structure — not the `.xcodeproj`.
@@ -28,13 +28,13 @@ open VercelBar.xcodeproj
 **Build:**
 
 ```sh
-xcodebuild -project VercelBar.xcodeproj -scheme VercelBar -destination 'platform=macOS' build
+xcodebuild -project DeployBar.xcodeproj -scheme DeployBar -destination 'platform=macOS' build
 ```
 
 **Run tests:**
 
 ```sh
-xcodebuild test -project VercelBar.xcodeproj -scheme VercelBar -destination 'platform=macOS'
+xcodebuild test -project DeployBar.xcodeproj -scheme DeployBar -destination 'platform=macOS'
 ```
 
 ## Architecture Conventions
@@ -53,7 +53,7 @@ Pure logic (clients, services, stores) belongs in unit tests. Views are build-ve
 
 ## Tests & Fixtures
 
-There are ~98 unit tests. Tests use real-shaped (but anonymized) JSON fixtures located in `VercelBarTests/Fixtures/`.
+There are ~98 unit tests. Tests use real-shaped (but anonymized) JSON fixtures located in `DeployBarTests/Fixtures/`.
 
 **Keep fixtures anonymized.** Never commit real account data, API tokens, email addresses, or identifiable project names. If you add a new fixture, anonymize all personal or account-specific fields before committing.
 

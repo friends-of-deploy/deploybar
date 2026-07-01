@@ -35,15 +35,15 @@ jobs:
       - name: Build
         run: |
           xcodebuild build \
-            -project VercelBar.xcodeproj \
-            -scheme VercelBar \
+            -project DeployBar.xcodeproj \
+            -scheme DeployBar \
             -destination 'platform=macOS' \
             CODE_SIGNING_ALLOWED=NO
 
       - name: Test
         run: |
           xcodebuild test \
-            -project VercelBar.xcodeproj \
-            -scheme VercelBar \
+            -project DeployBar.xcodeproj \
+            -scheme DeployBar \
             -destination 'platform=macOS' \
             CODE_SIGNING_ALLOWED=NO

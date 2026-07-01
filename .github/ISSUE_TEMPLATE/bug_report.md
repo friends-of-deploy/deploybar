@@ -21,7 +21,7 @@ What actually happened.
 
 **Environment**
 - macOS version:
-- VercelBar version / commit:
+- DeployBar version / commit:
 - Does `vercel whoami` work in your terminal? (helps rule out an auth/login issue)
 
 **Screenshots**
@@ -31,7 +31,7 @@ If applicable, add screenshots of the menu bar popover or settings.
 Recent app logs can help. Run:
 
 ```sh
-log show --predicate 'process == "VercelBar"' --last 5m
+log show --predicate 'process == "DeployBar"' --last 5m
 ```
 
 Paste any relevant output (redact anything private).

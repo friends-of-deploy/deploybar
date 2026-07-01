@@ -61,11 +61,11 @@ jobs:
         run: |
           set -euo pipefail
           xcodebuild archive \
-            -project VercelBar.xcodeproj \
-            -scheme VercelBar \
+            -project DeployBar.xcodeproj \
+            -scheme DeployBar \
             -configuration Release \
             -destination 'generic/platform=macOS' \
-            -archivePath "$RUNNER_TEMP/VercelBar.xcarchive" \
+            -archivePath "$RUNNER_TEMP/DeployBar.xcarchive" \
             DEVELOPMENT_TEAM="$APPLE_TEAM_ID" \
             "CODE_SIGN_IDENTITY=Developer ID Application"
 
@@ -76,7 +76,7 @@ jobs:
           set -euo pipefail
           sed "s/__TEAM_ID__/$APPLE_TEAM_ID/" .github/release/ExportOptions.plist > "$RUNNER_TEMP/ExportOptions.plist"
           xcodebuild -exportArchive \
-            -archivePath "$RUNNER_TEMP/VercelBar.xcarchive" \
+            -archivePath "$RUNNER_TEMP/DeployBar.xcarchive" \
             -exportPath "$RUNNER_TEMP/export" \
             -exportOptionsPlist "$RUNNER_TEMP/ExportOptions.plist"
 
@@ -85,15 +85,15 @@ jobs:
         run: |
           set -euo pipefail
           VERSION="${{ steps.version.outputs.version }}"
-          DMG="$RUNNER_TEMP/VercelBar-$VERSION.dmg"
+          DMG="$RUNNER_TEMP/DeployBar-$VERSION.dmg"
           create-dmg \
-            --volname "VercelBar $VERSION" \
+            --volname "DeployBar $VERSION" \
             --window-size 540 380 \
             --icon-size 100 \
-            --icon "VercelBar.app" 140 190 \
+            --icon "DeployBar.app" 140 190 \
             --app-drop-link 400 190 \
             "$DMG" \
-            "$RUNNER_TEMP/export/VercelBar.app"
+            "$RUNNER_TEMP/export/DeployBar.app"
           echo "path=$DMG" >> "$GITHUB_OUTPUT"
 
       - name: Notarize & staple
@@ -129,7 +129,7 @@ jobs:
           files: ${{ steps.dmg.outputs.path }}
           generate_release_notes: true
 
-      # --- Optional: auto-bump the Homebrew cask in RadnoK/homebrew-tap ---
+      # --- Optional: auto-bump the Homebrew cask in friends-of-deploy/homebrew-tap ---
       # Requires a TAP_REPO_TOKEN secret (a PAT with `contents:write` on the tap repo).
       # Remove this step if you prefer to update the cask by hand.
       - name: Bump Homebrew cask
@@ -140,12 +140,12 @@ jobs:
           SHA256: ${{ steps.sha.outputs.sha256 }}
         run: |
           set -euo pipefail
-          git clone "https://x-access-token:$GH_TOKEN@github.com/RadnoK/homebrew-tap.git" tap
+          git clone "https://x-access-token:$GH_TOKEN@github.com/friends-of-deploy/homebrew-tap.git" tap
           cd tap
-          CASK="Casks/vercelbar.rb"
+          CASK="Casks/deploybar.rb"
           sed -i '' -E "s/version \"[^\"]*\"/version \"$VERSION\"/" "$CASK"
           sed -i '' -E "s/sha256 \"[^\"]*\"/sha256 \"$SHA256\"/" "$CASK"
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git commit -am "vercelbar $VERSION"
+          git commit -am "deploybar $VERSION"
           git push

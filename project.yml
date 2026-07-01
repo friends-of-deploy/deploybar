@@ -1,6 +1,6 @@
-name: VercelBar
+name: DeployBar
 options:
-  bundleIdPrefix: io.eightlines.vercelbar
+  bundleIdPrefix: io.eightlines.deploybar
   deploymentTarget:
     macOS: "14.0"
   createIntermediateGroups: true
@@ -15,18 +15,18 @@ settings:
     SWIFT_STRICT_CONCURRENCY: minimal
 
 targets:
-  VercelBar:
+  DeployBar:
     type: application
     platform: macOS
     sources:
-      - VercelBar
+      - DeployBar
     entitlements:
-      path: VercelBar/VercelBar.entitlements
+      path: DeployBar/DeployBar.entitlements
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: io.eightlines.vercelbar.VercelBar
+        PRODUCT_BUNDLE_IDENTIFIER: io.eightlines.deploybar.DeployBar
         INFOPLIST_KEY_LSUIElement: "YES"
-        INFOPLIST_KEY_CFBundleDisplayName: VercelBar
+        INFOPLIST_KEY_CFBundleDisplayName: DeployBar
         INFOPLIST_KEY_CFBundleDevelopmentRegion: en
         GENERATE_INFOPLIST_FILE: "YES"
         MARKETING_VERSION: "1.0.0"
@@ -45,29 +45,29 @@ targets:
           ENABLE_HARDENED_RUNTIME: "YES"
           OTHER_CODE_SIGN_FLAGS: "--timestamp"
 
-  VercelBarTests:
+  DeployBarTests:
     type: bundle.unit-test
     platform: macOS
     sources:
-      - path: VercelBarTests
+      - path: DeployBarTests
         excludes:
           - Fixtures
-      - path: VercelBarTests/Fixtures
+      - path: DeployBarTests/Fixtures
         buildPhase: resources
     dependencies:
-      - target: VercelBar
+      - target: DeployBar
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: io.eightlines.vercelbar.VercelBarTests
+        PRODUCT_BUNDLE_IDENTIFIER: io.eightlines.deploybar.DeployBarTests
         CODE_SIGNING_ALLOWED: "NO"
 
 schemes:
-  VercelBar:
+  DeployBar:
     build:
       targets:
-        VercelBar: all
+        DeployBar: all
     test:
       targets:
-        - VercelBarTests
+        - DeployBarTests
     run:
       config: Debug

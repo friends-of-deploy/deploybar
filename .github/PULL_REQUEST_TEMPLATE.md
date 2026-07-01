@@ -12,7 +12,7 @@
 
 ## How was this tested?
 
-- [ ] `xcodebuild test -project VercelBar.xcodeproj -scheme VercelBar -destination 'platform=macOS'` passes
+- [ ] `xcodebuild test -project DeployBar.xcodeproj -scheme DeployBar -destination 'platform=macOS'` passes
 - [ ] Manually verified in the running app
 
 ## Checklist
