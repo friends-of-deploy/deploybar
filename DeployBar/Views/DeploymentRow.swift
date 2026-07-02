@@ -68,6 +68,8 @@ struct DeploymentRow: View {
 
     /// Pure rule for the row's default click target.
     static func primaryDestination(for d: Deployment) -> URL? {
+        // A provider-supplied canonical page (e.g. a GitHub run) always wins.
+        if let web = d.webURL { return web }
         if d.state == .error {
             return d.inspectorUrl.flatMap(URL.init(string:))
                 ?? LinkBuilder.liveURL(host: d.url)   // fall back to site if no logs URL
@@ -102,7 +104,13 @@ struct DeploymentRow: View {
             if deployment.state == .error {
                 CopyBuildErrorButton(deployment: deployment, copyError: copyError)
             }
-            if let live = LinkBuilder.liveURL(host: deployment.url) {
+            if let web = deployment.webURL {
+                IconActionButton(
+                    systemImage: "arrow.up.forward.app",
+                    url: web,
+                    help: String(localized: "Open deployment", comment: "Action tooltip")
+                )
+            } else if let live = LinkBuilder.liveURL(host: deployment.url) {
                 IconActionButton(
                     systemImage: "arrow.up.forward.app",
                     url: live,

@@ -32,6 +32,31 @@ struct Project: Decodable, Identifiable {
         latestStateRaw.map { DeploymentState(apiValue: $0) } ?? .unknown
     }
 
+    /// Memberwise initializer for non-Vercel providers (e.g. `GitHubClient`) that
+    /// build a `Project` from their own JSON rather than the Vercel decoder.
+    init(id: String, name: String, repoType: String? = nil, repoOrg: String? = nil,
+         repoName: String? = nil, productionBranch: String? = nil,
+         productionURL: String? = nil, productionAliases: [String] = [],
+         framework: String? = nil, nodeVersion: String? = nil,
+         envCount: Int = 0, cronCount: Int = 0, hasAnalytics: Bool = false,
+         latestStateRaw: String? = nil, latestCreatedAt: Double? = nil) {
+        self.id = id
+        self.name = name
+        self.repoType = repoType
+        self.repoOrg = repoOrg
+        self.repoName = repoName
+        self.productionBranch = productionBranch
+        self.productionURL = productionURL
+        self.productionAliases = productionAliases
+        self.framework = framework
+        self.nodeVersion = nodeVersion
+        self.envCount = envCount
+        self.cronCount = cronCount
+        self.hasAnalytics = hasAnalytics
+        self.latestStateRaw = latestStateRaw
+        self.latestCreatedAt = latestCreatedAt
+    }
+
     private enum CodingKeys: String, CodingKey {
         case id, name, link, latestDeployments, targets, framework, nodeVersion, env, crons, webAnalytics
     }

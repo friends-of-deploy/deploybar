@@ -39,7 +39,7 @@ struct PopoverView: View {
                         } else {
                             ForEach(store.sourcedProjects) { sourced in
                                 HStack(spacing: 0) {
-                                    ProjectRow(project: sourced.project, scopeName: store.scopeName)
+                                    ProjectRow(project: sourced.project, scopeName: store.scopeName, provider: sourced.account.provider)
                                     if store.connectedAccounts.count > 1 {
                                         SourceBadge(account: sourced.account)
                                             .padding(.trailing, 14)
