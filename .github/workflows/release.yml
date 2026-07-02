@@ -14,6 +14,11 @@ jobs:
     name: Build, sign, notarize & publish
     runs-on: macos-14
 
+    # Hoisted here because `secrets.*` cannot be used in a step-level `if:`.
+    # The optional Homebrew step gates on `env.TAP_REPO_TOKEN` instead.
+    env:
+      TAP_REPO_TOKEN: ${{ secrets.TAP_REPO_TOKEN }}
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -133,9 +138,9 @@ jobs:
       # Requires a TAP_REPO_TOKEN secret (a PAT with `contents:write` on the tap repo).
       # Remove this step if you prefer to update the cask by hand.
       - name: Bump Homebrew cask
-        if: ${{ secrets.TAP_REPO_TOKEN != '' }}
+        if: ${{ env.TAP_REPO_TOKEN != '' }}
         env:
-          GH_TOKEN: ${{ secrets.TAP_REPO_TOKEN }}
+          GH_TOKEN: ${{ env.TAP_REPO_TOKEN }}
           VERSION: ${{ steps.version.outputs.version }}
           SHA256: ${{ steps.sha.outputs.sha256 }}
         run: |
