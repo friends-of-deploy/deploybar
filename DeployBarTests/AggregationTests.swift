@@ -51,7 +51,8 @@ extension AggregationTests {
         let store = AccountStore(defaults: UserDefaults(suiteName: UUID().uuidString)!,
                                  credentials: InMemoryCredentialStore(),
                                  detectCLI: { false },
-                                 reloadCLIToken: { nil })
+                                 reloadCLIToken: { nil },
+                                 detectGitHubCLI: { false })
         let a = store.addKeychainAccount(provider: .vercel, label: "Acct A", token: "tok-a")
         let b = store.addKeychainAccount(provider: .vercel, label: "Acct B", token: "tok-b")
         return (store, a, b)
@@ -123,7 +124,8 @@ extension AggregationTests {
         let accountStore = AccountStore(defaults: UserDefaults(suiteName: UUID().uuidString)!,
                                         credentials: InMemoryCredentialStore(),
                                         detectCLI: { true },
-                                        reloadCLIToken: { "cli-token" })
+                                        reloadCLIToken: { "cli-token" },
+                                        detectGitHubCLI: { false })
         let cli = accountStore.cliAccount!
         let kc = accountStore.addKeychainAccount(provider: .vercel, label: "Acct KC", token: "tok-kc")
         let settings = SettingsStore(defaults: UserDefaults(suiteName: UUID().uuidString)!)

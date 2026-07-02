@@ -109,9 +109,15 @@ final class DeploymentStore {
         // Default factory: build a real VercelClient for .vercel accounts using
         // the token from this store's AccountStore; nil for other providers.
         self.makeClient = makeClient ?? { [accountStore] account, teamId in
-            guard account.provider == .vercel,
-                  let token = accountStore.token(for: account) else { return nil }
-            return VercelClient(credentials: VercelCredentials(token: token, teamId: teamId))
+            guard let token = accountStore.token(for: account) else { return nil }
+            switch account.provider {
+            case .vercel:
+                return VercelClient(credentials: VercelCredentials(token: token, teamId: teamId))
+            case .github:
+                return GitHubClient(token: token)
+            case .azureDevOps:
+                return nil        // unimplemented provider → skipped silently
+            }
         }
 
         // Seed CLI-scope team/user clients + token baseline when a CLI account exists.
@@ -143,7 +149,8 @@ final class DeploymentStore {
         let legacyStore = AccountStore(defaults: UserDefaults(suiteName: "legacy-\(UUID().uuidString)")!,
                                        credentials: InMemoryCredentialStore(),
                                        detectCLI: { true },
-                                       reloadCLIToken: { reloadToken() ?? creds.token })
+                                       reloadCLIToken: { reloadToken() ?? creds.token },
+                                       detectGitHubCLI: { false })
         let legacyAccount = legacyStore.cliAccount!
 
         self.init(accountStore: legacyStore,

@@ -136,6 +136,14 @@ private struct AccountsSettingsTab: View {
     @State private var newLabel: String = ""
     @State private var newToken: String = ""
 
+    private func sourceCaption(for account: Account) -> String {
+        switch account.source {
+        case .vercelCLI:  return String(localized: "From Vercel CLI", comment: "CLI account source caption")
+        case .githubCLI:  return String(localized: "From GitHub CLI", comment: "CLI account source caption")
+        case .keychain:   return String(localized: "Token", comment: "Keychain account source caption")
+        }
+    }
+
     var body: some View {
         Form {
             ForEach(Provider.allCases.filter { provider in
@@ -146,9 +154,7 @@ private struct AccountsSettingsTab: View {
                         HStack {
                             VStack(alignment: .leading, spacing: 2) {
                                 Text(account.label)
-                                Text(account.isReadOnly
-                                     ? String(localized: "From Vercel CLI", comment: "CLI account source caption")
-                                     : String(localized: "Token", comment: "Keychain account source caption"))
+                                Text(sourceCaption(for: account))
                                     .font(.caption)
                                     .foregroundStyle(.secondary)
                             }
