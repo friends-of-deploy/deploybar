@@ -43,6 +43,31 @@ struct GHCommit: Decodable, Sendable {
     let message: String?
 }
 
+struct GHJobsResponse: Decodable, Sendable {
+    let jobs: [GHJob]
+}
+
+struct GHJob: Decodable, Sendable {
+    let id: Int
+    let name: String
+    let status: String?
+    let conclusion: String?
+    let htmlURL: String?
+    let steps: [GHStep]?
+
+    enum CodingKeys: String, CodingKey {
+        case id, name, status, conclusion, steps
+        case htmlURL = "html_url"
+    }
+}
+
+struct GHStep: Decodable, Sendable {
+    let name: String
+    let status: String?
+    let conclusion: String?
+    let number: Int?
+}
+
 struct GHRun: Decodable, Sendable {
     let id: Int
     let name: String?

@@ -104,6 +104,53 @@ final class GitHubClientTests: XCTestCase {
         XCTAssertTrue(deployments.isEmpty)
     }
 
+    // MARK: - Failure report (copy error)
+
+    func test_failureReport_summarizesFailedJobsAndLogTail() async throws {
+        let jobsJSON = """
+        {"jobs":[
+          {"id":11,"name":"build","status":"completed","conclusion":"success","html_url":"h","steps":[]},
+          {"id":12,"name":"test","status":"completed","conclusion":"failure","html_url":"h",
+           "steps":[{"name":"Checkout","status":"completed","conclusion":"success","number":1},
+                    {"name":"Run tests","status":"completed","conclusion":"failure","number":3}]}
+        ]}
+        """
+        let logText = "setup\ninstall\nError: boom\n"
+        let client = makeClient { req in
+            if req.url!.path.contains("/jobs/12/logs") { return (200, logText) }
+            if req.url!.path.contains("/actions/runs/100/jobs") { return (200, jobsJSON) }
+            return (200, "{}")
+        }
+        let dep = Deployment(uid: "100", name: "acme/web", stateRaw: "ERROR", url: "",
+                             createdAt: 0, commitRef: "main", commitMessage: "Fix things",
+                             webURL: URL(string: "https://github.com/acme/web/actions/runs/100"))
+
+        let report = try await client.failureReport(for: dep)
+        XCTAssertTrue(report.contains("GitHub Actions run failed"))
+        XCTAssertTrue(report.contains("Repository: acme/web"))
+        XCTAssertTrue(report.contains("Branch: main"))
+        XCTAssertTrue(report.contains("Failed job: test"))
+        XCTAssertTrue(report.contains("✗ Run tests"))
+        XCTAssertFalse(report.contains("✗ Checkout"))       // successful step excluded
+        XCTAssertFalse(report.contains("Failed job: build")) // successful job excluded
+        XCTAssertTrue(report.contains("Error: boom"))        // log tail included
+    }
+
+    func test_failureReport_toleratesMissingLog() async throws {
+        let jobsJSON = """
+        {"jobs":[{"id":12,"name":"deploy","status":"completed","conclusion":"failure","html_url":"h","steps":[]}]}
+        """
+        let client = makeClient { req in
+            if req.url!.path.contains("/logs") { return (500, "boom") }   // log fetch fails
+            return (200, jobsJSON)
+        }
+        let dep = Deployment(uid: "100", name: "acme/api", stateRaw: "ERROR", url: "", createdAt: 0,
+                             webURL: URL(string: "https://github.com/acme/api/actions/runs/100"))
+        let report = try await client.failureReport(for: dep)
+        XCTAssertTrue(report.contains("Failed job: deploy"))
+        XCTAssertFalse(report.contains("Job log (tail)"))    // gracefully omitted
+    }
+
     // MARK: - Auth
 
     func test_unauthorizedMapsToProviderError() async {

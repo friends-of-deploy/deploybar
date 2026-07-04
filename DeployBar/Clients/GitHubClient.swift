@@ -74,6 +74,30 @@ struct GitHubClient: Sendable {
         return all
     }
 
+    /// Builds a paste-ready failure report for a run: its failed jobs/steps plus
+    /// the tail of the first failed job's log (log fetch is best-effort).
+    /// `deployment.name` is the repo full name and `deployment.uid` is the run id.
+    func failureReport(for deployment: Deployment) async throws -> String {
+        let repo = deployment.name
+        let runId = deployment.uid
+        let data = try await get(path: "/repos/\(repo)/actions/runs/\(runId)/jobs", query: [])
+        let jobs = try Self.decoder.decode(GHJobsResponse.self, from: data).jobs
+        let failed = jobs.filter { GitHubActionsErrorReport.isFailure($0.conclusion) }
+
+        var logTail: String?
+        if let job = failed.first {
+            logTail = try? await jobLog(repoFullName: repo, jobId: job.id)
+        }
+        return GitHubActionsErrorReport.make(deployment: deployment, failedJobs: failed, logTail: logTail)
+    }
+
+    /// Plain-text log for a single job. GitHub 302-redirects to a storage host;
+    /// URLSession follows it. Best-effort — callers tolerate a throw.
+    private func jobLog(repoFullName: String, jobId: Int) async throws -> String {
+        let data = try await get(path: "/repos/\(repoFullName)/actions/jobs/\(jobId)/logs", query: [])
+        return String(decoding: data, as: UTF8.self)
+    }
+
     private func runs(for repo: GHRepo, perPage: Int) async throws -> [Deployment] {
         let data = try await get(path: "/repos/\(repo.fullName)/actions/runs",
                                  query: [URLQueryItem(name: "per_page", value: String(perPage))])

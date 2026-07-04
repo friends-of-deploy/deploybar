@@ -250,12 +250,42 @@ final class DeploymentStore {
         return .ready
     }
 
-    // MARK: - Build-error copy (legacy single-scope helper)
+    // MARK: - Build-error copy (provider-aware)
 
-    /// Fetch the failed deployment's build log and copy a context-rich error
-    /// report to the clipboard. Only works for the legacy Vercel scope.
+    /// The account a displayed deployment came from, so we can build the correct
+    /// provider client for its logs.
+    private func account(forDeploymentUid uid: String) -> Account? {
+        unfilteredDeployments.first { $0.deployment.uid == uid }?.account
+            ?? sourcedDeployments.first { $0.deployment.uid == uid }?.account
+    }
+
+    /// Fetch the failed deployment's / run's log and copy a context-rich error
+    /// report to the clipboard. Works for Vercel deployments and GitHub Actions runs.
     @discardableResult
     func copyBuildError(for deployment: Deployment) async -> Bool {
+        if let account = account(forDeploymentUid: deployment.uid),
+           let token = accountStore.token(for: account) {
+            switch account.provider {
+            case .vercel:
+                let client = VercelClient(credentials: VercelCredentials(token: token, teamId: scopeTeamId(for: account)))
+                guard let events = try? await client.buildEvents(deploymentId: deployment.uid) else { return false }
+                Pasteboard.copy(BuildErrorReport.make(for: deployment, events: events))
+                return true
+            case .github:
+                let client = GitHubClient(token: token)
+                guard let report = try? await client.failureReport(for: deployment) else { return false }
+                Pasteboard.copy(report)
+                return true
+            case .azureDevOps:
+                return false
+            }
+        }
+        return await legacyCopyBuildError(for: deployment)
+    }
+
+    /// Legacy single-scope path, retained for the convenience-init test suites
+    /// where the client's transport is injected via `legacyClientFactory`.
+    private func legacyCopyBuildError(for deployment: Deployment) async -> Bool {
         guard let creds = legacyCredentials,
               let factory = legacyClientFactory else { return false }
         let client = factory(VercelCredentials(token: cliBaseToken ?? creds.token, teamId: currentTeamId))
