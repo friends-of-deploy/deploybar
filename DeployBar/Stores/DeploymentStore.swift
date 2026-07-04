@@ -1,7 +1,7 @@
 import Foundation
 import Observation
 
-enum IconState: Equatable { case ready, building, failure, loggedOut }
+enum IconState: Equatable { case ready, building, failure, loggedOut, idle }
 
 /// Factory that builds a per-scope provider client for an account+team, pulling
 /// the token via the AccountStore. Returns nil for unimplemented providers (skipped).
@@ -238,16 +238,28 @@ final class DeploymentStore {
 
     // MARK: - Icon state
 
+    /// Green/red are an "alert" that clears when the user opens the popover; a
+    /// fresh success/failure re-raises it. Orange (something running) is a live
+    /// status, never acknowledged away.
+    private var alertAcknowledged = false
+
+    /// Acknowledge the current green/red alert — called when the popover opens.
+    func acknowledge() { alertAcknowledged = true }
+
     var iconState: IconState {
         if isLoggedOut { return .loggedOut }
-        return Self.iconState(for: sourcedDeployments.map(\.deployment.state))
+        let base = Self.baseState(for: sourcedDeployments.map(\.deployment.state))
+        if base == .building { return .building }   // running → orange, always shown
+        if alertAcknowledged { return .idle }       // green/red cleared until a new event
+        return base                                 // .failure / .ready / .idle
     }
 
-    /// Pure derivation: failure > building > ready.
-    static func iconState(for states: [DeploymentState]) -> IconState {
-        if states.contains(.error) { return .failure }
+    /// Pure derivation (no acknowledgment): running > failure > ready.
+    static func baseState(for states: [DeploymentState]) -> IconState {
         if states.contains(where: { $0 == .building || $0 == .queued }) { return .building }
-        return .ready
+        if states.contains(.error) { return .failure }
+        if states.contains(.ready) { return .ready }
+        return .idle
     }
 
     // MARK: - Build-error copy (provider-aware)
@@ -413,6 +425,12 @@ final class DeploymentStore {
         let transitions = DeploymentDiffer.transitions(previous: previousSnapshots, current: snapshots)
         notifier.handle(transitions)
         previousSnapshots = snapshots
+
+        // A fresh success/failure re-raises the green/red icon alert the user
+        // last acknowledged by opening the popover.
+        if transitions.contains(where: { $0.event == .success || $0.event == .failure }) {
+            alertAcknowledged = false
+        }
 
         self.sourceErrors = errors
         self.lastUpdated = Date()

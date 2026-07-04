@@ -175,3 +175,74 @@ extension AggregationTests {
                       "keychain deployment unaffected by the CLI name fallback")
     }
 }
+
+// MARK: - Icon alert acknowledgment + provider split
+
+extension AggregationTests {
+    private func singleDeploymentStore(_ dep: Deployment, provider: Provider = .vercel)
+        -> (DeploymentStore, AccountStore) {
+        let accountStore = AccountStore(defaults: UserDefaults(suiteName: UUID().uuidString)!,
+                                        credentials: InMemoryCredentialStore(),
+                                        detectCLI: { false }, reloadCLIToken: { nil },
+                                        detectGitHubCLI: { false })
+        let acct = accountStore.addKeychainAccount(provider: provider, label: "A", token: "t")
+        let settings = SettingsStore(defaults: UserDefaults(suiteName: UUID().uuidString)!)
+        let store = DeploymentStore(
+            accountStore: accountStore, settings: settings,
+            makeClient: { account, _ in
+                account.id == acct.id ? StubClient(deps: [dep], projs: [], error: nil) : nil
+            },
+            reloadToken: { nil }, authRetryBackoff: .zero)
+        return (store, accountStore)
+    }
+
+    func test_iconFailureAlertClearsOnAcknowledge() async {
+        let (store, _) = singleDeploymentStore(
+            Fixtures.deployment(uid: "e1", name: "alpha", state: "ERROR"))
+        await store.poll()
+        XCTAssertEqual(store.iconState, .failure)   // unacknowledged failure → red
+        store.acknowledge()
+        XCTAssertEqual(store.iconState, .idle)       // cleared on open
+    }
+
+    func test_iconReadyAlertClearsOnAcknowledge() async {
+        let (store, _) = singleDeploymentStore(
+            Fixtures.deployment(uid: "r1", name: "alpha", state: "READY"))
+        await store.poll()
+        XCTAssertEqual(store.iconState, .ready)
+        store.acknowledge()
+        XCTAssertEqual(store.iconState, .idle)
+    }
+
+    func test_iconBuildingNeverAcknowledgedAway() async {
+        let (store, _) = singleDeploymentStore(
+            Fixtures.deployment(uid: "b1", name: "alpha", state: "BUILDING"))
+        await store.poll()
+        XCTAssertEqual(store.iconState, .building)
+        store.acknowledge()
+        XCTAssertEqual(store.iconState, .building)   // running stays orange
+    }
+
+    func test_splitsVercelAndGitHubDeployments() async {
+        let accountStore = AccountStore(defaults: UserDefaults(suiteName: UUID().uuidString)!,
+                                        credentials: InMemoryCredentialStore(),
+                                        detectCLI: { false }, reloadCLIToken: { nil },
+                                        detectGitHubCLI: { false })
+        let v = accountStore.addKeychainAccount(provider: .vercel, label: "V", token: "tv")
+        let g = accountStore.addKeychainAccount(provider: .github, label: "G", token: "tg")
+        let settings = SettingsStore(defaults: UserDefaults(suiteName: UUID().uuidString)!)
+        let store = DeploymentStore(
+            accountStore: accountStore, settings: settings,
+            makeClient: { account, _ in
+                account.id == v.id
+                    ? StubClient(deps: [Fixtures.deployment(uid: "vd", name: "web")], projs: [], error: nil)
+                    : StubClient(deps: [Fixtures.deployment(uid: "gd", name: "acme/web")], projs: [], error: nil)
+            },
+            reloadToken: { nil }, authRetryBackoff: .zero)
+        _ = g
+        await store.poll()
+        XCTAssertTrue(store.hasGitHubSource)
+        XCTAssertEqual(store.vercelDeployments.map(\.deployment.uid), ["vd"])
+        XCTAssertEqual(store.githubDeployments.map(\.deployment.uid), ["gd"])
+    }
+}

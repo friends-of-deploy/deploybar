@@ -20,12 +20,12 @@ final class DeploymentStoreTests: XCTestCase {
     }
 
     func test_iconStateDerivation() {
-        XCTAssertEqual(DeploymentStore.iconState(for: [.ready, .building]), .building)
-        XCTAssertEqual(DeploymentStore.iconState(for: [.ready, .error]), .failure)
-        XCTAssertEqual(DeploymentStore.iconState(for: [.error, .building]), .failure) // failure wins
-        XCTAssertEqual(DeploymentStore.iconState(for: [.ready, .ready]), .ready)
-        XCTAssertEqual(DeploymentStore.iconState(for: []), .ready)
-        XCTAssertEqual(DeploymentStore.iconState(for: [.queued]), .building)
+        XCTAssertEqual(DeploymentStore.baseState(for: [.ready, .building]), .building)
+        XCTAssertEqual(DeploymentStore.baseState(for: [.ready, .error]), .failure)
+        XCTAssertEqual(DeploymentStore.baseState(for: [.error, .building]), .building) // running wins
+        XCTAssertEqual(DeploymentStore.baseState(for: [.ready, .ready]), .ready)
+        XCTAssertEqual(DeploymentStore.baseState(for: []), .idle)
+        XCTAssertEqual(DeploymentStore.baseState(for: [.queued]), .building)
     }
 
     func test_firstPollPopulatesAndClearsError() async throws {
