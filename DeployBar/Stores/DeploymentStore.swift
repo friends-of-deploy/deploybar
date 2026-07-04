@@ -26,6 +26,13 @@ final class DeploymentStore {
     var deployments: [Deployment] { sourcedDeployments.map(\.deployment) }
     var projects: [Project] { sourcedProjects.map(\.project) }
 
+    /// Real deployments (Vercel) vs GitHub Actions runs — shown in separate tabs,
+    /// since a workflow run is CI output, not a deployment.
+    var vercelDeployments: [SourcedDeployment] { sourcedDeployments.filter { $0.account.provider == .vercel } }
+    var githubDeployments: [SourcedDeployment] { sourcedDeployments.filter { $0.account.provider == .github } }
+    /// Whether any connected account is a GitHub source (gates the Actions tab).
+    var hasGitHubSource: Bool { accountStore.accounts.contains { $0.provider == .github } }
+
     /// Derived from `sourceErrors`: none → nil; one → its message; many → summary.
     var errorMessage: String? {
         // Only show the CLI-specific "run vercel login" copy when a CLI account

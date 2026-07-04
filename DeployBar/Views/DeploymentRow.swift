@@ -124,6 +124,15 @@ struct DeploymentRow: View {
                     help: String(localized: "Open build logs", comment: "Action tooltip")
                 )
             }
+            // GitHub runs (webURL set): a shortcut to the repo's Actions overview.
+            if deployment.webURL != nil,
+               let actions = LinkBuilder.githubActions(org: deployment.commitOrg, repo: deployment.commitRepo) {
+                IconActionButton(
+                    systemImage: "list.bullet.rectangle",
+                    url: actions,
+                    help: String(localized: "Open Actions", comment: "Action tooltip")
+                )
+            }
             if let commit = LinkBuilder.githubCommit(
                 org: deployment.commitOrg,
                 repo: deployment.commitRepo,
