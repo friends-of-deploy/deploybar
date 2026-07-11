@@ -15,8 +15,24 @@ enum LinkBuilder {
     }
     /// The repository's GitHub Actions overview page.
     static func githubActions(org: String?, repo: String?) -> URL? {
+        githubPage(org: org, repo: repo, path: "/actions")
+    }
+    /// The repository's open pull requests.
+    static func githubPulls(org: String?, repo: String?) -> URL? {
+        githubPage(org: org, repo: repo, path: "/pulls")
+    }
+    /// The repository's open issues.
+    static func githubIssues(org: String?, repo: String?) -> URL? {
+        githubPage(org: org, repo: repo, path: "/issues")
+    }
+    /// The repository's settings page.
+    static func githubRepoSettings(org: String?, repo: String?) -> URL? {
+        githubPage(org: org, repo: repo, path: "/settings")
+    }
+
+    private static func githubPage(org: String?, repo: String?, path: String) -> URL? {
         guard let org, let repo, !org.isEmpty, !repo.isEmpty else { return nil }
-        return URL(string: "https://github.com/\(org)/\(repo)/actions")
+        return URL(string: "https://github.com/\(org)/\(repo)\(path)")
     }
 
     // MARK: - Vercel dashboard deep links

@@ -131,8 +131,14 @@ struct GitHubClient: Sendable {
             repoOrg: repo.owner.login,
             repoName: repo.name,
             productionBranch: repo.defaultBranch,
-            productionURL: repo.homepage.flatMap { $0.isEmpty ? nil : $0 },
-            productionAliases: []
+            productionURL: host(fromHomepage: repo.homepage),
+            productionAliases: [],
+            framework: repo.language,          // primary language fills the framework chip
+            starCount: repo.stargazersCount,
+            openIssueCount: repo.openIssuesCount,
+            isPrivate: repo.isPrivate,
+            pushedAt: epochMs(repo.pushedAt),
+            iconURL: repo.owner.avatarURL
         )
     }
 
@@ -155,6 +161,15 @@ struct GitHubClient: Sendable {
             commitMessage: run.displayTitle ?? run.headCommit?.message ?? run.name,
             webURL: URL(string: run.htmlURL)
         )
+    }
+
+    /// GitHub `homepage` is free text — often a full URL, sometimes a bare host.
+    /// The shared `Project` model carries bare hosts (Vercel-style), which feed
+    /// both the live-site link and the favicon fetch, so extract one.
+    static func host(fromHomepage homepage: String?) -> String? {
+        guard let homepage, !homepage.isEmpty else { return nil }
+        if let url = URL(string: homepage), let host = url.host { return host }
+        return homepage.split(separator: "/").first.map(String.init)
     }
 
     /// Maps GitHub run `status`/`conclusion` onto the Vercel-shaped tokens that

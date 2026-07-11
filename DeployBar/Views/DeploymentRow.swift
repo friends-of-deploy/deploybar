@@ -5,6 +5,9 @@ struct DeploymentRow: View {
     /// Brandable favicon host resolved from the deployment's project (the
     /// deployment's own hashed URL has no favicon). See `DeploymentFavicon`.
     let faviconHost: String?
+    /// Direct icon URL fallback (e.g. a GitHub owner avatar) when the project
+    /// has no production domain to derive a favicon from.
+    var faviconDirectURL: String? = nil
     /// Fetches the build log for a failed deployment and copies a paste-ready
     /// error report to the clipboard. Returns true on success.
     let copyError: (Deployment) async -> Bool
@@ -15,7 +18,7 @@ struct DeploymentRow: View {
             // Status dot + favicon cluster
             HStack(spacing: 6) {
                 StatusDot(state: deployment.state)
-                FaviconView(host: faviconHost)
+                FaviconView(host: faviconHost, directURL: faviconDirectURL)
                     .frame(width: 18, height: 18)
             }
 
@@ -139,7 +142,7 @@ struct DeploymentRow: View {
                 sha: deployment.commitSha
             ) {
                 IconActionButton(
-                    systemImage: "chevron.left.forwardslash.chevron.right",
+                    systemImage: "apple.terminal",
                     url: commit,
                     help: String(localized: "Open commit on the repository", comment: "Action tooltip")
                 )

@@ -27,6 +27,14 @@ struct Project: Decodable, Identifiable {
     let hasAnalytics: Bool
     let latestStateRaw: String?
     let latestCreatedAt: Double?
+    // Repository stats (GitHub sources only; nil for Vercel projects).
+    let starCount: Int?
+    let openIssueCount: Int?
+    let isPrivate: Bool?
+    let pushedAt: Double?
+    /// Direct icon URL (e.g. a GitHub owner avatar), used when there is no
+    /// production domain to derive a favicon from.
+    let iconURL: String?
 
     var latestState: DeploymentState {
         latestStateRaw.map { DeploymentState(apiValue: $0) } ?? .unknown
@@ -39,7 +47,9 @@ struct Project: Decodable, Identifiable {
          productionURL: String? = nil, productionAliases: [String] = [],
          framework: String? = nil, nodeVersion: String? = nil,
          envCount: Int = 0, cronCount: Int = 0, hasAnalytics: Bool = false,
-         latestStateRaw: String? = nil, latestCreatedAt: Double? = nil) {
+         latestStateRaw: String? = nil, latestCreatedAt: Double? = nil,
+         starCount: Int? = nil, openIssueCount: Int? = nil, isPrivate: Bool? = nil,
+         pushedAt: Double? = nil, iconURL: String? = nil) {
         self.id = id
         self.name = name
         self.repoType = repoType
@@ -55,6 +65,11 @@ struct Project: Decodable, Identifiable {
         self.hasAnalytics = hasAnalytics
         self.latestStateRaw = latestStateRaw
         self.latestCreatedAt = latestCreatedAt
+        self.starCount = starCount
+        self.openIssueCount = openIssueCount
+        self.isPrivate = isPrivate
+        self.pushedAt = pushedAt
+        self.iconURL = iconURL
     }
 
     private enum CodingKeys: String, CodingKey {
@@ -113,6 +128,9 @@ struct Project: Decodable, Identifiable {
             productionURL = try pc.decodeIfPresent(String.self, forKey: .url)
             productionAliases = (try? pc.decodeIfPresent([String].self, forKey: .alias)) ?? []
         } else { productionURL = nil; productionAliases = [] }
+
+        // Repo stats / icon are GitHub-only.
+        starCount = nil; openIssueCount = nil; isPrivate = nil; pushedAt = nil; iconURL = nil
     }
 
     /// The best host for fetching a favicon / opening the live site: prefers a

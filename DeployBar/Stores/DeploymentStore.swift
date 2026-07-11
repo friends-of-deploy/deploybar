@@ -26,12 +26,9 @@ final class DeploymentStore {
     var deployments: [Deployment] { sourcedDeployments.map(\.deployment) }
     var projects: [Project] { sourcedProjects.map(\.project) }
 
-    /// Real deployments (Vercel) vs GitHub Actions runs — shown in separate tabs,
-    /// since a workflow run is CI output, not a deployment.
-    var vercelDeployments: [SourcedDeployment] { sourcedDeployments.filter { $0.account.provider == .vercel } }
-    var githubDeployments: [SourcedDeployment] { sourcedDeployments.filter { $0.account.provider == .github } }
-    /// Whether any connected account is a GitHub source (gates the Actions tab).
-    var hasGitHubSource: Bool { accountStore.accounts.contains { $0.provider == .github } }
+    /// Every fetched project across all sources, unfiltered — for the Settings
+    /// Projects tab, so follow toggles stay reachable regardless of the active scope.
+    var allSourcedProjects: [SourcedProject] { unfilteredProjects }
 
     /// Derived from `sourceErrors`: none → nil; one → its message; many → summary.
     var errorMessage: String? {
@@ -47,10 +44,6 @@ final class DeploymentStore {
         default: return "\(sourceErrors.count) accounts couldn't refresh"
         }
     }
-
-    /// Number of connected accounts regardless of the active display filter.
-    /// Use this for badge gating so the badges don't disappear when a filter is active.
-    var connectedSourceCount: Int { accountStore.accounts.count }
 
     // MARK: Dependencies
     @ObservationIgnored private let accountStore: AccountStore
@@ -224,6 +217,15 @@ final class DeploymentStore {
         accountStore.accounts.first { $0.id == id }
     }
 
+    /// Newest fetched deployment for a project (same account, matching name) —
+    /// enriches rows whose project API carries no latest-deployment info
+    /// (GitHub repos get their CI state from the runs already fetched).
+    func latestDeployment(for sp: SourcedProject) -> Deployment? {
+        unfilteredDeployments.first {
+            $0.account.id == sp.account.id && $0.deployment.name == sp.project.name
+        }?.deployment
+    }
+
     /// Human-readable name for a scope, e.g. the team name or "personal".
     func scopeName(accountId: UUID, teamId: String?) -> String? {
         guard let acct = account(accountId) else { return nil }
@@ -320,6 +322,21 @@ final class DeploymentStore {
         if let u = try? await userClient.user() { self.user = u }
     }
 
+    // MARK: - Scope selection (dropdown)
+
+    /// Select the scope shown in the popover: filters deployments AND projects to
+    /// that account (+ team), and for the Vercel CLI account also switches the
+    /// polled team.
+    func select(accountId: UUID, teamId: String?) async {
+        filter = .scope(accountId: accountId, teamId: teamId)
+        scopeName = scopeName(accountId: accountId, teamId: teamId) ?? "all"
+        if account(accountId)?.source == .vercelCLI, teamId != currentTeamId {
+            await switchTeam(teamId)
+        } else {
+            applyDisplayFilter()
+        }
+    }
+
     // MARK: - Legacy team switching (thin compatibility, CLI/first account)
 
     /// Switch the active team for the CLI account at runtime. `availableScopes`
@@ -328,8 +345,12 @@ final class DeploymentStore {
     /// the choice, silently re-seeds the notification baseline, and re-polls.
     func switchScope(teamId: String?, scopeName: String) async {
         guard teamId != currentTeamId else { return }
-        currentTeamId = teamId
         self.scopeName = scopeName
+        await switchTeam(teamId)
+    }
+
+    private func switchTeam(_ teamId: String?) async {
+        currentTeamId = teamId
         settings.selectedTeamId = teamId ?? "__personal__"
         previousSnapshots = nil               // silent re-seed for the new scope
         sourcedDeployments = []
@@ -342,6 +363,15 @@ final class DeploymentStore {
 
     func start() {
         notifier.requestAuthorization()
+        // Default selection: the CLI account (with its persisted team) or, failing
+        // that, the first connected account — so the popover always shows exactly
+        // one source.
+        if filter == .all,
+           let account = accountStore.cliAccount ?? accountStore.accounts.first {
+            let teamId = account.source == .vercelCLI ? currentTeamId : nil
+            filter = .scope(accountId: account.id, teamId: teamId)
+            scopeName = scopeName(accountId: account.id, teamId: teamId) ?? account.label
+        }
         Task { await poll() }
         Task { await loadTeams() }
         Task { await loadUser() }

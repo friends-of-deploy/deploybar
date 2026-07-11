@@ -6,11 +6,15 @@ struct ProjectRow: View {
     /// The source provider, used to gate provider-specific actions (the Vercel
     /// dashboard deep links don't apply to a GitHub repository, for example).
     var provider: Provider = .vercel
+    /// Newest fetched deployment/run for this project — fills the state badge and
+    /// last-activity line for providers whose project API carries no latest-
+    /// deployment info (GitHub repos).
+    var latestRun: Deployment? = nil
     @State private var hovering = false
 
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
-            FaviconView(host: project.faviconHost)
+            FaviconView(host: project.faviconHost, directURL: project.iconURL)
                 .frame(width: 18, height: 18)
                 .padding(.top, 1)
 
@@ -25,7 +29,7 @@ struct ProjectRow: View {
             Spacer(minLength: 8)
 
             VStack(alignment: .trailing, spacing: 6) {
-                StateBadge(state: project.latestState)
+                StateBadge(state: displayState)
                 actions
             }
         }
@@ -47,6 +51,15 @@ struct ProjectRow: View {
             if let fw = project.framework {
                 MetaItem(symbol: "cube", text: fw)
             }
+            if let stars = project.starCount, stars > 0 {
+                MetaItem(symbol: "star", text: "\(stars)")
+            }
+            if let issues = project.openIssueCount, issues > 0 {
+                MetaItem(symbol: "exclamationmark.circle", text: "\(issues)")
+            }
+            if project.isPrivate == true {
+                MetaItem(symbol: "lock", text: String(localized: "private", comment: "Private repository chip"))
+            }
             if project.cronCount > 0 {
                 MetaItem(
                     symbol: "clock.arrow.circlepath",
@@ -58,6 +71,19 @@ struct ProjectRow: View {
         .foregroundStyle(.secondary)
         .lineLimit(1)
         .truncationMode(.tail)
+    }
+
+    // MARK: - State (project's own latest deployment, else the newest fetched run)
+
+    private var displayState: DeploymentState {
+        if project.latestStateRaw != nil { return project.latestState }
+        return latestRun?.state ?? .unknown
+    }
+
+    /// Timestamp backing the last-activity line, matching `displayState`'s source.
+    private var displayStateCreatedAt: Double? {
+        if project.latestStateRaw != nil { return project.latestCreatedAt }
+        return latestRun?.createdAt
     }
 
     // MARK: - Last-deploy line
@@ -72,14 +98,25 @@ struct ProjectRow: View {
     }
 
     private var lastDeployText: String? {
-        switch project.latestState {
+        let isCI = provider == .github
+        switch displayState {
         case .building, .queued:
-            return String(localized: "building…", comment: "Build in progress")
+            return isCI
+                ? String(localized: "running…", comment: "CI run in progress")
+                : String(localized: "building…", comment: "Build in progress")
         case .ready, .error, .canceled, .unknown:
-            guard let created = project.latestCreatedAt else { return nil }
+            guard let created = displayStateCreatedAt else {
+                // No deployment/run info at all — fall back to the repo's last push.
+                guard let pushed = project.pushedAt else { return nil }
+                return String(localized: "pushed \(DeploymentTiming.relative(epochMs: pushed))",
+                              comment: "Last push time when no CI runs are known")
+            }
             let when = DeploymentTiming.relative(epochMs: created)
-            switch project.latestState {
-            case .ready: return String(localized: "✓ deployed \(when)", comment: "Last successful deploy time")
+            switch displayState {
+            case .ready:
+                return isCI
+                    ? String(localized: "✓ passed \(when)", comment: "Last successful CI run time")
+                    : String(localized: "✓ deployed \(when)", comment: "Last successful deploy time")
             case .error: return String(localized: "⚠ failed \(when)", comment: "Last failed deploy time")
             default:     return when
             }
@@ -100,24 +137,45 @@ struct ProjectRow: View {
             }
             if let repo = LinkBuilder.githubRepo(org: project.repoOrg, repo: project.repoName) {
                 IconActionButton(
-                    systemImage: "chevron.left.forwardslash.chevron.right",
+                    systemImage: "apple.terminal",
                     url: repo,
                     help: String(localized: "Open repository", comment: "Action tooltip")
                 )
             }
 
-            // Overflow menu holds Vercel dashboard deep links; only meaningful
-            // for Vercel-sourced projects.
-            if provider == .vercel {
-                overflowMenu
+            // Overflow menu holds provider-specific deep links.
+            switch provider {
+            case .vercel:      vercelOverflowMenu
+            case .github:      githubOverflowMenu
+            case .azureDevOps: EmptyView()
             }
         }
         .foregroundStyle(.secondary)
         .imageScale(.medium)
     }
 
-    @ViewBuilder private var overflowMenu: some View {
-        Menu {
+    @ViewBuilder private var githubOverflowMenu: some View {
+        overflowMenu {
+            if let pulls = LinkBuilder.githubPulls(org: project.repoOrg, repo: project.repoName) {
+                Link(destination: pulls) {
+                    Label("Pull requests", systemImage: "arrow.triangle.merge")
+                }
+            }
+            if let issues = LinkBuilder.githubIssues(org: project.repoOrg, repo: project.repoName) {
+                Link(destination: issues) {
+                    Label("Issues", systemImage: "exclamationmark.circle")
+                }
+            }
+            if let settings = LinkBuilder.githubRepoSettings(org: project.repoOrg, repo: project.repoName) {
+                Link(destination: settings) {
+                    Label("Repository settings", systemImage: "gearshape")
+                }
+            }
+        }
+    }
+
+    @ViewBuilder private var vercelOverflowMenu: some View {
+        overflowMenu {
             if let env = LinkBuilder.projectEnv(scope: scopeName, project: project.name) {
                 Link(destination: env) {
                     Label("Environment variables", systemImage: "key.fill")
@@ -139,6 +197,13 @@ struct ProjectRow: View {
                     Label("Vercel dashboard", systemImage: "square.grid.2x2")
                 }
             }
+        }
+    }
+
+    /// Shared ⋯ menu chrome around provider-specific links.
+    private func overflowMenu(@ViewBuilder _ content: () -> some View) -> some View {
+        Menu {
+            content()
         } label: {
             Image(systemName: "ellipsis.circle")
         }

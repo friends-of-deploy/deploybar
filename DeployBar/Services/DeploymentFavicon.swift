@@ -16,4 +16,10 @@ enum DeploymentFavicon {
         }
         return deployment.url.isEmpty ? nil : deployment.url
     }
+
+    /// Direct icon URL fallback (e.g. a GitHub owner avatar) from the matching
+    /// project, for deployments whose project has no production domain at all.
+    static func directURL(for deployment: Deployment, in projects: [Project]) -> String? {
+        projects.first { $0.name == deployment.name }?.iconURL
+    }
 }

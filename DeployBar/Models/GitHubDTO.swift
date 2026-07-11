@@ -22,12 +22,21 @@ struct GHRepo: Decodable, Sendable {
     let htmlURL: String
     let defaultBranch: String?
     let homepage: String?
+    let language: String?
+    let stargazersCount: Int?
+    let openIssuesCount: Int?
+    let isPrivate: Bool?
+    let pushedAt: String?
 
     enum CodingKeys: String, CodingKey {
-        case id, name, owner, homepage
+        case id, name, owner, homepage, language
         case fullName = "full_name"
         case htmlURL = "html_url"
         case defaultBranch = "default_branch"
+        case stargazersCount = "stargazers_count"
+        case openIssuesCount = "open_issues_count"
+        case isPrivate = "private"
+        case pushedAt = "pushed_at"
     }
 }
 

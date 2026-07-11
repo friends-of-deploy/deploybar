@@ -18,6 +18,24 @@ final class LinkBuilderTests: XCTestCase {
         XCTAssertNil(LinkBuilder.githubCommit(org: nil, repo: "app", sha: "x"))
         XCTAssertNil(LinkBuilder.liveURL(host: nil))
         XCTAssertNil(LinkBuilder.githubRepo(org: "acme", repo: nil))
+        XCTAssertNil(LinkBuilder.githubPulls(org: "", repo: "app"))
+    }
+
+    func test_githubRepoDeepLinks() {
+        XCTAssertEqual(LinkBuilder.githubPulls(org: "acme", repo: "web")?.absoluteString,
+                       "https://github.com/acme/web/pulls")
+        XCTAssertEqual(LinkBuilder.githubIssues(org: "acme", repo: "web")?.absoluteString,
+                       "https://github.com/acme/web/issues")
+        XCTAssertEqual(LinkBuilder.githubRepoSettings(org: "acme", repo: "web")?.absoluteString,
+                       "https://github.com/acme/web/settings")
+    }
+
+    func test_homepageHostNormalization() {
+        XCTAssertEqual(GitHubClient.host(fromHomepage: "https://acme.dev"), "acme.dev")
+        XCTAssertEqual(GitHubClient.host(fromHomepage: "https://acme.dev/docs"), "acme.dev")
+        XCTAssertEqual(GitHubClient.host(fromHomepage: "acme.dev"), "acme.dev")
+        XCTAssertNil(GitHubClient.host(fromHomepage: ""))
+        XCTAssertNil(GitHubClient.host(fromHomepage: nil))
     }
 
     func test_projectDashboardDeepLinks() {

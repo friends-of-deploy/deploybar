@@ -11,7 +11,9 @@ final class GitHubClientTests: XCTestCase {
     private static let reposJSON = """
     [
       {"id":1,"name":"web","full_name":"acme/web","owner":{"login":"acme","avatar_url":"https://x/a.png"},
-       "html_url":"https://github.com/acme/web","default_branch":"main","homepage":"https://acme.dev"},
+       "html_url":"https://github.com/acme/web","default_branch":"main","homepage":"https://acme.dev",
+       "language":"Swift","stargazers_count":42,"open_issues_count":3,"private":true,
+       "pushed_at":"2024-01-02T00:00:00Z"},
       {"id":2,"name":"api","full_name":"acme/api","owner":{"login":"acme","avatar_url":null},
        "html_url":"https://github.com/acme/api","default_branch":"trunk","homepage":""}
     ]
@@ -54,10 +56,23 @@ final class GitHubClientTests: XCTestCase {
         XCTAssertEqual(projects[0].repoOrg, "acme")
         XCTAssertEqual(projects[0].repoName, "web")
         XCTAssertEqual(projects[0].productionBranch, "main")
-        XCTAssertEqual(projects[0].productionURL, "https://acme.dev")
+        // Homepage URL is normalized to a bare host (Vercel-style), so the
+        // live-site link and favicon fetch work unchanged.
+        XCTAssertEqual(projects[0].productionURL, "acme.dev")
+        // Repo stats surface on the project row.
+        XCTAssertEqual(projects[0].framework, "Swift")          // language fills the framework chip
+        XCTAssertEqual(projects[0].starCount, 42)
+        XCTAssertEqual(projects[0].openIssueCount, 3)
+        XCTAssertEqual(projects[0].isPrivate, true)
+        XCTAssertEqual(projects[0].pushedAt, 1_704_153_600_000) // 2024-01-02T00:00:00Z
+        XCTAssertEqual(projects[0].iconURL, "https://x/a.png")  // owner avatar as row icon
         // Empty homepage collapses to nil.
         XCTAssertNil(projects[1].productionURL)
         XCTAssertEqual(projects[1].productionBranch, "trunk")
+        // Stats absent → nils, so Vercel-style chips stay hidden.
+        XCTAssertNil(projects[1].framework)
+        XCTAssertNil(projects[1].starCount)
+        XCTAssertNil(projects[1].iconURL)
     }
 
     // MARK: - deployments()

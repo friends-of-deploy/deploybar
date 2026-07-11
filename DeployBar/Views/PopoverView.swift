@@ -9,15 +9,13 @@ struct PopoverView: View {
         VStack(spacing: 0) {
             TopBar(store: store, openSettings: openSettings)
 
-            TabSelector(tabs: availableTabs, selection: $tab)
+            TabSelector(tabs: PopoverTab.allCases, selection: $tab)
 
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: 0) {
                     switch tab {
                     case .deployments:
-                        deploymentsList(store.vercelDeployments, empty: "No deployments")
-                    case .actions:
-                        deploymentsList(store.githubDeployments, empty: "No workflow runs")
+                        deploymentsList(store.sourcedDeployments, empty: "No deployments")
                     case .projects:
                         projectsList
                     }
@@ -34,13 +32,7 @@ struct PopoverView: View {
         .onAppear {
             // Opening the popover acknowledges the current green/red icon alert.
             store.acknowledge()
-            if !availableTabs.contains(tab) { tab = .deployments }
         }
-    }
-
-    /// The Actions tab appears only when a GitHub source is connected.
-    private var availableTabs: [PopoverTab] {
-        store.hasGitHubSource ? [.deployments, .actions, .projects] : [.deployments, .projects]
     }
 
     @ViewBuilder
@@ -50,17 +42,12 @@ struct PopoverView: View {
         } else {
             let allProjects = store.sourcedProjects.map(\.project)
             ForEach(items) { sourced in
-                HStack(spacing: 0) {
-                    DeploymentRow(
-                        deployment: sourced.deployment,
-                        faviconHost: DeploymentFavicon.host(for: sourced.deployment, in: allProjects),
-                        copyError: { await store.copyBuildError(for: $0) }
-                    )
-                    if store.connectedAccounts.count > 1 {
-                        SourceBadge(account: sourced.account)
-                            .padding(.trailing, 14)
-                    }
-                }
+                DeploymentRow(
+                    deployment: sourced.deployment,
+                    faviconHost: DeploymentFavicon.host(for: sourced.deployment, in: allProjects),
+                    faviconDirectURL: DeploymentFavicon.directURL(for: sourced.deployment, in: allProjects),
+                    copyError: { await store.copyBuildError(for: $0) }
+                )
             }
         }
     }
@@ -71,24 +58,20 @@ struct PopoverView: View {
             EmptyListPlaceholder(label: "No projects")
         } else {
             ForEach(store.sourcedProjects) { sourced in
-                HStack(spacing: 0) {
-                    ProjectRow(project: sourced.project, scopeName: store.scopeName, provider: sourced.account.provider)
-                    if store.connectedAccounts.count > 1 {
-                        SourceBadge(account: sourced.account)
-                            .padding(.trailing, 14)
-                    }
-                }
+                ProjectRow(project: sourced.project,
+                           scopeName: store.scopeName,
+                           provider: sourced.account.provider,
+                           latestRun: store.latestDeployment(for: sourced))
             }
         }
     }
 }
 
 enum PopoverTab: CaseIterable {
-    case deployments, actions, projects
+    case deployments, projects
     var title: String {
         switch self {
         case .deployments: return String(localized: "Deployments", comment: "Tab title")
-        case .actions:     return String(localized: "Actions", comment: "Tab title")
         case .projects:    return String(localized: "Projects", comment: "Tab title")
         }
     }
@@ -122,10 +105,11 @@ private struct TopBar: View {
         .background(.quaternary.opacity(0.4))
     }
 
-    /// Label reflects the active CLI scope (the one being polled).
+    /// Label reflects the selected scope (account + team).
     private var filterLabel: String {
-        if let cli = store.connectedAccounts.first(where: { $0.source == .vercelCLI }) {
-            return store.scopeName(accountId: cli.id, teamId: store.currentTeamId) ?? cli.label
+        if case .scope(let accountId, let teamId) = store.filter,
+           let name = store.scopeName(accountId: accountId, teamId: teamId) {
+            return name
         }
         return String(localized: "All", comment: "Filter: show all sources")
     }
@@ -140,11 +124,9 @@ private struct TopBar: View {
                         ForEach(accounts) { account in
                             let scopes = store.scopes(for: account)
                             ForEach(scopes) { scope in
-                                let isActive = account.source == .vercelCLI
-                                    && scope.teamId == store.currentTeamId
+                                let isActive = store.filter == .scope(accountId: account.id, teamId: scope.teamId)
                                 Button {
-                                    let name = store.scopeName(accountId: account.id, teamId: scope.teamId) ?? account.label
-                                    Task { await store.switchScope(teamId: scope.teamId, scopeName: name) }
+                                    Task { await store.select(accountId: account.id, teamId: scope.teamId) }
                                 } label: {
                                     let name = store.scopeName(accountId: account.id, teamId: scope.teamId) ?? account.label
                                     if isActive {

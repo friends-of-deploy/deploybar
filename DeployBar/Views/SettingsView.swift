@@ -19,7 +19,7 @@ struct SettingsView: View {
             AccountsSettingsTab(accountStore: accountStore)
                 .tabItem { Label(String(localized: "Accounts", comment: "Settings tab title"), systemImage: "person.2.crop.square.stack") }
         }
-        .frame(width: 460)
+        .frame(width: 540)
     }
 }
 
@@ -51,7 +51,7 @@ private struct GeneralSettingsTab: View {
         }
         .formStyle(.grouped)
         .scrollDisabled(true)
-        .frame(height: 220)
+        .frame(height: 240)
     }
 
     private var intervalBinding: Binding<Int> {
@@ -78,7 +78,7 @@ private struct NotificationSettingsTab: View {
         }
         .formStyle(.grouped)
         .scrollDisabled(true)
-        .frame(height: 220)
+        .frame(height: 240)
     }
 
     private func bind(_ keyPath: ReferenceWritableKeyPath<SettingsStore, Bool>) -> Binding<Bool> {
@@ -91,6 +91,15 @@ private struct NotificationSettingsTab: View {
 private struct ProjectsSettingsTab: View {
     let settings: SettingsStore
     let store: DeploymentStore
+    @State private var query = ""
+
+    /// All projects (across accounts), alphabetical, narrowed by the filter field.
+    private var filtered: [SourcedProject] {
+        let all = store.allSourcedProjects
+            .sorted { $0.project.name.localizedCaseInsensitiveCompare($1.project.name) == .orderedAscending }
+        guard !query.isEmpty else { return all }
+        return all.filter { $0.project.name.localizedCaseInsensitiveContains(query) }
+    }
 
     var body: some View {
         Form {
@@ -104,26 +113,51 @@ private struct ProjectsSettingsTab: View {
                 )
             }
 
-            Section {
-                if store.sourcedProjects.isEmpty {
+            if store.allSourcedProjects.isEmpty {
+                Section(String(localized: "Projects", comment: "Projects tab section header")) {
                     Text(String(localized: "No projects loaded yet.", comment: "Projects tab empty state"))
                         .foregroundStyle(.secondary)
-                } else {
-                    ForEach(store.sourcedProjects) { sp in
-                        Toggle(sp.project.name, isOn: Binding(
-                            get: { store.isFollowed(sp) },
-                            set: { store.setFollowed(sp, $0) }
-                        ))
+                }
+            } else {
+                Section {
+                    TextField(
+                        String(localized: "Filter projects", comment: "Projects tab filter field placeholder"),
+                        text: $query
+                    )
+                }
+
+                // One section per account, so long multi-source lists stay scannable.
+                ForEach(store.connectedAccounts) { account in
+                    let items = filtered.filter { $0.account.id == account.id }
+                    if !items.isEmpty {
+                        Section {
+                            ForEach(items) { sp in
+                                Toggle(sp.project.name, isOn: Binding(
+                                    get: { store.isFollowed(sp) },
+                                    set: { store.setFollowed(sp, $0) }
+                                ))
+                            }
+                        } header: {
+                            Text(account.label)
+                        }
                     }
                 }
-            } header: {
-                Text(String(localized: "Projects", comment: "Projects tab section header"))
-            } footer: {
-                Text(String(localized: "Unfollowed projects are hidden from the menu and never notify.", comment: "Projects tab footer"))
+
+                if !query.isEmpty, filtered.isEmpty {
+                    Section {
+                        Text(String(localized: "No projects match “\(query)”.", comment: "Projects tab filter empty state"))
+                            .foregroundStyle(.secondary)
+                    }
+                }
+
+                Section {
+                } footer: {
+                    Text(String(localized: "Unfollowed projects are hidden from the menu and never notify.", comment: "Projects tab footer"))
+                }
             }
         }
         .formStyle(.grouped)
-        .frame(height: 360)
+        .frame(height: 520)
     }
 }
 
@@ -200,6 +234,6 @@ private struct AccountsSettingsTab: View {
             }
         }
         .formStyle(.grouped)
-        .frame(height: 420)
+        .frame(height: 480)
     }
 }

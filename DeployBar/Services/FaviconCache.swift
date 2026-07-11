@@ -15,21 +15,35 @@ actor FaviconCache {
         try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
     }
 
-    func image(for host: String?) async -> NSImage? {
-        guard let host, !host.isEmpty else { return nil }
-        let key = host as NSString
+    /// Icon for a host's favicon, falling back to a direct image URL (e.g. a
+    /// GitHub owner avatar) when no host is available.
+    func image(for host: String?, directURL: String? = nil) async -> NSImage? {
+        if let host, !host.isEmpty {
+            // Try sources in order of fidelity: the site's own favicon first
+            // (real brand icon), then Google's favicon service as a fallback.
+            return await cachedImage(key: host, candidates: FaviconURL.candidates(forHost: host))
+        }
+        if let directURL, !directURL.isEmpty, let url = URL(string: directURL) {
+            return await cachedImage(key: directURL, candidates: [url])
+        }
+        return nil
+    }
+
+    private func cachedImage(key keyString: String, candidates: [URL]) async -> NSImage? {
+        let key = keyString as NSString
         if let cached = memory.object(forKey: key) { return cached }
 
-        let safe = host.replacingOccurrences(of: "/", with: "_")
+        let safe = keyString
+            .replacingOccurrences(of: "/", with: "_")
+            .replacingOccurrences(of: ":", with: "_")
+            .replacingOccurrences(of: "?", with: "_")
         let fileURL = dir.appendingPathComponent("\(safe).png")
         if let data = try? Data(contentsOf: fileURL), let img = NSImage(data: data) {
             memory.setObject(img, forKey: key)
             return img
         }
 
-        // Try sources in order of fidelity: the site's own favicon first
-        // (real brand icon), then Google's favicon service as a fallback.
-        for url in FaviconURL.candidates(forHost: host) {
+        for url in candidates {
             if let img = await fetchImage(url) {
                 // Re-encode to PNG so the on-disk cache is always a decodable image.
                 if let png = img.pngData() { try? png.write(to: fileURL) }

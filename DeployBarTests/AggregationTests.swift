@@ -223,7 +223,9 @@ extension AggregationTests {
         XCTAssertEqual(store.iconState, .building)   // running stays orange
     }
 
-    func test_splitsVercelAndGitHubDeployments() async {
+    /// Selecting an account in the dropdown must show ONLY that account's rows —
+    /// including a GitHub account, whose "deployments" are its Actions runs.
+    func test_selectScopeShowsOnlyThatAccount() async {
         let accountStore = AccountStore(defaults: UserDefaults(suiteName: UUID().uuidString)!,
                                         credentials: InMemoryCredentialStore(),
                                         detectCLI: { false }, reloadCLIToken: { nil },
@@ -235,14 +237,28 @@ extension AggregationTests {
             accountStore: accountStore, settings: settings,
             makeClient: { account, _ in
                 account.id == v.id
-                    ? StubClient(deps: [Fixtures.deployment(uid: "vd", name: "web")], projs: [], error: nil)
-                    : StubClient(deps: [Fixtures.deployment(uid: "gd", name: "acme/web")], projs: [], error: nil)
+                    ? StubClient(deps: [Fixtures.deployment(uid: "vd", name: "web")],
+                                 projs: [Fixtures.project(id: "pv", name: "web")], error: nil)
+                    : StubClient(deps: [Fixtures.deployment(uid: "gd", name: "acme/web")],
+                                 projs: [Fixtures.project(id: "pg", name: "acme/web")], error: nil)
             },
             reloadToken: { nil }, authRetryBackoff: .zero)
-        _ = g
         await store.poll()
-        XCTAssertTrue(store.hasGitHubSource)
-        XCTAssertEqual(store.vercelDeployments.map(\.deployment.uid), ["vd"])
-        XCTAssertEqual(store.githubDeployments.map(\.deployment.uid), ["gd"])
+
+        await store.select(accountId: g.id, teamId: nil)
+        XCTAssertEqual(store.sourcedDeployments.map(\.deployment.uid), ["gd"])
+        XCTAssertEqual(store.sourcedProjects.map(\.project.id), ["pg"])
+
+        await store.select(accountId: v.id, teamId: nil)
+        XCTAssertEqual(store.sourcedDeployments.map(\.deployment.uid), ["vd"])
+        XCTAssertEqual(store.sourcedProjects.map(\.project.id), ["pv"])
+
+        // Settings' follow list stays unfiltered.
+        XCTAssertEqual(Set(store.allSourcedProjects.map(\.project.id)), ["pv", "pg"])
+
+        // A project row can borrow its newest fetched deployment (fills the CI
+        // state badge for GitHub repos, whose repo API has no latest-run info).
+        let vp = store.sourcedProjects.first { $0.project.id == "pv" }!
+        XCTAssertEqual(store.latestDeployment(for: vp)?.uid, "vd")
     }
 }

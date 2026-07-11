@@ -44,4 +44,17 @@ final class DeploymentFaviconTests: XCTestCase {
         let dep = try deployment(name: "blank", url: "")
         XCTAssertNil(DeploymentFavicon.host(for: dep, in: []))
     }
+
+    func test_directURLFallsBackToProjectIcon() throws {
+        // A GitHub run: empty deployment url, and its repo-project has no
+        // production domain — the owner avatar is the only icon source.
+        let dep = try deployment(name: "acme/web", url: "")
+        let repoProject = Project(id: "acme/web", name: "acme/web",
+                                  iconURL: "https://avatars.githubusercontent.com/u/1?v=4")
+        XCTAssertNil(DeploymentFavicon.host(for: dep, in: [repoProject]))
+        XCTAssertEqual(DeploymentFavicon.directURL(for: dep, in: [repoProject]),
+                       "https://avatars.githubusercontent.com/u/1?v=4")
+        // No matching project → no direct URL either.
+        XCTAssertNil(DeploymentFavicon.directURL(for: dep, in: []))
+    }
 }
