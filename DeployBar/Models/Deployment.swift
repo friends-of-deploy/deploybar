@@ -50,6 +50,12 @@ struct Deployment: Decodable, Identifiable {
     let commitRef: String?
     let commitMessage: String?
 
+    /// Provider-supplied canonical web page for this deployment/run. When set it
+    /// takes precedence over the Vercel host-based link building in the row.
+    /// Vercel leaves this `nil` (its links derive from `url`/`inspectorUrl`);
+    /// GitHub sets it to the workflow run's `html_url`.
+    let webURL: URL?
+
     var id: String { uid }
     var state: DeploymentState { DeploymentState(apiValue: stateRaw) }
 
@@ -62,9 +68,35 @@ struct Deployment: Decodable, Identifiable {
         case githubCommitOrg, githubCommitRepo, githubCommitSha, githubCommitRef, githubCommitMessage
     }
 
+    /// Memberwise initializer for non-Vercel providers (e.g. `GitHubClient`) that
+    /// build a `Deployment` from their own JSON rather than the Vercel decoder.
+    init(uid: String, name: String, stateRaw: String, target: String? = nil,
+         url: String, inspectorUrl: String? = nil, createdAt: Double,
+         buildingAt: Double? = nil, ready: Double? = nil, creatorUsername: String? = nil,
+         commitOrg: String? = nil, commitRepo: String? = nil, commitSha: String? = nil,
+         commitRef: String? = nil, commitMessage: String? = nil, webURL: URL? = nil) {
+        self.uid = uid
+        self.name = name
+        self.stateRaw = stateRaw
+        self.target = target
+        self.url = url
+        self.inspectorUrl = inspectorUrl
+        self.createdAt = createdAt
+        self.buildingAt = buildingAt
+        self.ready = ready
+        self.creatorUsername = creatorUsername
+        self.commitOrg = commitOrg
+        self.commitRepo = commitRepo
+        self.commitSha = commitSha
+        self.commitRef = commitRef
+        self.commitMessage = commitMessage
+        self.webURL = webURL
+    }
+
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         uid = try c.decode(String.self, forKey: .uid)
+        webURL = nil
         name = try c.decode(String.self, forKey: .name)
         stateRaw = try c.decode(String.self, forKey: .stateRaw)
         target = try c.decodeIfPresent(String.self, forKey: .target)

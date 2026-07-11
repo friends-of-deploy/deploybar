@@ -3,6 +3,9 @@ import SwiftUI
 struct ProjectRow: View {
     let project: Project
     let scopeName: String
+    /// The source provider, used to gate provider-specific actions (the Vercel
+    /// dashboard deep links don't apply to a GitHub repository, for example).
+    var provider: Provider = .vercel
     @State private var hovering = false
 
     var body: some View {
@@ -103,8 +106,11 @@ struct ProjectRow: View {
                 )
             }
 
-            // Overflow menu: analytics (conditional), settings, dashboard
-            overflowMenu
+            // Overflow menu holds Vercel dashboard deep links; only meaningful
+            // for Vercel-sourced projects.
+            if provider == .vercel {
+                overflowMenu
+            }
         }
         .foregroundStyle(.secondary)
         .imageScale(.medium)

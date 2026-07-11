@@ -1,6 +1,8 @@
 import Foundation
 
-enum VercelClientError: Error, Equatable { case unauthorized, http(Int) }
+/// Vercel keeps its historical name; it's now an alias of the shared error type
+/// so both `VercelClient` and `GitHubClient` throw one thing the aggregator handles.
+typealias VercelClientError = ProviderClientError
 
 struct VercelClient: Sendable {
     typealias Fetch = @Sendable (URLRequest) async throws -> (Data, URLResponse)

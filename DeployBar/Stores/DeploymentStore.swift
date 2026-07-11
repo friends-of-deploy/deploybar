@@ -1,7 +1,7 @@
 import Foundation
 import Observation
 
-enum IconState: Equatable { case ready, building, failure, loggedOut }
+enum IconState: Equatable { case ready, building, failure, loggedOut, idle }
 
 /// Factory that builds a per-scope provider client for an account+team, pulling
 /// the token via the AccountStore. Returns nil for unimplemented providers (skipped).
@@ -25,6 +25,13 @@ final class DeploymentStore {
     /// Legacy single-scope view of the merged data, for the not-yet-rewired app.
     var deployments: [Deployment] { sourcedDeployments.map(\.deployment) }
     var projects: [Project] { sourcedProjects.map(\.project) }
+
+    /// Real deployments (Vercel) vs GitHub Actions runs — shown in separate tabs,
+    /// since a workflow run is CI output, not a deployment.
+    var vercelDeployments: [SourcedDeployment] { sourcedDeployments.filter { $0.account.provider == .vercel } }
+    var githubDeployments: [SourcedDeployment] { sourcedDeployments.filter { $0.account.provider == .github } }
+    /// Whether any connected account is a GitHub source (gates the Actions tab).
+    var hasGitHubSource: Bool { accountStore.accounts.contains { $0.provider == .github } }
 
     /// Derived from `sourceErrors`: none → nil; one → its message; many → summary.
     var errorMessage: String? {
@@ -109,9 +116,15 @@ final class DeploymentStore {
         // Default factory: build a real VercelClient for .vercel accounts using
         // the token from this store's AccountStore; nil for other providers.
         self.makeClient = makeClient ?? { [accountStore] account, teamId in
-            guard account.provider == .vercel,
-                  let token = accountStore.token(for: account) else { return nil }
-            return VercelClient(credentials: VercelCredentials(token: token, teamId: teamId))
+            guard let token = accountStore.token(for: account) else { return nil }
+            switch account.provider {
+            case .vercel:
+                return VercelClient(credentials: VercelCredentials(token: token, teamId: teamId))
+            case .github:
+                return GitHubClient(token: token)
+            case .azureDevOps:
+                return nil        // unimplemented provider → skipped silently
+            }
         }
 
         // Seed CLI-scope team/user clients + token baseline when a CLI account exists.
@@ -143,7 +156,8 @@ final class DeploymentStore {
         let legacyStore = AccountStore(defaults: UserDefaults(suiteName: "legacy-\(UUID().uuidString)")!,
                                        credentials: InMemoryCredentialStore(),
                                        detectCLI: { true },
-                                       reloadCLIToken: { reloadToken() ?? creds.token })
+                                       reloadCLIToken: { reloadToken() ?? creds.token },
+                                       detectGitHubCLI: { false })
         let legacyAccount = legacyStore.cliAccount!
 
         self.init(accountStore: legacyStore,
@@ -224,24 +238,66 @@ final class DeploymentStore {
 
     // MARK: - Icon state
 
+    /// Green/red are an "alert" that clears when the user opens the popover; a
+    /// fresh success/failure re-raises it. Orange (something running) is a live
+    /// status, never acknowledged away.
+    private var alertAcknowledged = false
+
+    /// Acknowledge the current green/red alert — called when the popover opens.
+    func acknowledge() { alertAcknowledged = true }
+
     var iconState: IconState {
         if isLoggedOut { return .loggedOut }
-        return Self.iconState(for: sourcedDeployments.map(\.deployment.state))
+        let base = Self.baseState(for: sourcedDeployments.map(\.deployment.state))
+        if base == .building { return .building }   // running → orange, always shown
+        if alertAcknowledged { return .idle }       // green/red cleared until a new event
+        return base                                 // .failure / .ready / .idle
     }
 
-    /// Pure derivation: failure > building > ready.
-    static func iconState(for states: [DeploymentState]) -> IconState {
-        if states.contains(.error) { return .failure }
+    /// Pure derivation (no acknowledgment): running > failure > ready.
+    static func baseState(for states: [DeploymentState]) -> IconState {
         if states.contains(where: { $0 == .building || $0 == .queued }) { return .building }
-        return .ready
+        if states.contains(.error) { return .failure }
+        if states.contains(.ready) { return .ready }
+        return .idle
     }
 
-    // MARK: - Build-error copy (legacy single-scope helper)
+    // MARK: - Build-error copy (provider-aware)
 
-    /// Fetch the failed deployment's build log and copy a context-rich error
-    /// report to the clipboard. Only works for the legacy Vercel scope.
+    /// The account a displayed deployment came from, so we can build the correct
+    /// provider client for its logs.
+    private func account(forDeploymentUid uid: String) -> Account? {
+        unfilteredDeployments.first { $0.deployment.uid == uid }?.account
+            ?? sourcedDeployments.first { $0.deployment.uid == uid }?.account
+    }
+
+    /// Fetch the failed deployment's / run's log and copy a context-rich error
+    /// report to the clipboard. Works for Vercel deployments and GitHub Actions runs.
     @discardableResult
     func copyBuildError(for deployment: Deployment) async -> Bool {
+        if let account = account(forDeploymentUid: deployment.uid),
+           let token = accountStore.token(for: account) {
+            switch account.provider {
+            case .vercel:
+                let client = VercelClient(credentials: VercelCredentials(token: token, teamId: scopeTeamId(for: account)))
+                guard let events = try? await client.buildEvents(deploymentId: deployment.uid) else { return false }
+                Pasteboard.copy(BuildErrorReport.make(for: deployment, events: events))
+                return true
+            case .github:
+                let client = GitHubClient(token: token)
+                guard let report = try? await client.failureReport(for: deployment) else { return false }
+                Pasteboard.copy(report)
+                return true
+            case .azureDevOps:
+                return false
+            }
+        }
+        return await legacyCopyBuildError(for: deployment)
+    }
+
+    /// Legacy single-scope path, retained for the convenience-init test suites
+    /// where the client's transport is injected via `legacyClientFactory`.
+    private func legacyCopyBuildError(for deployment: Deployment) async -> Bool {
         guard let creds = legacyCredentials,
               let factory = legacyClientFactory else { return false }
         let client = factory(VercelCredentials(token: cliBaseToken ?? creds.token, teamId: currentTeamId))
@@ -369,6 +425,12 @@ final class DeploymentStore {
         let transitions = DeploymentDiffer.transitions(previous: previousSnapshots, current: snapshots)
         notifier.handle(transitions)
         previousSnapshots = snapshots
+
+        // A fresh success/failure re-raises the green/red icon alert the user
+        // last acknowledged by opening the popover.
+        if transitions.contains(where: { $0.event == .success || $0.event == .failure }) {
+            alertAcknowledged = false
+        }
 
         self.sourceErrors = errors
         self.lastUpdated = Date()

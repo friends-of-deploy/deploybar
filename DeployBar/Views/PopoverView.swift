@@ -9,44 +9,17 @@ struct PopoverView: View {
         VStack(spacing: 0) {
             TopBar(store: store, openSettings: openSettings)
 
-            TabSelector(selection: $tab)
+            TabSelector(tabs: availableTabs, selection: $tab)
 
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: 0) {
                     switch tab {
                     case .deployments:
-                        if store.sourcedDeployments.isEmpty {
-                            EmptyListPlaceholder(label: "No deployments")
-                        } else {
-                            let allProjects = store.sourcedProjects.map(\.project)
-                            ForEach(store.sourcedDeployments) { sourced in
-                                HStack(spacing: 0) {
-                                    DeploymentRow(
-                                        deployment: sourced.deployment,
-                                        faviconHost: DeploymentFavicon.host(for: sourced.deployment, in: allProjects),
-                                        copyError: { await store.copyBuildError(for: $0) }
-                                    )
-                                    if store.connectedAccounts.count > 1 {
-                                        SourceBadge(account: sourced.account)
-                                            .padding(.trailing, 14)
-                                    }
-                                }
-                            }
-                        }
+                        deploymentsList(store.vercelDeployments, empty: "No deployments")
+                    case .actions:
+                        deploymentsList(store.githubDeployments, empty: "No workflow runs")
                     case .projects:
-                        if store.sourcedProjects.isEmpty {
-                            EmptyListPlaceholder(label: "No projects")
-                        } else {
-                            ForEach(store.sourcedProjects) { sourced in
-                                HStack(spacing: 0) {
-                                    ProjectRow(project: sourced.project, scopeName: store.scopeName)
-                                    if store.connectedAccounts.count > 1 {
-                                        SourceBadge(account: sourced.account)
-                                            .padding(.trailing, 14)
-                                    }
-                                }
-                            }
-                        }
+                        projectsList
                     }
                 }
             }
@@ -58,14 +31,64 @@ struct PopoverView: View {
             }
         }
         .frame(width: 380)
+        .onAppear {
+            // Opening the popover acknowledges the current green/red icon alert.
+            store.acknowledge()
+            if !availableTabs.contains(tab) { tab = .deployments }
+        }
+    }
+
+    /// The Actions tab appears only when a GitHub source is connected.
+    private var availableTabs: [PopoverTab] {
+        store.hasGitHubSource ? [.deployments, .actions, .projects] : [.deployments, .projects]
+    }
+
+    @ViewBuilder
+    private func deploymentsList(_ items: [SourcedDeployment], empty: LocalizedStringKey) -> some View {
+        if items.isEmpty {
+            EmptyListPlaceholder(label: empty)
+        } else {
+            let allProjects = store.sourcedProjects.map(\.project)
+            ForEach(items) { sourced in
+                HStack(spacing: 0) {
+                    DeploymentRow(
+                        deployment: sourced.deployment,
+                        faviconHost: DeploymentFavicon.host(for: sourced.deployment, in: allProjects),
+                        copyError: { await store.copyBuildError(for: $0) }
+                    )
+                    if store.connectedAccounts.count > 1 {
+                        SourceBadge(account: sourced.account)
+                            .padding(.trailing, 14)
+                    }
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var projectsList: some View {
+        if store.sourcedProjects.isEmpty {
+            EmptyListPlaceholder(label: "No projects")
+        } else {
+            ForEach(store.sourcedProjects) { sourced in
+                HStack(spacing: 0) {
+                    ProjectRow(project: sourced.project, scopeName: store.scopeName, provider: sourced.account.provider)
+                    if store.connectedAccounts.count > 1 {
+                        SourceBadge(account: sourced.account)
+                            .padding(.trailing, 14)
+                    }
+                }
+            }
+        }
     }
 }
 
 enum PopoverTab: CaseIterable {
-    case deployments, projects
+    case deployments, actions, projects
     var title: String {
         switch self {
         case .deployments: return String(localized: "Deployments", comment: "Tab title")
+        case .actions:     return String(localized: "Actions", comment: "Tab title")
         case .projects:    return String(localized: "Projects", comment: "Tab title")
         }
     }
@@ -156,11 +179,12 @@ private struct TopBar: View {
 // MARK: - Underlined tab selector
 
 private struct TabSelector: View {
+    let tabs: [PopoverTab]
     @Binding var selection: PopoverTab
 
     var body: some View {
         HStack(spacing: 0) {
-            ForEach(PopoverTab.allCases, id: \.self) { tab in
+            ForEach(tabs, id: \.self) { tab in
                 TabButton(tab: tab, isSelected: selection == tab) {
                     selection = tab
                 }

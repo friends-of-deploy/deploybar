@@ -2,9 +2,9 @@ import XCTest
 @testable import DeployBar
 
 final class AccountModelTests: XCTestCase {
-    func test_provider_onlyVercelImplemented() {
+    func test_provider_implementedProviders() {
         XCTAssertTrue(Provider.vercel.isImplemented)
-        XCTAssertFalse(Provider.github.isImplemented)
+        XCTAssertTrue(Provider.github.isImplemented)
         XCTAssertFalse(Provider.azureDevOps.isImplemented)
     }
 
@@ -39,6 +39,19 @@ extension AccountModelTests {
         let acct = Account(id: UUID(), provider: .vercel, label: "bob",
                            source: .keychain(account: "kc-2"))
         XCTAssertFalse(acct.isReadOnly)
+    }
+
+    func test_account_githubCLIIsReadOnly() {
+        let gh = Account.githubCLI(id: UUID(), label: "from gh")
+        XCTAssertTrue(gh.isReadOnly)
+        XCTAssertEqual(gh.source, .githubCLI)
+        XCTAssertEqual(gh.provider, .github)
+    }
+
+    func test_credentialSource_githubCLICodableRoundTrip() throws {
+        let acct = Account.githubCLI(id: UUID(), label: "gh")
+        let data = try JSONEncoder().encode(acct)
+        XCTAssertEqual(try JSONDecoder().decode(Account.self, from: data), acct)
     }
 
     func test_projectKey_storageRoundTrip() {

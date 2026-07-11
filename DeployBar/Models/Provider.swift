@@ -22,6 +22,11 @@ enum Provider: String, Codable, CaseIterable, Sendable {
         }
     }
 
-    /// Whether a working client exists. Only Vercel ships in this milestone.
-    var isImplemented: Bool { self == .vercel }
+    /// Whether a working client exists for this provider.
+    var isImplemented: Bool {
+        switch self {
+        case .vercel, .github: return true
+        case .azureDevOps:     return false
+        }
+    }
 }

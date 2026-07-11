@@ -13,6 +13,11 @@ enum LinkBuilder {
         guard let org, let repo, !org.isEmpty, !repo.isEmpty else { return nil }
         return URL(string: "https://github.com/\(org)/\(repo)")
     }
+    /// The repository's GitHub Actions overview page.
+    static func githubActions(org: String?, repo: String?) -> URL? {
+        guard let org, let repo, !org.isEmpty, !repo.isEmpty else { return nil }
+        return URL(string: "https://github.com/\(org)/\(repo)/actions")
+    }
 
     // MARK: - Vercel dashboard deep links
 
