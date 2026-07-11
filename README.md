@@ -1,6 +1,6 @@
 # DeployBar
 
-**Native macOS menu bar app for monitoring Vercel deployments at a glance.**
+**Native macOS menu bar app for monitoring Vercel deployments and GitHub Actions runs at a glance.**
 
 [![CI](https://github.com/friends-of-deploy/deploybar/actions/workflows/ci.yml/badge.svg)](https://github.com/friends-of-deploy/deploybar/actions/workflows/ci.yml)
 [![macOS 14+](https://img.shields.io/badge/macOS-14.0%2B-blue)](https://developer.apple.com/macos/)
@@ -16,47 +16,62 @@
 ## Features
 
 **Menu bar**
-- ▲ icon with a colored status dot — green (all ready), amber (building), red (failure), gray (not logged in)
+- ▲ icon with a colored status dot — green (all ready), amber (building/running), red (failure), gray (not logged in)
 - Lives in the menu bar only; no Dock icon
+- Right-click the icon for quick Settings / Quit
+
+**Sources**
+- **Vercel** — deployments and projects, reusing your Vercel CLI login
+- **GitHub** — Actions workflow runs and repositories, reusing your GitHub CLI (`gh`) login or a personal access token
+- A scope dropdown in the popover switches between your Vercel personal account, any Vercel team, and each connected GitHub account — every list shows exactly the selected source
 
 **Deployments tab**
-- Per-deployment rows: status dot, favicon, project name, commit message, branch, and timing ("started 3m ago · built in 56s")
-- Click a successful deployment → opens the live site; click a failed deployment → opens build logs
-- Row actions: open deployment, open build logs, open the source commit
+- Per-deployment rows: status dot, favicon (or repo owner avatar), project name, commit message, branch, and timing ("started 3m ago · built in 56s")
+- Click a successful deployment → opens the live site (or the run page for GitHub); click a failed one → opens build logs
+- Row actions: open deployment/run, open build logs, open the Actions overview (GitHub), open the source commit
+- Failed rows: one click copies a paste-ready error report — build log tail for Vercel, failed jobs/steps plus log tail for GitHub Actions
 
 **Projects tab**
-- Favicon, project name, and stat chips — framework, production branch, environment variable count, Node version, cron count (when applicable)
-- Quick links: open production site, edit environment variables, open repository
-- Overflow menu (⋯): Analytics (when web analytics is enabled), project settings, Vercel dashboard
+- Vercel projects: favicon, production branch, framework, cron count, latest-deploy state and time
+- GitHub repositories: owner avatar, default branch, language, stars, open issues, private badge, and CI state ("✓ passed 2h ago") derived from the latest fetched run
+- Quick links: open production site, open repository
+- Overflow menu (⋯) — Vercel: environment variables, Analytics (when enabled), project settings, dashboard; GitHub: pull requests, issues, repository settings
 
 **Notifications**
-- System notifications on deployment events
+- System notifications on deployment/run events across all connected accounts
 - Failure and Success alerts on by default; Started and Canceled off by default
 - Per-project opt-out available in Settings
 
 **Settings**
 - Configurable poll interval (default 30 seconds)
 - Four notification event toggles
-- Per-project notification toggles
+- Follow/unfollow projects per account, with a filter field for long lists
+- Accounts tab: see CLI-connected accounts, add token-based accounts
 - Launch at login
-- Account section showing the connected Vercel account and active team
 
 ---
 
 ## How It Works / Auth
 
-DeployBar reuses your existing **Vercel CLI** session. On launch it reads:
+DeployBar reuses the CLI sessions you already have. On launch it reads:
 
 | File | Purpose |
 |------|---------|
 | `~/Library/Application Support/com.vercel.cli/auth.json` | Your Vercel access token |
-| `~/Library/Application Support/com.vercel.cli/config.json` | Your active team selection |
+| `~/Library/Application Support/com.vercel.cli/config.json` | Your active Vercel team |
+| `gh auth token` (GitHub CLI) | Your GitHub session, when `gh` is installed and logged in |
 
-No separate API key setup is required. If you have already run `vercel login`, DeployBar is ready to go. The team switcher in the popover toolbar lets you switch between Personal and any team you belong to — this is stored locally and does not modify the Vercel CLI's own config.
+No separate API key setup is required — if you have run `vercel login` (and optionally `gh auth login`), DeployBar is ready to go. You can also add accounts manually with a personal access token in **Settings → Accounts**; those tokens are stored in the macOS Keychain. The scope dropdown selection is stored locally and never modifies the CLIs' own config.
 
-**DeployBar is strictly read-only.** It never creates, modifies, or deletes any resource on Vercel.
+**DeployBar is strictly read-only.** It never creates, modifies, or deletes any resource on Vercel or GitHub.
 
-**Privacy**: your token never leaves your machine. All network requests go only to `api.vercel.com` and to project domains for favicon fetching. Favicons are cached on disk.
+**Privacy**: your tokens never leave your machine. Network requests go to:
+- `api.vercel.com` — deployments, projects, teams
+- `api.github.com` — repositories and workflow runs (only when a GitHub account is connected)
+- your project domains and `avatars.githubusercontent.com` — favicons / repo avatars
+- `www.google.com/s2/favicons` — favicon fallback for sites that don't serve `/favicon.ico`
+
+Icons are cached on disk so these lookups happen rarely.
 
 ---
 
@@ -64,6 +79,7 @@ No separate API key setup is required. If you have already run `vercel login`, D
 
 - macOS 14.0 (Sonoma) or later
 - [Vercel CLI](https://vercel.com/docs/cli) installed and logged in (`npm i -g vercel && vercel login`)
+- Optional: [GitHub CLI](https://cli.github.com) logged in (`gh auth login`) for GitHub Actions monitoring
 
 To **build from source**, you also need:
 - Xcode 15 or later
@@ -135,15 +151,16 @@ Open the popover and click the gear icon to open Settings.
 
 | Setting | Default | Description |
 |---------|---------|-------------|
-| Poll interval | 30 seconds | How often DeployBar fetches from the Vercel API |
-| Notify on Failure | On | System notification when a deployment fails |
-| Notify on Success | On | System notification when a deployment succeeds |
-| Notify on Started | Off | System notification when a deployment starts |
-| Notify on Canceled | Off | System notification when a deployment is canceled |
-| Per-project notifications | All on | Disable notifications for individual projects |
+| Poll interval | 30 seconds | How often DeployBar fetches from the provider APIs |
+| Notify on Failure | On | System notification when a deployment/run fails |
+| Notify on Success | On | System notification when a deployment/run succeeds |
+| Notify on Started | Off | System notification when a deployment/run starts |
+| Notify on Canceled | Off | System notification when a deployment/run is canceled |
+| Auto-follow new projects | On | Follow newly discovered projects automatically |
+| Per-project follow toggles | All on | Unfollowed projects are hidden and never notify |
 | Launch at login | Off | Start DeployBar automatically when you log in |
 
-The Account section shows the currently connected Vercel user and the active team.
+The Accounts tab lists the connected sources (Vercel CLI, GitHub CLI, token accounts) and lets you add a token-based account for either provider.
 
 ---
 
@@ -153,16 +170,16 @@ The Account section shows the currently connected Vercel user and the active tea
 
 ```
 DeployBar/
-  Models/      — Deployment, Project, Team, VercelUser, StateTransition
-  Clients/     — VercelClient, TeamsClient, UserClient, TokenProvider, ScopeResolver
-  Stores/      — DeploymentStore (@Observable, drives the UI)
+  Models/      — Deployment, Project, Team, Account, Scope, VercelUser, GitHub DTOs
+  Clients/     — VercelClient, GitHubClient, TeamsClient, UserClient, TokenProvider, GitHubTokenProvider
+  Stores/      — DeploymentStore (@Observable, drives the UI), AccountStore, SettingsStore
   Services/    — FaviconCache, FaviconURL, NotificationManager, LinkBuilder, LaunchAtLogin, DeploymentDiffer
   Views/       — PopoverView, DeploymentRow, ProjectRow, SettingsView, MenuBarIcon, StatusDot, FaviconView
 DeployBarTests/
-  — ~98 unit tests covering decoding, diffing, notification gating, link building, scope resolution, and more
+  — 180+ unit tests covering decoding, aggregation, scope filtering, diffing, notification gating, link building, localization, and more
 ```
 
-The architecture is layered: clients are pure value types that accept an injectable `fetch` closure, making them straightforward to test without network access. `DeploymentStore` is the single `@Observable` object that the SwiftUI views observe.
+The architecture is layered: clients are pure value types that accept an injectable `fetch` closure, making them straightforward to test without network access. GitHub data is mapped onto the same `Deployment`/`Project` models at the client boundary, so the UI is provider-agnostic. `DeploymentStore` is the single `@Observable` object that the SwiftUI views observe.
 
 ### Running Tests
 
@@ -190,4 +207,4 @@ MIT — see [LICENSE](LICENSE).
 
 ## Disclaimer
 
-DeployBar is an unofficial, community-built project. It is not affiliated with, endorsed by, or supported by Vercel Inc.
+DeployBar is an unofficial, community-built project. It is not affiliated with, endorsed by, or supported by Vercel Inc. or GitHub Inc.

@@ -56,7 +56,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         menu.addItem(.separator())
 
         let quitItem = NSMenuItem(
-            title: String(localized: "Quit VercelBar", comment: "Menu bar context menu item"),
+            title: String(localized: "Quit DeployBar", comment: "Menu bar context menu item"),
             action: #selector(NSApplication.terminate(_:)),
             keyEquivalent: "q")
         quitItem.target = NSApp

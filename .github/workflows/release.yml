@@ -17,7 +17,7 @@ jobs:
     # Hoisted here because `secrets.*` cannot be used in a step-level `if:`.
     # The optional Homebrew step gates on `env.TAP_REPO_TOKEN` instead.
     env:
-      TAP_REPO_TOKEN: ${{ secrets.TAP_REPO_TOKEN }}
+      TAP_REPO_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
 
     steps:
       - name: Checkout
@@ -65,6 +65,8 @@ jobs:
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         run: |
           set -euo pipefail
+          # MARKETING_VERSION comes from the tag so the app always reports the
+          # released version regardless of what project.yml carries.
           xcodebuild archive \
             -project DeployBar.xcodeproj \
             -scheme DeployBar \
@@ -72,6 +74,7 @@ jobs:
             -destination 'generic/platform=macOS' \
             -archivePath "$RUNNER_TEMP/DeployBar.xcarchive" \
             DEVELOPMENT_TEAM="$APPLE_TEAM_ID" \
+            MARKETING_VERSION="${{ steps.version.outputs.version }}" \
             "CODE_SIGN_IDENTITY=Developer ID Application"
 
       - name: Export signed .app
