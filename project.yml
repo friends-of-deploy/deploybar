@@ -29,6 +29,9 @@ targets:
         INFOPLIST_KEY_CFBundleDisplayName: DeployBar
         INFOPLIST_KEY_CFBundleDevelopmentRegion: en
         GENERATE_INFOPLIST_FILE: "YES"
+        # Assets.xcassets is picked up automatically from the `DeployBar` source
+        # directory; this names the app icon set inside it.
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         MARKETING_VERSION: "1.1.0"
         CURRENT_PROJECT_VERSION: "3"
         # Default (Debug + CI): unsigned, no certs needed.

@@ -16,6 +16,10 @@ final class DeploymentStore {
     private(set) var filter: ScopeFilter = .all
     private(set) var sourceErrors: [UUID: String] = [:]
 
+    /// True until the first poll completes. Lets the popover say "Loading…"
+    /// instead of "No projects", which reads as an empty account.
+    private(set) var isLoadingInitial = true
+
     // MARK: Legacy / shared surface (still consumed by the current app + tests)
     var teams: [Team] = []
     var user: VercelUser?
@@ -85,9 +89,10 @@ final class DeploymentStore {
     @ObservationIgnored private var unfilteredDeployments: [SourcedDeployment] = []
     @ObservationIgnored private var unfilteredProjects: [SourcedProject] = []
 
-    /// Last successful fetch per account, used to retain a source's rows across a
-    /// transient failure (so the menu doesn't blank).
-    @ObservationIgnored private var lastGood: [UUID: ScopeResult] = [:]
+    /// Last successful fetch per SCOPE (account + team), used to retain a source's
+    /// rows across a transient failure (so the menu doesn't blank). Keyed by scope
+    /// rather than account because "All" polls several teams of the same account.
+    @ObservationIgnored private var lastGood: [ScopeRef: ScopeResult] = [:]
 
     /// Number of consecutive auth failures before we declare an account logged out.
     private static let authFailureThreshold = 3
@@ -128,8 +133,39 @@ final class DeploymentStore {
                 self.userClient = UserClient(token: token)
                 self.cliBaseToken = token
             }
+            // Start from the cached team list so the very first poll already covers
+            // every team and rows carry real names — `loadTeams` refreshes it.
+            self.teams = settings.cachedTeams
+        }
+
+        restoreCachedRows()
+    }
+
+    /// Replay the last successful poll so the popover opens with content. Rows
+    /// belonging to accounts that are no longer connected are dropped.
+    private func restoreCachedRows() {
+        let cache = settings.cachedRows
+        // A stale snapshot is worse than a brief "Loading…" — deploy states go out
+        // of date fast.
+        guard cache.savedAt > Date(timeIntervalSinceNow: -Self.rowCacheMaxAge) else { return }
+
+        let byId = Dictionary(uniqueKeysWithValues: accountStore.accounts.map { ($0.id, $0) })
+        unfilteredDeployments = cache.deployments.compactMap { $0.restore(accounts: byId) }
+        unfilteredProjects = cache.projects.compactMap { $0.restore(accounts: byId) }
+        guard !unfilteredDeployments.isEmpty || !unfilteredProjects.isEmpty else { return }
+
+        applyDisplayFilter()
+        // Cached rows are shown, so the list is no longer "waiting for first data".
+        isLoadingInitial = false
+        // Seed the notification baseline from the cache so restored rows don't
+        // re-notify as if they were brand new on the first poll.
+        previousSnapshots = unfilteredDeployments.map {
+            DeploymentSnapshot($0.deployment, key: deploymentKey(for: $0))
         }
     }
+
+    /// Beyond this, a cached snapshot is treated as too stale to show.
+    private static let rowCacheMaxAge: TimeInterval = 24 * 60 * 60
 
     // MARK: - Legacy (single-scope) init — kept for the not-yet-rewired app + tests
 
@@ -178,12 +214,22 @@ final class DeploymentStore {
 
     // MARK: - Scopes
 
-    /// One `Scope` per connected account: its default scope (CLI → persisted/CLI
-    /// team or personal; keychain → personal). Multi-team expansion is out of scope.
+    /// The scopes actually polled each tick.
+    ///
+    /// In `.all` we fan out over EVERY Vercel team (plus personal), so the
+    /// cross-provider overview is complete rather than showing only whichever
+    /// team happens to be active. Any other filter polls just the active scope,
+    /// keeping the request count at one per account.
     var availableScopes: [Scope] {
-        accountStore.accounts.map { account in
-            let teamId = account.source == .vercelCLI ? currentTeamId : nil
-            return Scope(account: account, teamId: teamId, teamName: nil)
+        accountStore.accounts.flatMap { account -> [Scope] in
+            guard filter == .all, account.source == .vercelCLI, !teams.isEmpty else {
+                let teamId = account.source == .vercelCLI ? currentTeamId : nil
+                return [Scope(account: account, teamId: teamId, teamName: nil)]
+            }
+            let personal = Scope(account: account, teamId: nil, teamName: nil)
+            return [personal] + teams.map { team in
+                Scope(account: account, teamId: team.id, teamName: team.slug ?? team.name)
+            }
         }
     }
 
@@ -226,16 +272,41 @@ final class DeploymentStore {
         }?.deployment
     }
 
+    /// Scope label to show on a row, or nil when the row needs no marker.
+    ///
+    /// Only meaningful in `.all`, where rows from different accounts/teams sit in
+    /// one list; a single-scope view already names its source in the top bar.
+    func rowScopeLabel(accountId: UUID, teamId: String?) -> String? {
+        guard filter == .all else { return nil }
+        guard let acct = account(accountId) else { return nil }
+        guard let tid = teamId else { return acct.label }
+        // No marker at all until the name is known — a raw "team_xasdf…" id is
+        // noise, and the team list may still be loading on a cold first launch.
+        return teamDisplayName(tid)
+    }
+
     /// Human-readable name for a scope, e.g. the team name or "personal".
+    /// Falls back to the raw id so URL building still has something to work with;
+    /// use `rowScopeLabel` for anything user-visible.
     func scopeName(accountId: UUID, teamId: String?) -> String? {
         guard let acct = account(accountId) else { return nil }
-        if let tid = teamId {
-            if let team = teams.first(where: { $0.id == tid }) {
-                return team.slug ?? team.name ?? tid
-            }
-            return tid
-        }
-        return acct.label
+        guard let tid = teamId else { return acct.label }
+        return teamDisplayName(tid) ?? tid
+    }
+
+    /// Like `rowScopeLabel` but independent of the active filter — for the scope
+    /// menu, which lists every scope regardless of what's selected.
+    func rowScopeLabelIgnoringFilter(accountId: UUID, teamId: String?) -> String? {
+        guard let acct = account(accountId) else { return nil }
+        guard let tid = teamId else { return acct.label }
+        return teamDisplayName(tid)
+    }
+
+    /// The team's slug/name, or nil when the team isn't in the (possibly still
+    /// loading) list.
+    private func teamDisplayName(_ teamId: String) -> String? {
+        guard let team = teams.first(where: { $0.id == teamId }) else { return nil }
+        return team.slug ?? team.name
     }
 
     // MARK: - Icon state
@@ -268,20 +339,24 @@ final class DeploymentStore {
 
     /// The account a displayed deployment came from, so we can build the correct
     /// provider client for its logs.
-    private func account(forDeploymentUid uid: String) -> Account? {
-        unfilteredDeployments.first { $0.deployment.uid == uid }?.account
-            ?? sourcedDeployments.first { $0.deployment.uid == uid }?.account
+    private func sourced(forDeploymentUid uid: String) -> SourcedDeployment? {
+        unfilteredDeployments.first { $0.deployment.uid == uid }
+            ?? sourcedDeployments.first { $0.deployment.uid == uid }
     }
 
     /// Fetch the failed deployment's / run's log and copy a context-rich error
     /// report to the clipboard. Works for Vercel deployments and GitHub Actions runs.
     @discardableResult
     func copyBuildError(for deployment: Deployment) async -> Bool {
-        if let account = account(forDeploymentUid: deployment.uid),
-           let token = accountStore.token(for: account) {
+        if let sourced = sourced(forDeploymentUid: deployment.uid),
+           let token = accountStore.token(for: sourced.account) {
+            let account = sourced.account
             switch account.provider {
             case .vercel:
-                let client = VercelClient(credentials: VercelCredentials(token: token, teamId: scopeTeamId(for: account)))
+                // Use the team the deployment was FETCHED from — in "All" that is
+                // not necessarily the currently selected one, and a mismatched
+                // teamId makes the build-log request 404.
+                let client = VercelClient(credentials: VercelCredentials(token: token, teamId: sourced.teamId))
                 guard let events = try? await client.buildEvents(deploymentId: deployment.uid) else { return false }
                 Pasteboard.copy(BuildErrorReport.make(for: deployment, events: events))
                 return true
@@ -314,7 +389,16 @@ final class DeploymentStore {
 
     func loadTeams() async {
         guard let teamsClient else { return }
-        if let fetched = try? await teamsClient.teams() { self.teams = fetched }
+        // A failed fetch keeps the cached list rather than blanking scope names.
+        guard let fetched = try? await teamsClient.teams() else { return }
+        let changed = fetched.map(\.id) != teams.map(\.id)
+        self.teams = fetched
+        settings.cachedTeams = fetched
+        // In "All" the team list defines what gets polled. Re-poll only when the
+        // set actually changed — with a warm cache it usually hasn't.
+        if filter == .all, changed {
+            await poll()
+        }
     }
 
     func loadUser() async {
@@ -337,6 +421,17 @@ final class DeploymentStore {
         }
     }
 
+    /// Show every connected source at once. Widens `availableScopes` to all Vercel
+    /// teams, so this re-polls to pick up the teams a single-scope view never fetched.
+    func selectAll() async {
+        guard filter != .all else { return }
+        filter = .all
+        scopeName = "all"
+        // Rows already on screen stay visible while the wider fetch lands.
+        applyDisplayFilter()
+        await poll()
+    }
+
     // MARK: - Legacy team switching (thin compatibility, CLI/first account)
 
     /// Switch the active team for the CLI account at runtime. `availableScopes`
@@ -353,9 +448,11 @@ final class DeploymentStore {
         currentTeamId = teamId
         settings.selectedTeamId = teamId ?? "__personal__"
         previousSnapshots = nil               // silent re-seed for the new scope
-        sourcedDeployments = []
-        sourcedProjects = []
         sourceErrors = [:]
+        // Deliberately NOT clearing the row lists: `applyDisplayFilter` re-derives
+        // them from the unfiltered merge, so the popover shows the new scope's
+        // known rows immediately instead of flashing empty until the poll lands.
+        applyDisplayFilter()
         await poll()
     }
 
@@ -363,15 +460,11 @@ final class DeploymentStore {
 
     func start() {
         notifier.requestAuthorization()
-        // Default selection: the CLI account (with its persisted team) or, failing
-        // that, the first connected account — so the popover always shows exactly
-        // one source.
-        if filter == .all,
-           let account = accountStore.cliAccount ?? accountStore.accounts.first {
-            let teamId = account.source == .vercelCLI ? currentTeamId : nil
-            filter = .scope(accountId: account.id, teamId: teamId)
-            scopeName = scopeName(accountId: account.id, teamId: teamId) ?? account.label
-        }
+        // Default view is "All": every connected provider, and every Vercel team,
+        // in one list. `scopeName` stays "all" and the filter is left untouched.
+        //
+        // Teams load asynchronously, so the first poll only covers the persisted
+        // team; `loadTeams` re-polls once the full list arrives (see loadTeams()).
         Task { await poll() }
         Task { await loadTeams() }
         Task { await loadUser() }
@@ -391,6 +484,8 @@ final class DeploymentStore {
 
     private struct ScopeResult {
         let account: Account
+        /// Vercel team the rows came from; nil for personal / non-Vercel.
+        let teamId: String?
         let deployments: [Deployment]
         let projects: [Project]
     }
@@ -398,7 +493,9 @@ final class DeploymentStore {
     func poll() async {
         guard !isPollInFlight else { return }
         isPollInFlight = true
-        defer { isPollInFlight = false }
+        // Whatever the outcome, the first attempt is over — the popover must stop
+        // showing "Loading…" even when there is nothing to show.
+        defer { isPollInFlight = false; isLoadingInitial = false }
 
         let scopes = availableScopes
         guard !scopes.isEmpty else {
@@ -420,32 +517,46 @@ final class DeploymentStore {
                 }
             }
             for await (scope, result) in group {
+                let ref = ScopeRef(accountId: scope.account.id, teamId: scope.teamId)
                 switch result {
                 case .success(let (deps, projs)):
                     consecutiveAuthFailures[scope.account.id] = 0
                     freshSuccessCount += 1
-                    let res = ScopeResult(account: scope.account, deployments: deps, projects: projs)
-                    lastGood[scope.account.id] = res
+                    let res = ScopeResult(account: scope.account, teamId: scope.teamId,
+                                          deployments: deps, projects: projs)
+                    lastGood[ref] = res
                     merged.append(res)
                 case .failure(let error):
                     record(error: error, for: scope.account, into: &errors)
                     // Keep this source's last-known rows so a transient failure
                     // doesn't blank the menu (mirrors the old "stale" behavior).
-                    if let prev = lastGood[scope.account.id] { merged.append(prev) }
+                    if let prev = lastGood[ref] { merged.append(prev) }
                 }
             }
         }
 
         // Tag + merge across all sources (unfiltered).
         let allDeployments = merged.flatMap { res in
-            res.deployments.map { SourcedDeployment(deployment: $0, account: res.account) }
+            res.deployments.map {
+                SourcedDeployment(deployment: $0, account: res.account, teamId: res.teamId)
+            }
         }.sorted { $0.deployment.createdAt > $1.deployment.createdAt }
         let allProjects = merged.flatMap { res in
-            res.projects.map { SourcedProject(project: $0, account: res.account) }
+            res.projects.map {
+                SourcedProject(project: $0, account: res.account, teamId: res.teamId)
+            }
         }
 
-        self.unfilteredDeployments = allDeployments
-        self.unfilteredProjects = allProjects
+        // Polling several teams of one account can return the same deployment
+        // twice (a project visible in more than one scope). Keep the first —
+        // rows are already sorted newest-first — so the list and the notification
+        // diff below both see each deployment exactly once.
+        self.unfilteredDeployments = allDeployments.deduplicated { (sd: SourcedDeployment) in
+            "\(sd.account.id.uuidString)|\(sd.deployment.uid)"
+        }
+        self.unfilteredProjects = allProjects.deduplicated { (sp: SourcedProject) in
+            "\(sp.account.id.uuidString)|\(sp.project.id)"
+        }
 
         // Notification diff runs over the FULL merged set (before display filtering),
         // against the persistent snapshot. Changing the ScopeFilter never re-notifies.
@@ -466,6 +577,16 @@ final class DeploymentStore {
         self.lastUpdated = Date()
         applyDisplayFilter()
 
+        // Persist the merged rows for the next launch. Only when something was
+        // actually fetched, so a fully failed tick can't overwrite a good snapshot
+        // with an empty one.
+        if freshSuccessCount > 0 {
+            // Cache the deduplicated merge — the same rows the UI shows.
+            settings.cachedRows = RowCache(deployments: unfilteredDeployments,
+                                           projects: unfilteredProjects,
+                                           savedAt: Date())
+        }
+
         // loggedOut only when there are zero usable sources (no fresh successful
         // fetch this tick AND every account is past the auth-failure threshold).
         let allAuthFailing = scopes.allSatisfy {
@@ -476,24 +597,20 @@ final class DeploymentStore {
         // Prune per-account state for accounts that are no longer connected,
         // preventing unbounded growth when accounts are removed.
         let liveIds = Set(accountStore.accounts.map(\.id))
-        lastGood = lastGood.filter { liveIds.contains($0.key) }
+        lastGood = lastGood.filter { liveIds.contains($0.key.accountId) }
         consecutiveAuthFailures = consecutiveAuthFailures.filter { liveIds.contains($0.key) }
     }
 
     /// Apply the follow filter + active ScopeFilter to the unfiltered merge.
     private func applyDisplayFilter() {
         sourcedDeployments = unfilteredDeployments.filter { sd in
-            filter.matches(account: sd.account, teamId: scopeTeamId(for: sd.account))
+            filter.matches(account: sd.account, teamId: sd.teamId)
                 && followed(account: sd.account, projectId: projectId(for: sd), projectName: sd.deployment.name)
         }
         sourcedProjects = unfilteredProjects.filter { sp in
-            filter.matches(account: sp.account, teamId: scopeTeamId(for: sp.account))
+            filter.matches(account: sp.account, teamId: sp.teamId)
                 && isFollowed(sp)
         }
-    }
-
-    private func scopeTeamId(for account: Account) -> String? {
-        account.source == .vercelCLI ? currentTeamId : nil
     }
 
     /// Resolve a deployment to its project id when the project is known, so the

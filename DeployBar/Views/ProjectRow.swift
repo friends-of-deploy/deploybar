@@ -10,6 +10,9 @@ struct ProjectRow: View {
     /// last-activity line for providers whose project API carries no latest-
     /// deployment info (GitHub repos).
     var latestRun: Deployment? = nil
+    /// Account/team this row came from. Set only in the "All sources" view, where
+    /// one list mixes scopes and two teams may share a project name.
+    var scopeLabel: String? = nil
     @State private var hovering = false
 
     var body: some View {
@@ -19,14 +22,23 @@ struct ProjectRow: View {
                 .padding(.top, 1)
 
             VStack(alignment: .leading, spacing: 4) {
-                Text(project.name)
-                    .font(.body)
-                    .fontWeight(.semibold)
+                HStack(spacing: 6) {
+                    Text(project.name)
+                        .font(.body)
+                        .fontWeight(.semibold)
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                    if let scopeLabel {
+                        ScopeDot(label: scopeLabel)
+                    }
+                }
                 metaLine
                 lastDeployLine
             }
-
-            Spacer(minLength: 8)
+            // See `DeploymentRow`: the text column, not a spacer, takes the
+            // slack so hiding the action icons actually widens the content.
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.trailing, 8)
 
             VStack(alignment: .trailing, spacing: 6) {
                 StateBadge(state: displayState)
@@ -38,7 +50,10 @@ struct ProjectRow: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .contentShape(Rectangle())
         .background(hovering ? Color.primary.opacity(0.06) : Color.clear)
-        .onHover { hovering = $0 }
+        .clipped()
+        .onHover { hovering in
+            withAnimation(.easeOut(duration: 0.1)) { self.hovering = hovering }
+        }
     }
 
     // MARK: - Metadata line (icon + value pairs)
@@ -125,22 +140,14 @@ struct ProjectRow: View {
 
     // MARK: - Actions
 
+    /// Direct links appear on hover; the overflow menu stays anchored so every
+    /// row keeps a visible affordance and the cluster never collapses to
+    /// nothing. See `DeploymentRow.actions` for the same reasoning.
     @ViewBuilder private var actions: some View {
         HStack(spacing: 2) {
-            // Inline: production site, repository
-            if let prod = LinkBuilder.liveURL(host: project.productionURL) {
-                IconActionButton(
-                    systemImage: "globe",
-                    url: prod,
-                    help: String(localized: "Open production site", comment: "Action tooltip")
-                )
-            }
-            if let repo = LinkBuilder.githubRepo(org: project.repoOrg, repo: project.repoName) {
-                IconActionButton(
-                    systemImage: "apple.terminal",
-                    url: repo,
-                    help: String(localized: "Open repository", comment: "Action tooltip")
-                )
+            if hovering {
+                linkActions
+                    .transition(.move(edge: .trailing).combined(with: .opacity))
             }
 
             // Overflow menu holds provider-specific deep links.
@@ -152,6 +159,24 @@ struct ProjectRow: View {
         }
         .foregroundStyle(.secondary)
         .imageScale(.medium)
+    }
+
+    /// Production site and repository — the two direct links, shown on hover.
+    @ViewBuilder private var linkActions: some View {
+        if let prod = LinkBuilder.liveURL(host: project.productionURL) {
+            IconActionButton(
+                systemImage: "globe",
+                url: prod,
+                help: String(localized: "Open production site", comment: "Action tooltip")
+            )
+        }
+        if let repo = LinkBuilder.githubRepo(org: project.repoOrg, repo: project.repoName) {
+            IconActionButton(
+                systemImage: "apple.terminal",
+                url: repo,
+                help: String(localized: "Open repository", comment: "Action tooltip")
+            )
+        }
     }
 
     @ViewBuilder private var githubOverflowMenu: some View {

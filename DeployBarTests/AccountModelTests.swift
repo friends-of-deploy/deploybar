@@ -101,7 +101,25 @@ extension AccountModelTests {
         let json = #"{"id":"prj_1","name":"web"}"#
         let project = try JSONDecoder().decode(Project.self, from: Data(json.utf8))
         let sp = SourcedProject(project: project, account: acct)
-        XCTAssertEqual(sp.id, "\(acct.id.uuidString)|prj_1")
+        // id is scope-qualified: "<account>|<team-or-personal>|<projectId>".
+        XCTAssertEqual(sp.id, "\(acct.id.uuidString)|personal|prj_1")
+        // The follow key stays account-scoped, so a follow toggle applies to the
+        // project regardless of which team scope surfaced it.
         XCTAssertEqual(sp.key, ProjectKey(provider: .vercel, accountId: acct.id, projectId: "prj_1"))
+    }
+
+    /// The same project fetched from two team scopes must produce distinct ids,
+    /// otherwise SwiftUI's ForEach collapses (or duplicates) rows in "All".
+    func test_sourcedProject_idDistinguishesTeams() throws {
+        let acct = Account.vercelCLI(id: UUID(), label: "cli")
+        let json = #"{"id":"prj_1","name":"web"}"#
+        let project = try JSONDecoder().decode(Project.self, from: Data(json.utf8))
+
+        let personal = SourcedProject(project: project, account: acct)
+        let team = SourcedProject(project: project, account: acct, teamId: "team_a")
+
+        XCTAssertNotEqual(personal.id, team.id)
+        XCTAssertEqual(team.id, "\(acct.id.uuidString)|team_a|prj_1")
+        XCTAssertEqual(personal.key, team.key)   // follow state is shared
     }
 }

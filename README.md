@@ -1,4 +1,9 @@
-# DeployBar
+<img src="docs/banner.png" alt="DeployBar — monitor your deploys across all providers from the macOS menu bar" width="100%" />
+
+<h1>
+  <img src="docs/brand/icon-64.png" alt="" width="28" align="top" />
+  DeployBar
+</h1>
 
 **Native macOS menu bar app for monitoring Vercel deployments and GitHub Actions runs at a glance.**
 
@@ -8,17 +13,24 @@
 
 ---
 
-<!-- Add a real screenshot here. Replace docs/screenshot.png with an actual capture of the popover. -->
-<img src="docs/screenshot.png" alt="DeployBar popover showing deployment statuses" width="420" />
-
----
-
 ## Features
 
 **Menu bar**
-- ▲ icon with a colored status dot — green (all ready), amber (building/running), red (failure), gray (not logged in)
+- The icon carries the current state by *shape*, so it stays readable in light and dark bars:
+
+  | | State | Reads as |
+  |---|---|---|
+  | <picture><source media="(prefers-color-scheme: dark)" srcset="docs/brand/menubar-idle-dark.png" /><img src="docs/brand/menubar-idle.png" alt="" width="18" /></picture> | Idle | Everything dimmed, hollow node — nothing to report |
+  | <picture><source media="(prefers-color-scheme: dark)" srcset="docs/brand/menubar-ready-dark.png" /><img src="docs/brand/menubar-ready.png" alt="" width="18" /></picture> | Ready | Solid strands, filled node |
+  | <picture><source media="(prefers-color-scheme: dark)" srcset="docs/brand/menubar-building-dark.png" /><img src="docs/brand/menubar-building.png" alt="" width="18" /></picture> | Building | Dashed strand travelling into a hollow node |
+  | <picture><source media="(prefers-color-scheme: dark)" srcset="docs/brand/menubar-failure-dark.png" /><img src="docs/brand/menubar-failure.png" alt="" width="18" /></picture> | Failure | Strands broken, solid node with a knocked-out X |
+  | <picture><source media="(prefers-color-scheme: dark)" srcset="docs/brand/menubar-loggedout-dark.png" /><img src="docs/brand/menubar-loggedout.png" alt="" width="18" /></picture> | Signed out | Dashed outline, node gone |
+
 - Lives in the menu bar only; no Dock icon
 - Right-click the icon for quick Settings / Quit
+
+> Colour lives *inside* the popover (green / amber / red dots per deployment), never in the bar
+> itself — macOS only recolours a status item reliably when the icon is a monochrome template image.
 
 **Sources**
 - **Vercel** — deployments and projects, reusing your Vercel CLI login
@@ -175,6 +187,7 @@ DeployBar/
   Stores/      — DeploymentStore (@Observable, drives the UI), AccountStore, SettingsStore
   Services/    — FaviconCache, FaviconURL, NotificationManager, LinkBuilder, LaunchAtLogin, DeploymentDiffer
   Views/       — PopoverView, DeploymentRow, ProjectRow, SettingsView, MenuBarIcon, StatusDot, FaviconView
+  Assets.xcassets/ — AppIcon, five MenuBar* template imagesets, DocumentIcon
 DeployBarTests/
   — 180+ unit tests covering decoding, aggregation, scope filtering, diffing, notification gating, link building, localization, and more
 ```
@@ -196,6 +209,28 @@ xcodebuild test \
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines on reporting issues and submitting pull requests.
+
+---
+
+## Brand
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/brand/lockup-horizontal-dark.png" />
+  <img src="docs/brand/lockup-horizontal.png" alt="DeployBar logo lockup" width="260" />
+</picture>
+
+The mark is two strands running in from the left, converging into a single filled
+node — two providers, one place to look. Source artwork lives in [`docs/brand/`](docs/brand):
+lockups (horizontal, stacked, mono), the app icon, the document icon, and the five
+menu bar states as SVG.
+
+Palette: ink shell `#334155` → `#020617`, cold light `#60A5FA` at 45%, glyph `#FFFFFF`.
+Status colors: green `#3AAA35`, amber `#F59E0B`, red `#E7332A`, tab accent `#3B82F6`.
+Type: Open Sans (700 wordmark, 600 labels, 400 body), JetBrains Mono for code.
+
+Keep at least the node's radius of clear space around the lockups. Don't recolour the
+glyph, add a stroke to the shell, or place the colour icon on a red or blue field —
+the blue lift disappears.
 
 ---
 

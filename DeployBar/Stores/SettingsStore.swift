@@ -17,6 +17,8 @@ final class SettingsStore {
         static let unfollowedKeys   = "unfollowedProjectKeys"
         static let autoFollowNew    = "autoFollowNewProjects"
         static let didMigrateFollow = "didMigrateFollowData"
+        static let cachedTeams      = "cachedTeams"
+        static let cachedRows       = "cachedRows"
     }
 
     init(defaults: UserDefaults = .standard) {
@@ -59,6 +61,37 @@ final class SettingsStore {
         set {
             if let newValue { defaults.set(newValue, forKey: Keys.selectedTeamId) }
             else { defaults.removeObject(forKey: Keys.selectedTeamId) }
+        }
+    }
+
+    /// Last known Vercel team list, cached so a relaunch can label scopes and
+    /// poll every team immediately, instead of waiting on `/v2/teams`. Refreshed
+    /// on every successful fetch; the network response always wins.
+    var cachedTeams: [Team] {
+        get {
+            guard let data = defaults.data(forKey: Keys.cachedTeams),
+                  let teams = try? JSONDecoder().decode([Team].self, from: data)
+            else { return [] }
+            return teams
+        }
+        set {
+            guard let data = try? JSONEncoder().encode(newValue) else { return }
+            defaults.set(data, forKey: Keys.cachedTeams)
+        }
+    }
+
+    /// Last successful poll's rows, replayed on launch so the popover isn't empty
+    /// while the first fetch runs. Best-effort: a decode failure just means a cold start.
+    var cachedRows: RowCache {
+        get {
+            guard let data = defaults.data(forKey: Keys.cachedRows),
+                  let cache = try? JSONDecoder().decode(RowCache.self, from: data)
+            else { return RowCache() }
+            return cache
+        }
+        set {
+            guard let data = try? JSONEncoder().encode(newValue) else { return }
+            defaults.set(data, forKey: Keys.cachedRows)
         }
     }
 

@@ -11,6 +11,9 @@ struct DeploymentRow: View {
     /// Fetches the build log for a failed deployment and copies a paste-ready
     /// error report to the clipboard. Returns true on success.
     let copyError: (Deployment) async -> Bool
+    /// Account/team this row came from. Set only in the "All sources" view, where
+    /// one list mixes scopes and two teams may share a project name.
+    var scopeLabel: String? = nil
     @State private var hovering = false
 
     var body: some View {
@@ -23,9 +26,16 @@ struct DeploymentRow: View {
             }
 
             VStack(alignment: .leading, spacing: 3) {
-                Text(deployment.name)
-                    .font(.body)
-                    .fontWeight(.semibold)
+                HStack(spacing: 6) {
+                    Text(deployment.name)
+                        .font(.body)
+                        .fontWeight(.semibold)
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                    if let scopeLabel {
+                        ScopeDot(label: scopeLabel)
+                    }
+                }
                 Text(subtitle)
                     .font(.callout)
                     .foregroundStyle(.secondary)
@@ -36,8 +46,10 @@ struct DeploymentRow: View {
                     .foregroundStyle(.tertiary)
                     .lineLimit(1)
             }
-
-            Spacer()
+            // Claim the row's slack here rather than via a trailing `Spacer`:
+            // a spacer would soak up the width freed by hiding the action
+            // icons, leaving the commit message truncated exactly as before.
+            .frame(maxWidth: .infinity, alignment: .leading)
 
             actions
         }
@@ -46,7 +58,12 @@ struct DeploymentRow: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .contentShape(Rectangle())
         .background(hovering ? Color.primary.opacity(0.06) : Color.clear)
-        .onHover { hovering = $0 }
+        // Clip so hover-revealed icons slide out from the row's edge instead of
+        // briefly drawing past it.
+        .clipped()
+        .onHover { hovering in
+            withAnimation(.easeOut(duration: 0.1)) { self.hovering = hovering }
+        }
         .onTapGesture { openPrimary() }
         .pointingHandCursor()
     }
@@ -102,54 +119,85 @@ struct DeploymentRow: View {
 
     // MARK: - Actions
 
+    /// One icon is always visible; the rest appear on hover.
+    ///
+    /// At 380pt the full five-icon cluster claimed ~100pt that the commit
+    /// message needed more.
+    ///
+    /// Order matters: the anchored icon is pinned at the trailing edge and the
+    /// hover-revealed ones open to its *left*, into space the subtitle gives
+    /// up. Putting the anchored icon first instead would shove it sideways the
+    /// instant you hover it, sliding a different action under a cursor that is
+    /// already aiming to click — so the row would reliably open the wrong thing.
     @ViewBuilder private var actions: some View {
         HStack(spacing: 2) {
-            if deployment.state == .error {
-                CopyBuildErrorButton(deployment: deployment, copyError: copyError)
+            if hovering {
+                secondaryActions
+                    .transition(.move(edge: .trailing).combined(with: .opacity))
             }
-            if let web = deployment.webURL {
-                IconActionButton(
-                    systemImage: "arrow.up.forward.app",
-                    url: web,
-                    help: String(localized: "Open deployment", comment: "Action tooltip")
-                )
-            } else if let live = LinkBuilder.liveURL(host: deployment.url) {
-                IconActionButton(
-                    systemImage: "arrow.up.forward.app",
-                    url: live,
-                    help: String(localized: "Open deployment", comment: "Action tooltip")
-                )
-            }
-            if let logs = deployment.inspectorUrl.flatMap(URL.init(string:)) {
-                IconActionButton(
-                    systemImage: "doc.text.magnifyingglass",
-                    url: logs,
-                    help: String(localized: "Open build logs", comment: "Action tooltip")
-                )
-            }
-            // GitHub runs (webURL set): a shortcut to the repo's Actions overview.
-            if deployment.webURL != nil,
-               let actions = LinkBuilder.githubActions(org: deployment.commitOrg, repo: deployment.commitRepo) {
-                IconActionButton(
-                    systemImage: "list.bullet.rectangle",
-                    url: actions,
-                    help: String(localized: "Open Actions", comment: "Action tooltip")
-                )
-            }
-            if let commit = LinkBuilder.githubCommit(
-                org: deployment.commitOrg,
-                repo: deployment.commitRepo,
-                sha: deployment.commitSha
-            ) {
-                IconActionButton(
-                    systemImage: "apple.terminal",
-                    url: commit,
-                    help: String(localized: "Open commit on the repository", comment: "Action tooltip")
-                )
-            }
+            primaryAction
         }
         .foregroundStyle(.secondary)
         .imageScale(.medium)
+    }
+
+    /// The most useful action for this row's state: a failed build wants its
+    /// error on the clipboard, anything else wants to be opened.
+    @ViewBuilder private var primaryAction: some View {
+        if deployment.state == .error {
+            CopyBuildErrorButton(deployment: deployment, copyError: copyError)
+        } else if let open = openURL {
+            IconActionButton(
+                systemImage: "arrow.up.forward.app",
+                url: open,
+                help: String(localized: "Open deployment", comment: "Action tooltip")
+            )
+        }
+    }
+
+    @ViewBuilder private var secondaryActions: some View {
+        // Shown on hover only. The "open" icon moves here for failed builds,
+        // where the clipboard action takes the anchored slot instead.
+        if deployment.state == .error, let open = openURL {
+            IconActionButton(
+                systemImage: "arrow.up.forward.app",
+                url: open,
+                help: String(localized: "Open deployment", comment: "Action tooltip")
+            )
+        }
+        if let logs = deployment.inspectorUrl.flatMap(URL.init(string:)) {
+            IconActionButton(
+                systemImage: "doc.text.magnifyingglass",
+                url: logs,
+                help: String(localized: "Open build logs", comment: "Action tooltip")
+            )
+        }
+        // GitHub runs (webURL set): a shortcut to the repo's Actions overview.
+        if deployment.webURL != nil,
+           let actions = LinkBuilder.githubActions(org: deployment.commitOrg, repo: deployment.commitRepo) {
+            IconActionButton(
+                systemImage: "list.bullet.rectangle",
+                url: actions,
+                help: String(localized: "Open Actions", comment: "Action tooltip")
+            )
+        }
+        if let commit = LinkBuilder.githubCommit(
+            org: deployment.commitOrg,
+            repo: deployment.commitRepo,
+            sha: deployment.commitSha
+        ) {
+            IconActionButton(
+                systemImage: "apple.terminal",
+                url: commit,
+                help: String(localized: "Open commit on the repository", comment: "Action tooltip")
+            )
+        }
+    }
+
+    /// Canonical "open the thing" target: a provider page when there is one,
+    /// else the live site.
+    private var openURL: URL? {
+        deployment.webURL ?? LinkBuilder.liveURL(host: deployment.url)
     }
 }
 
