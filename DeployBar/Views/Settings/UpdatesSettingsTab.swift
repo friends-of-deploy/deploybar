@@ -42,7 +42,8 @@ struct UpdatesSettingsTab: View {
                     }
                 }
             } footer: {
-                Text("Beta releases arrive earlier and may be unstable. Switching back to Stable keeps the installed build until the next stable release.")
+                Text(String(localized: "Beta releases arrive earlier and may be unstable. Switching back to Stable keeps the installed build until the next stable release.",
+                            comment: "Update channel picker footer"))
                     .foregroundStyle(.secondary)
             }
         }
