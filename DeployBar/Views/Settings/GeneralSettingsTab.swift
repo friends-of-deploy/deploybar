@@ -32,10 +32,6 @@ struct GeneralSettingsTab: View {
             }
 
             Section {
-                LabeledContent(String(localized: "Version", comment: "About row label"),
-                               value: AppInfo.version)
-                LabeledContent(String(localized: "Build", comment: "About row label"),
-                               value: AppInfo.build)
                 LabeledContent(String(localized: "Website", comment: "About row label")) {
                     Link(AppInfo.websiteLabel, destination: AppInfo.websiteURL)
                 }

@@ -6,7 +6,13 @@ import XCTest
 final class SettingsTabTests: XCTestCase {
     func test_tabOrderIsStable() {
         XCTAssertEqual(SettingsTab.allCases.map(\.rawValue),
-                       ["general", "notifications", "accounts"])
+                       ["general", "notifications", "updates", "accounts"])
+    }
+
+    /// Version and build moved to the Updates tab; leaving a copy behind in
+    /// General would mean two places claiming to say what is installed.
+    func test_updatesTabExists() {
+        XCTAssertTrue(SettingsTab.allCases.contains(.updates))
     }
 
     func test_everyTabHasADistinctSymbol() {

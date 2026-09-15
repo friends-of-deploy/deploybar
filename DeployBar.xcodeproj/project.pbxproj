@@ -74,6 +74,7 @@
 		A58D1083AFF9DB99170BAE91 /* GitHubCLITokenProviderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 25C9F632B66D2D3D831877A4 /* GitHubCLITokenProviderTests.swift */; };
 		A6420D2DE19628FA56D15373 /* VercelClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 91A0EE20CBAED0CF2E98D0EA /* VercelClient.swift */; };
 		AB05CEE6D985A246AF311BFF /* Account.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6FC4D6FE5731A17EE474B0FF /* Account.swift */; };
+		ADBA836670D899CC4CD1FC46 /* UpdatesSettingsTab.swift in Sources */ = {isa = PBXBuildFile; fileRef = E40F36E39BA8022AA11834F2 /* UpdatesSettingsTab.swift */; };
 		B38BCF54BDF614EDB2CE49ED /* DeploymentRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7F84C9A259AE88BB6112EA03 /* DeploymentRow.swift */; };
 		B5DCE90E58EF6D38594C2677 /* TokenProviderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3FC7F8BFC1B963C7CBD0CC12 /* TokenProviderTests.swift */; };
 		B8FBB667064DA6505FBFD3D7 /* SettingsTabTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0D039D3EA4243F487405EC3 /* SettingsTabTests.swift */; };
@@ -219,6 +220,7 @@
 		DA457F0018F99555F5527030 /* ScopeSwitchTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScopeSwitchTests.swift; sourceTree = "<group>"; };
 		DCF0236F9C974998867E7582 /* ScaffoldTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScaffoldTests.swift; sourceTree = "<group>"; };
 		DD43A2A6C53DEA9D5514D087 /* DeployBar.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = DeployBar.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		E40F36E39BA8022AA11834F2 /* UpdatesSettingsTab.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UpdatesSettingsTab.swift; sourceTree = "<group>"; };
 		ECB5A270A7B7428A8E5C8A40 /* StatusDot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatusDot.swift; sourceTree = "<group>"; };
 		EDD7066A7A7BB011FEF8D8FE /* DiffTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiffTests.swift; sourceTree = "<group>"; };
 		EF7365E6FD34AFF0BCAF17FD /* SettingsStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsStore.swift; sourceTree = "<group>"; };
@@ -384,6 +386,7 @@
 				176FE250E8C527CAFCF05603 /* NotificationSettingsTab.swift */,
 				55AB77851ECA5FE66D67CF46 /* SettingsListBox.swift */,
 				44D380D53D1059B6E606EF12 /* SettingsTab.swift */,
+				E40F36E39BA8022AA11834F2 /* UpdatesSettingsTab.swift */,
 			);
 			path = Settings;
 			sourceTree = "<group>";
@@ -599,6 +602,7 @@
 				BF5EA1E55A0B5E0E15E231C9 /* Tooltip.swift in Sources */,
 				27B2977BC195025852589715 /* UpdateChannel.swift in Sources */,
 				3652C766BF4109CBFA0C7B0E /* UpdaterController.swift in Sources */,
+				ADBA836670D899CC4CD1FC46 /* UpdatesSettingsTab.swift in Sources */,
 				36C40BB58FF083A557093276 /* UserClient.swift in Sources */,
 				A6420D2DE19628FA56D15373 /* VercelClient.swift in Sources */,
 				798528DF547AA5A90B58FE94 /* VercelUser.swift in Sources */,
