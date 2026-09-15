@@ -25,6 +25,7 @@
 		310D5457D5EEFA8535B92577 /* SettingsListBox.swift in Sources */ = {isa = PBXBuildFile; fileRef = 55AB77851ECA5FE66D67CF46 /* SettingsListBox.swift */; };
 		32D8E850E70A35D53B7863D6 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50F128CEC831EFAF612AA4DF /* AppDelegate.swift */; };
 		3588B28E2D7C709149D992CB /* FaviconView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 920576907DA14B3B2C60D8C9 /* FaviconView.swift */; };
+		3652C766BF4109CBFA0C7B0E /* UpdaterController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4CEFB6EADC920D69D0FD23BA /* UpdaterController.swift */; };
 		36C40BB58FF083A557093276 /* UserClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 42320F70CBF5D94E3917DBFD /* UserClient.swift */; };
 		381FFC3875258C77DF9B9814 /* FollowMigrationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C6A8B56E49A8EB58182D2975 /* FollowMigrationTests.swift */; };
 		3D605FE360984EE3F03956DC /* RowPrimaryActionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB443AD7E9305D7127C6B292 /* RowPrimaryActionTests.swift */; };
@@ -84,6 +85,7 @@
 		C39599953CDFC4C643C5C113 /* AggregationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 897DD0C50DF99321A6B0FF21 /* AggregationTests.swift */; };
 		C51A1FA71CCAFBEFA0EEB1DF /* TeamsLoadingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 228B4A2687511C4A259DA822 /* TeamsLoadingTests.swift */; };
 		C5D46B432FD74FB4A3BFD665 /* deployments.json in Resources */ = {isa = PBXBuildFile; fileRef = 3A158DF8F08F11C26FC7FF5E /* deployments.json */; };
+		C7B36C9D72EF72B8D0B68430 /* UpdaterControllerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1AA2C69EAB8096E637822571 /* UpdaterControllerTests.swift */; };
 		C969290F82BA3BC8E2005921 /* DeploymentDiffer.swift in Sources */ = {isa = PBXBuildFile; fileRef = B7B2A3C52B577758FC96D59E /* DeploymentDiffer.swift */; };
 		CC165BF8EEAE82A96A44CE7B /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = CB9D4EBA17ACC04E8F2C9252 /* Assets.xcassets */; };
 		CE04B0246BA9011F69FF0883 /* DiffTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = EDD7066A7A7BB011FEF8D8FE /* DiffTests.swift */; };
@@ -132,6 +134,7 @@
 		16ECF961AF63E983AF0B0995 /* DeploymentStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeploymentStoreTests.swift; sourceTree = "<group>"; };
 		171831EB706F154D65EC9487 /* ProviderClientError.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProviderClientError.swift; sourceTree = "<group>"; };
 		176FE250E8C527CAFCF05603 /* NotificationSettingsTab.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationSettingsTab.swift; sourceTree = "<group>"; };
+		1AA2C69EAB8096E637822571 /* UpdaterControllerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UpdaterControllerTests.swift; sourceTree = "<group>"; };
 		205B78F8FB30163F85C0FE74 /* Project.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Project.swift; sourceTree = "<group>"; };
 		228B4A2687511C4A259DA822 /* TeamsLoadingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TeamsLoadingTests.swift; sourceTree = "<group>"; };
 		25C9F632B66D2D3D831877A4 /* GitHubCLITokenProviderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GitHubCLITokenProviderTests.swift; sourceTree = "<group>"; };
@@ -149,6 +152,7 @@
 		44D380D53D1059B6E606EF12 /* SettingsTab.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsTab.swift; sourceTree = "<group>"; };
 		495A27E8C5B6857938455B86 /* LaunchAtLogin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LaunchAtLogin.swift; sourceTree = "<group>"; };
 		4A9A41B399199C4BEA314887 /* AppInfo.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppInfo.swift; sourceTree = "<group>"; };
+		4CEFB6EADC920D69D0FD23BA /* UpdaterController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UpdaterController.swift; sourceTree = "<group>"; };
 		4DB4B342E203F63C747D601A /* SourcedItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SourcedItem.swift; sourceTree = "<group>"; };
 		4EC059A6A8C152E20A42C7D7 /* ScopeResolver.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScopeResolver.swift; sourceTree = "<group>"; };
 		50F128CEC831EFAF612AA4DF /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
@@ -283,6 +287,7 @@
 				B015CC4FB573440F0554E492 /* LinkBuilder.swift */,
 				9FCE26D0648114752DE5DBA2 /* NotificationManager.swift */,
 				786C5ED6FABCA725D4A7E3FA /* Pasteboard.swift */,
+				4CEFB6EADC920D69D0FD23BA /* UpdaterController.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -325,6 +330,7 @@
 				228B4A2687511C4A259DA822 /* TeamsLoadingTests.swift */,
 				3FC7F8BFC1B963C7CBD0CC12 /* TokenProviderTests.swift */,
 				15079017D2BD08DD3DA2B78B /* UpdateChannelTests.swift */,
+				1AA2C69EAB8096E637822571 /* UpdaterControllerTests.swift */,
 				A5E5C2ED9666F903534AFD74 /* UserLoadingTests.swift */,
 				975C49CE978B69146270A2D6 /* VercelClientTests.swift */,
 				ED25543EFCD38C54768D8A71 /* Fixtures */,
@@ -592,6 +598,7 @@
 				0DC0A4563D56EFBDE8ED2412 /* TokenProvider.swift in Sources */,
 				BF5EA1E55A0B5E0E15E231C9 /* Tooltip.swift in Sources */,
 				27B2977BC195025852589715 /* UpdateChannel.swift in Sources */,
+				3652C766BF4109CBFA0C7B0E /* UpdaterController.swift in Sources */,
 				36C40BB58FF083A557093276 /* UserClient.swift in Sources */,
 				A6420D2DE19628FA56D15373 /* VercelClient.swift in Sources */,
 				798528DF547AA5A90B58FE94 /* VercelUser.swift in Sources */,
@@ -637,6 +644,7 @@
 				C51A1FA71CCAFBEFA0EEB1DF /* TeamsLoadingTests.swift in Sources */,
 				B5DCE90E58EF6D38594C2677 /* TokenProviderTests.swift in Sources */,
 				76BC172134B2B4823146AE59 /* UpdateChannelTests.swift in Sources */,
+				C7B36C9D72EF72B8D0B68430 /* UpdaterControllerTests.swift in Sources */,
 				E8C88C6284FB182EB9D3D48F /* UserLoadingTests.swift in Sources */,
 				4BF059240F92969CD0D72385 /* VercelClientTests.swift in Sources */,
 			);
