@@ -18,6 +18,7 @@
 		17D1A5FEA374800203AECDA6 /* StateBadge.swift in Sources */ = {isa = PBXBuildFile; fileRef = 33530944BBEC4C65CE574498 /* StateBadge.swift */; };
 		19ACC372C7B38089879F7208 /* AccountDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA16B92773C8D917F0338CF4 /* AccountDetailView.swift */; };
 		231C256FA93A2C46D73F43D1 /* FaviconURL.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE793AAA24E87F302F47F6BA /* FaviconURL.swift */; };
+		27B2977BC195025852589715 /* UpdateChannel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C29717717C676DD2D14C378 /* UpdateChannel.swift */; };
 		2ABA840B17F54B6B2A517989 /* SourcedItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4DB4B342E203F63C747D601A /* SourcedItem.swift */; };
 		2EBCA0BBD186032E5F886BAA /* ScaffoldTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = DCF0236F9C974998867E7582 /* ScaffoldTests.swift */; };
 		30E704ADB7DAFE6D8042D4B0 /* GitHubTokenProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B583275940E87AD51F09C7B /* GitHubTokenProvider.swift */; };
@@ -49,6 +50,7 @@
 		67A8C0C73EC26494B1008B1C /* ScopeDot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5EE3D64675F6B5C3F2344672 /* ScopeDot.swift */; };
 		6EA9051C98C744DB19AAABF6 /* Deployment.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B77B029D1BDDA0FCF4D342B /* Deployment.swift */; };
 		74B7E5BDEA03B046BF7B2809 /* NotificationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9FCE26D0648114752DE5DBA2 /* NotificationManager.swift */; };
+		76BC172134B2B4823146AE59 /* UpdateChannelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 15079017D2BD08DD3DA2B78B /* UpdateChannelTests.swift */; };
 		7969FE45B3099D562F6D289B /* StatusDot.swift in Sources */ = {isa = PBXBuildFile; fileRef = ECB5A270A7B7428A8E5C8A40 /* StatusDot.swift */; };
 		798528DF547AA5A90B58FE94 /* VercelUser.swift in Sources */ = {isa = PBXBuildFile; fileRef = BCA4BA9D9376E97271A39A18 /* VercelUser.swift */; };
 		7B5B214C13C36A5A4B8307D6 /* AppInfo.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A9A41B399199C4BEA314887 /* AppInfo.swift */; };
@@ -124,6 +126,7 @@
 		0CD31943215A1B07BE618266 /* TeamsClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TeamsClient.swift; sourceTree = "<group>"; };
 		10909CFA5E939D84F76594A7 /* FaviconCache.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FaviconCache.swift; sourceTree = "<group>"; };
 		131BF5CDDE6315FDAC94ECC2 /* ScopeResolverTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScopeResolverTests.swift; sourceTree = "<group>"; };
+		15079017D2BD08DD3DA2B78B /* UpdateChannelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UpdateChannelTests.swift; sourceTree = "<group>"; };
 		153392136119AFC60AF57F59 /* GitHubActionsErrorReportTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GitHubActionsErrorReportTests.swift; sourceTree = "<group>"; };
 		16ECF961AF63E983AF0B0995 /* DeploymentStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeploymentStoreTests.swift; sourceTree = "<group>"; };
 		171831EB706F154D65EC9487 /* ProviderClientError.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProviderClientError.swift; sourceTree = "<group>"; };
@@ -154,6 +157,7 @@
 		574C2BE2B1BB100DD7A95EEE /* LocalizationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalizationTests.swift; sourceTree = "<group>"; };
 		58F7B38F64649B26A1DFA747 /* DeploymentFaviconTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeploymentFaviconTests.swift; sourceTree = "<group>"; };
 		5BF87A3C8F157577CBACA30D /* StateTransition.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StateTransition.swift; sourceTree = "<group>"; };
+		5C29717717C676DD2D14C378 /* UpdateChannel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UpdateChannel.swift; sourceTree = "<group>"; };
 		5C45520C48C2F7C0E83C4E00 /* GitHubClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GitHubClient.swift; sourceTree = "<group>"; };
 		5D852B6204688B79CB733233 /* DeploymentFavicon.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeploymentFavicon.swift; sourceTree = "<group>"; };
 		5EA45595184BB5C619B00160 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
@@ -239,6 +243,7 @@
 				4DB4B342E203F63C747D601A /* SourcedItem.swift */,
 				5BF87A3C8F157577CBACA30D /* StateTransition.swift */,
 				99CE42C7D6C12B7325A60F1D /* Team.swift */,
+				5C29717717C676DD2D14C378 /* UpdateChannel.swift */,
 				BCA4BA9D9376E97271A39A18 /* VercelUser.swift */,
 			);
 			path = Models;
@@ -306,6 +311,7 @@
 				6DBD9CAD49574C68D9EED507 /* TeamsClientTests.swift */,
 				228B4A2687511C4A259DA822 /* TeamsLoadingTests.swift */,
 				3FC7F8BFC1B963C7CBD0CC12 /* TokenProviderTests.swift */,
+				15079017D2BD08DD3DA2B78B /* UpdateChannelTests.swift */,
 				A5E5C2ED9666F903534AFD74 /* UserLoadingTests.swift */,
 				975C49CE978B69146270A2D6 /* VercelClientTests.swift */,
 				ED25543EFCD38C54768D8A71 /* Fixtures */,
@@ -566,6 +572,7 @@
 				FD482DB5015784339C85DEF8 /* TeamsClient.swift in Sources */,
 				0DC0A4563D56EFBDE8ED2412 /* TokenProvider.swift in Sources */,
 				BF5EA1E55A0B5E0E15E231C9 /* Tooltip.swift in Sources */,
+				27B2977BC195025852589715 /* UpdateChannel.swift in Sources */,
 				36C40BB58FF083A557093276 /* UserClient.swift in Sources */,
 				A6420D2DE19628FA56D15373 /* VercelClient.swift in Sources */,
 				798528DF547AA5A90B58FE94 /* VercelUser.swift in Sources */,
@@ -610,6 +617,7 @@
 				BE5B14760244B9228E6D8E20 /* TeamsClientTests.swift in Sources */,
 				C51A1FA71CCAFBEFA0EEB1DF /* TeamsLoadingTests.swift in Sources */,
 				B5DCE90E58EF6D38594C2677 /* TokenProviderTests.swift in Sources */,
+				76BC172134B2B4823146AE59 /* UpdateChannelTests.swift in Sources */,
 				E8C88C6284FB182EB9D3D48F /* UserLoadingTests.swift in Sources */,
 				4BF059240F92969CD0D72385 /* VercelClientTests.swift in Sources */,
 			);
