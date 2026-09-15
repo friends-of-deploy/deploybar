@@ -56,11 +56,9 @@ final class UpdaterController: NSObject, SPUUpdaterDelegate {
 
     /// Forwarded to Sparkle, which is the store of record for these.
     ///
-    /// `@Observable` only tracks stored properties, so a plain computed
-    /// forwarder would never tell SwiftUI the toggle moved — hence the explicit
-    /// `access` / `withMutation` pair, and the `_didChange` counter they hang
-    /// off. Sparkle does not publish these through KVO, so there is nothing to
-    /// observe instead.
+    /// `@Observable` only tracks stored properties, so a computed forwarder
+    /// needs an explicit `access` / `withMutation` pair — keyed off the
+    /// `_didChange` counter — to notify SwiftUI that the value moved.
     var automaticallyChecksForUpdates: Bool {
         get {
             access(keyPath: \._didChange)
@@ -113,14 +111,18 @@ final class UpdaterController: NSObject, SPUUpdaterDelegate {
 
     // MARK: - SPUUpdaterDelegate
 
+    /// Exposed so tests can exercise `feedURLString(for:)` against a real
+    /// `SPUUpdater` without widening the delegate API itself.
+    var updater: SPUUpdater { controller.updater }
+
     nonisolated static func feedURLString(for channel: UpdateChannel) -> String {
         channel.appcastURL.absoluteString
     }
 
-    nonisolated func feedURLString(for updater: SPUUpdater) -> String? {
-        // Read on every check, so a channel switch needs no restart. Reading
-        // the stored value directly keeps this free of actor hops.
-        let stored = UserDefaults.standard.string(forKey: SettingsStore.updateChannelDefaultsKey)
-        return Self.feedURLString(for: UpdateChannel.from(storedValue: stored))
+    /// `SPUUpdaterDelegate` is declared `NS_SWIFT_UI_ACTOR`, so this is called
+    /// on the main actor — reading the injected `settings` directly is safe
+    /// and keeps this controller's single source of truth for the channel.
+    func feedURLString(for updater: SPUUpdater) -> String? {
+        Self.feedURLString(for: settings.updateChannel)
     }
 }

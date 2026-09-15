@@ -17,8 +17,9 @@ final class UpdaterFeedSelectionTests: XCTestCase {
                           UpdaterController.feedURLString(for: .beta))
     }
 
-    /// The delegate is asked for a feed on every check, so a channel switch has
-    /// to be visible immediately — no restart, no cached URL.
+    /// The setter must write through to the injected `SettingsStore` rather
+    /// than caching the channel locally, so `settings` stays the single
+    /// source of truth the delegate reads from on every check.
     @MainActor
     func test_channelSetterPersistsThroughSettings() {
         let settings = SettingsStore(defaults: UserDefaults(suiteName: UUID().uuidString)!)
@@ -38,5 +39,24 @@ final class UpdaterFeedSelectionTests: XCTestCase {
         settings.updateChannel = .beta
 
         XCTAssertEqual(UpdaterController(settings: settings).channel, .beta)
+    }
+
+    /// The delegate is asked for a feed on every check, so a channel switch
+    /// has to be visible immediately — no restart, no cached URL. This
+    /// exercises the actual `SPUUpdaterDelegate` conformance, not just the
+    /// pure mapping function, so it is the one test that would catch the
+    /// delegate reading a stale or wrong source of truth.
+    @MainActor
+    func test_delegateFeedURLStringReflectsCurrentChannel() {
+        let settings = SettingsStore(defaults: UserDefaults(suiteName: UUID().uuidString)!)
+        let controller = UpdaterController(settings: settings)
+
+        controller.channel = .beta
+        XCTAssertEqual(controller.feedURLString(for: controller.updater),
+                       UpdateChannel.beta.appcastURL.absoluteString)
+
+        controller.channel = .stable
+        XCTAssertEqual(controller.feedURLString(for: controller.updater),
+                       UpdateChannel.stable.appcastURL.absoluteString)
     }
 }
