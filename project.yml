@@ -14,6 +14,11 @@ settings:
     SWIFT_VERSION: "5.0"
     SWIFT_STRICT_CONCURRENCY: minimal
 
+packages:
+  Sparkle:
+    url: https://github.com/sparkle-project/Sparkle
+    majorVersion: 2.6.0
+
 targets:
   DeployBar:
     type: application
@@ -22,18 +27,50 @@ targets:
       - DeployBar
     entitlements:
       path: DeployBar/DeployBar.entitlements
+    dependencies:
+      - package: Sparkle
+    # Sparkle needs custom Info.plist keys, and the INFOPLIST_KEY_ build
+    # settings only carry Apple's own keys — anything else is dropped without
+    # a warning. So the plist is generated here instead, and
+    # GENERATE_INFOPLIST_FILE is off below.
+    info:
+      path: DeployBar/Info.plist
+      properties:
+        CFBundleDisplayName: DeployBar
+        CFBundleDevelopmentRegion: en
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        LSUIElement: true
+        LSMinimumSystemVersion: $(MACOSX_DEPLOYMENT_TARGET)
+        NSHumanReadableCopyright: ""
+        # The public key is public by design — an installed copy uses it to
+        # verify that an update was signed by the matching private key, which
+        # lives only in the SPARKLE_PRIVATE_KEY Actions secret and the
+        # maintainer's login Keychain.
+        #
+        # TO FILL: run `generate_keys -p` from a Sparkle distribution and paste
+        # the printed key here. Until then the app builds and runs, but rejects
+        # every update as unsigned. See docs/releasing.md.
+        SUPublicEDKey: PUBLIC_KEY_NOT_SET
+        # First-launch default only. Once the user has a channel preference,
+        # UpdaterController's delegate supplies the feed URL instead.
+        SUFeedURL: https://friends-of-deploy.github.io/deploybar/appcast.xml
+        SUEnableAutomaticChecks: true
+        SUAllowsAutomaticUpdates: true
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: io.eightlines.deploybar.DeployBar
-        INFOPLIST_KEY_LSUIElement: "YES"
-        INFOPLIST_KEY_CFBundleDisplayName: DeployBar
-        INFOPLIST_KEY_CFBundleDevelopmentRegion: en
-        GENERATE_INFOPLIST_FILE: "YES"
+        # Off: the plist is generated from the `info:` block above, because
+        # Sparkle's custom keys cannot travel through INFOPLIST_KEY_ settings.
+        GENERATE_INFOPLIST_FILE: "NO"
         # Assets.xcassets is picked up automatically from the `DeployBar` source
         # directory; this names the app icon set inside it.
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         MARKETING_VERSION: "1.1.0"
         CURRENT_PROJECT_VERSION: "3"
+        # Sparkle's keys are set under `info:` below, not here: the
+        # INFOPLIST_KEY_ prefix only carries Apple's known keys into a
+        # generated plist, and silently drops anything else.
         # Default (Debug + CI): unsigned, no certs needed.
         CODE_SIGN_STYLE: Automatic
         CODE_SIGNING_ALLOWED: "NO"

@@ -104,6 +104,7 @@
 		F3D2D4926DBD27A17564A675 /* DeploymentStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2395B1126B0EDB81E5EC45D /* DeploymentStore.swift */; };
 		F490B46C416C421A1E4E265B /* DeployBarApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = FED0A4A6C4E0346174AF8482 /* DeployBarApp.swift */; };
 		F5EA7077FC46F181603F8681 /* AccountStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 63E0030A9C2CF9E29B7C1CB4 /* AccountStore.swift */; };
+		F69977E3BF80594CDB054B00 /* Sparkle in Frameworks */ = {isa = PBXBuildFile; productRef = 3C3D5F1973EE8F7D409C6ABB /* Sparkle */; };
 		F9F6C1BF31C0CDFCB9CA044F /* BuildEvent.swift in Sources */ = {isa = PBXBuildFile; fileRef = D96FB60CD54BA04808EB1852 /* BuildEvent.swift */; };
 		FD3457E8BC93EFCDF34C2362 /* SettingsTab.swift in Sources */ = {isa = PBXBuildFile; fileRef = 44D380D53D1059B6E606EF12 /* SettingsTab.swift */; };
 		FD482DB5015784339C85DEF8 /* TeamsClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0CD31943215A1B07BE618266 /* TeamsClient.swift */; };
@@ -179,6 +180,7 @@
 		82E0F02584E0A22C73BB9BD6 /* CopyBuildErrorButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CopyBuildErrorButton.swift; sourceTree = "<group>"; };
 		8744201D53B972B1BBA7A89E /* AccountStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountStoreTests.swift; sourceTree = "<group>"; };
 		897DD0C50DF99321A6B0FF21 /* AggregationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AggregationTests.swift; sourceTree = "<group>"; };
+		8A5455E1C4EB61240DA56365 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		8A84A02061ED58BCE31809D4 /* CredentialStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CredentialStore.swift; sourceTree = "<group>"; };
 		8BFEF6A835586543257A17DB /* ProjectOrganizationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProjectOrganizationTests.swift; sourceTree = "<group>"; };
 		8D04BF4E5BDB09509208FA83 /* DeployBarTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = DeployBarTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -226,6 +228,17 @@
 		FE793AAA24E87F302F47F6BA /* FaviconURL.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FaviconURL.swift; sourceTree = "<group>"; };
 		FED0A4A6C4E0346174AF8482 /* DeployBarApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeployBarApp.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		C6BB0E87800C1A286DE34E52 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				F69977E3BF80594CDB054B00 /* Sparkle in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
 		039E305870787F9A40DCDF5C /* Models */ = {
@@ -397,6 +410,7 @@
 				CB9D4EBA17ACC04E8F2C9252 /* Assets.xcassets */,
 				FB9004A0F3030A14A0193CF9 /* DeployBar.entitlements */,
 				FED0A4A6C4E0346174AF8482 /* DeployBarApp.swift */,
+				8A5455E1C4EB61240DA56365 /* Info.plist */,
 				6E2C8404F39BA26A4345054F /* Localizable.xcstrings */,
 				874652FA2E11F8142241A168 /* Clients */,
 				039E305870787F9A40DCDF5C /* Models */,
@@ -446,6 +460,7 @@
 			buildPhases = (
 				5FC02FD7E19FBAEE85E2A354 /* Sources */,
 				785FFEAED22A10D0231F35B0 /* Resources */,
+				C6BB0E87800C1A286DE34E52 /* Frameworks */,
 			);
 			buildRules = (
 			);
@@ -453,6 +468,7 @@
 			);
 			name = DeployBar;
 			packageProductDependencies = (
+				3C3D5F1973EE8F7D409C6ABB /* Sparkle */,
 			);
 			productName = DeployBar;
 			productReference = DD43A2A6C53DEA9D5514D087 /* DeployBar.app */;
@@ -479,6 +495,9 @@
 			);
 			mainGroup = 1B41EF9D349B18CCFCE1EBAB;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				DDB0C32B5D730B1CA3A99978 /* XCRemoteSwiftPackageReference "Sparkle" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 65A8390B4450963738E8F560 /* Products */;
 			projectDirPath = "";
@@ -741,10 +760,8 @@
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 3;
-				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_CFBundleDevelopmentRegion = en;
-				INFOPLIST_KEY_CFBundleDisplayName = DeployBar;
-				INFOPLIST_KEY_LSUIElement = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = DeployBar/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
@@ -765,10 +782,8 @@
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 3;
 				ENABLE_HARDENED_RUNTIME = YES;
-				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_CFBundleDevelopmentRegion = en;
-				INFOPLIST_KEY_CFBundleDisplayName = DeployBar;
-				INFOPLIST_KEY_LSUIElement = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = DeployBar/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
@@ -868,6 +883,25 @@
 			defaultConfigurationName = Debug;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		DDB0C32B5D730B1CA3A99978 /* XCRemoteSwiftPackageReference "Sparkle" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/sparkle-project/Sparkle";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.6.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		3C3D5F1973EE8F7D409C6ABB /* Sparkle */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = DDB0C32B5D730B1CA3A99978 /* XCRemoteSwiftPackageReference "Sparkle" */;
+			productName = Sparkle;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = CEFDCD51BD5695E365B54CD3 /* Project object */;
 }
