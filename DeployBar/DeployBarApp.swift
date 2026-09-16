@@ -25,34 +25,26 @@ struct DeployBarApp: App {
         // opened, so relying on it alone meant a user who never opened the
         // popover got no background polling and no notifications.
         store.start()
+
+        // The menu bar icon and its panel are AppKit-owned now — see
+        // `MenuBarPanelController` for why `MenuBarExtra` had to go. The
+        // delegate builds them once the app has finished launching, so it needs
+        // closures rather than the values themselves: `@NSApplicationDelegateAdaptor`
+        // constructs the delegate before this initializer's `@State` exists.
+        appDelegate.makePanel = { [appDelegate] in
+            MenuBarPanelController(
+                content: PopoverView(store: store) {
+                    NSApp.activate(ignoringOtherApps: true)
+                    appDelegate.openSettings()
+                },
+                onRightClick: { button in appDelegate.showContextMenu(for: button) })
+        }
+        appDelegate.currentIconState = { store.iconState }
     }
 
     var body: some Scene {
-        MenuBarExtra {
-            MenuBarContentView(store: store)
-                .task {
-                    store.start()
-                }
-        } label: {
-            MenuBarIcon(state: store.iconState)
-        }
-        .menuBarExtraStyle(.window)
-
         Settings {
             SettingsView(settings: settings, store: store, accountStore: accountStore, updater: updater)
-        }
-    }
-}
-
-/// Wrapper view that gives access to `@Environment(\.openSettings)` for the Settings button.
-private struct MenuBarContentView: View {
-    @Environment(\.openSettings) private var openSettings
-    let store: DeploymentStore
-
-    var body: some View {
-        PopoverView(store: store) {
-            NSApp.activate(ignoringOtherApps: true)
-            openSettings()
         }
     }
 }

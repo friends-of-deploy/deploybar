@@ -41,9 +41,6 @@ struct PopoverView: View {
             }
         }
         .frame(width: 380)
-        // Rounds the panel's window and keeps its height on the content.
-        // `MenuBarExtra(.window)` does neither by itself.
-        .background(PopoverPanelStyler())
         .onAppear {
             // Opening the popover acknowledges the current green/red icon alert.
             store.acknowledge()
