@@ -1,19 +1,28 @@
 import AppKit
 import SwiftUI
 
-/// Gives the menu bar panel its translucent material and rounded corners, and
-/// snaps its window back down to the content's height.
+/// Rounds the menu bar panel and snaps its window back down to the content's
+/// height.
 ///
-/// `MenuBarExtra(.window)` ships no material of its own on macOS 26 — dumped
-/// from a live panel, its content view holds only two flat `_NSGraphicsView`s,
-/// one an opaque grey fill. Left alone, the panel is a flat grey slab.
+/// Deliberately does NOT try to give the panel a translucent material.
+/// `MenuBarExtra(.window)` ships none of its own on macOS 26 — dumped from a
+/// live panel, its content view holds only two flat `_NSGraphicsView`s, one an
+/// opaque grey fill — and every attempt to supply one from here has shipped a
+/// panel that draws nothing at all:
 ///
-/// The fix is the one remote-mac uses: add an `NSVisualEffectView` *below* the
-/// existing views and touch none of their layers. An earlier attempt here
-/// (1.2.2) cleared the grey fill's own layer instead and shipped a panel that
-/// drew nothing; a later one replaced `MenuBarExtra` with a hand-rolled
-/// `NSPanel` (1.3.0), which got the material but broke how the panel opens and
-/// dismisses. Neither was necessary — the plain framework path works.
+///   * 1.2.2 cleared the opaque fill's own layer;
+///   * 1.0.0-beta added an `NSVisualEffectView` beneath the content and set
+///     `window.backgroundColor = .clear`, the way remote-mac does it.
+///
+/// Both rendered correctly in a Debug build and failed only in Release, which
+/// is what let the second one ship. The common factor is clearing the window's
+/// background: a probe on a live panel showed that alone stops the draw pass.
+/// remote-mac gets away with it because its panel is a different, much simpler
+/// view tree; this one is not.
+///
+/// So the window's background is left alone. The grey fill stays, and the
+/// rounding below is applied to the content view's own layer — which touches
+/// nothing SwiftUI owns and has never broken anything.
 ///
 struct PopoverPanelStyler: NSViewRepresentable {
     /// The corrected window frame, or nil when the current one already fits.
@@ -78,48 +87,19 @@ struct PopoverPanelStyler: NSViewRepresentable {
             follow = nil
         }
 
-        /// Clears the panel's opaque fill and slots an `NSVisualEffectView`
-        /// under the content, so the desktop reads through the panel instead of
-        /// it being a flat grey slab.
+        /// Rounds the panel's own window and gives it a shadow.
         ///
-        /// `MenuBarExtra(.window)` ships no material of its own on macOS 26 —
-        /// dumped from a live panel, its content view holds only two flat
-        /// `_NSGraphicsView`s, one an opaque grey fill. This is the same
-        /// approach remote-mac uses, and the ordering is what makes it work:
-        /// the backdrop is added *below* the existing views and none of their
-        /// layers are touched. An earlier attempt here (1.2.2) cleared the grey
-        /// fill's own layer instead, and that stopped the panel drawing at all.
-        ///
-        /// `.menu` is the thinnest of the popover materials, which is the point.
-        ///
-        /// Idempotent: `viewDidMoveToWindow` fires again whenever the panel is
-        /// rebuilt, and a second effect view would stack another wash of tint.
+        /// Window-level only, and deliberately minimal — see the note on the
+        /// type for what happens when this reaches further.
         private func styleWindow() {
-            guard let window, let content = window.contentView else { return }
-            window.isOpaque = false
-            window.backgroundColor = .clear
-            guard !content.subviews.contains(where: { $0 is Backdrop }) else { return }
-            let backdrop = Backdrop()
-            backdrop.material = .menu
-            backdrop.blendingMode = .behindWindow
-            // .active, not .followsWindowActiveState: the panel resigns key as
-            // soon as the user clicks another app, and a backdrop that goes
-            // solid grey on the way out is the bug this came to fix.
-            backdrop.state = .active
-            backdrop.autoresizingMask = [.width, .height]
-            backdrop.frame = content.bounds
-            // Clipped to the panel's own corners — clearing the window drops
-            // the system's rounding, leaving the material square at the tips.
-            backdrop.wantsLayer = true
-            backdrop.layer?.cornerRadius = Self.cornerRadius
-            backdrop.layer?.cornerCurve = .continuous
-            backdrop.layer?.masksToBounds = true
-            content.addSubview(backdrop, positioned: .below, relativeTo: nil)
+            guard let window else { return }
+            window.hasShadow = true
+            guard let content = window.contentView else { return }
+            content.wantsLayer = true
+            content.layer?.cornerRadius = Self.cornerRadius
+            content.layer?.cornerCurve = .continuous
+            content.layer?.masksToBounds = true
         }
-
-        /// A marker class, so the idempotence check cannot mistake some other
-        /// effect view SwiftUI may park in the panel for ours.
-        final class Backdrop: NSVisualEffectView {}
 
         /// Matches the rounding `MenuBarExtra(.window)` draws for itself.
         static let cornerRadius: CGFloat = 11
