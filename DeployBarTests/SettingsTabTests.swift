@@ -6,7 +6,7 @@ import XCTest
 final class SettingsTabTests: XCTestCase {
     func test_tabOrderIsStable() {
         XCTAssertEqual(SettingsTab.allCases.map(\.rawValue),
-                       ["general", "notifications", "updates", "accounts"])
+                       ["general", "notifications", "accounts", "updates"])
     }
 
     /// Version and build moved to the Updates tab; leaving a copy behind in

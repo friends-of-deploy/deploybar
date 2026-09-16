@@ -8,8 +8,9 @@ import Foundation
 enum SettingsTab: String, CaseIterable, Identifiable, Sendable {
     case general
     case notifications
-    case updates
     case accounts
+    // Last: the tab a user opens once in a while, after the ones they live in.
+    case updates
 
     var id: String { rawValue }
 
