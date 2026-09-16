@@ -74,7 +74,9 @@ struct PopoverView: View {
                     faviconDirectURL: DeploymentFavicon.directURL(for: sourced.deployment, in: allProjects),
                     copyError: { await store.copyBuildError(for: $0) },
                     scopeLabel: store.rowScopeLabel(accountId: sourced.account.id,
-                                                    teamId: sourced.teamId)
+                                                    teamId: sourced.teamId),
+                    scopeColorIndex: store.scopeColorIndex(accountId: sourced.account.id,
+                                                           teamId: sourced.teamId)
                 )
             }
         }
@@ -95,7 +97,9 @@ struct PopoverView: View {
                            provider: sourced.account.provider,
                            latestRun: store.latestDeployment(for: sourced),
                            scopeLabel: store.rowScopeLabel(accountId: sourced.account.id,
-                                                           teamId: sourced.teamId))
+                                                           teamId: sourced.teamId),
+                           scopeColorIndex: store.scopeColorIndex(accountId: sourced.account.id,
+                                                                  teamId: sourced.teamId))
             }
         }
     }

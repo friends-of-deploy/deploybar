@@ -18,6 +18,9 @@ struct AccountsSettingsTab: View {
 
     @State private var selection: Selection?
     @State private var confirmingRemoval = false
+    /// Mirrored here so picking a color repaints the sidebar immediately —
+    /// `SettingsStore` reads through to `UserDefaults` and isn't observable.
+    @State private var scopeColors: [String: Int] = [:]
 
     private var selectedAccount: Account? {
         guard case .account(let id) = resolvedSelection else { return nil }
@@ -44,6 +47,7 @@ struct AccountsSettingsTab: View {
                 .frame(maxWidth: .infinity)
         }
         .padding(12)
+        .onAppear { scopeColors = settings.scopeColorOverrides }
     }
 
     // MARK: Sidebar
@@ -92,6 +96,10 @@ struct AccountsSettingsTab: View {
         let projects = store.allSourcedProjects.filter { $0.account.id == account.id }
         let followed = projects.filter { store.isFollowed($0) }.count
         return HStack(spacing: 8) {
+            ScopeColorPicker(scopeId: ScopeRef(accountId: account.id, teamId: nil).id,
+                             allScopeIds: store.allScopeIds,
+                             settings: settings,
+                             overrides: $scopeColors)
             Image(systemName: account.provider.iconName)
                 .foregroundStyle(.secondary)
                 .frame(width: 14)

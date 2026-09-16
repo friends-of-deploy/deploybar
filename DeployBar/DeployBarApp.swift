@@ -18,6 +18,11 @@ struct DeployBarApp: App {
         _settings = State(initialValue: settings)
         _accountStore = State(initialValue: accountStore)
         _store = State(initialValue: store)
+        // Start polling (and request notification authorization) at launch.
+        // The popover's `.task` runs only when the menu bar item is first
+        // opened, so relying on it alone meant a user who never opened the
+        // popover got no background polling and no notifications.
+        store.start()
     }
 
     var body: some Scene {

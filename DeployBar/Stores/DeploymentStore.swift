@@ -263,6 +263,24 @@ final class DeploymentStore {
         accountStore.accounts.first { $0.id == id }
     }
 
+    /// Every selectable scope's id, sorted — the input to default color
+    /// assignment, so each source gets a distinct slot while slots last.
+    var allScopeIds: [String] {
+        connectedAccounts.flatMap { account in
+            scopes(for: account).map { ScopeRef(accountId: account.id, teamId: $0.teamId).id }
+        }
+    }
+
+    /// Palette slot for a scope's marker — the user's override if set, else its
+    /// position among all known scopes. Keyed on identity rather than the
+    /// display label so renaming a team (or two teams sharing a name) can't
+    /// shuffle colors. Views turn this into a `Color` via `ScopeColor.palette`.
+    func scopeColorIndex(accountId: UUID, teamId: String?) -> Int {
+        let id = ScopeRef(accountId: accountId, teamId: teamId).id
+        if let override = settings.scopeColorOverrides[id] { return override }
+        return ScopeColorIndex.index(for: id, among: allScopeIds)
+    }
+
     /// Newest fetched deployment for a project (same account, matching name) —
     /// enriches rows whose project API carries no latest-deployment info
     /// (GitHub repos get their CI state from the runs already fetched).
@@ -458,7 +476,14 @@ final class DeploymentStore {
 
     // MARK: - Lifecycle
 
+    /// Idempotent: the app starts the store at launch, and the popover's
+    /// `.task` also calls it the first time it appears. Only the first call
+    /// requests notification authorization and schedules the poll timer.
+    @ObservationIgnored private var hasStarted = false
+
     func start() {
+        guard !hasStarted else { return }
+        hasStarted = true
         notifier.requestAuthorization()
         // Default view is "All": every connected provider, and every Vercel team,
         // in one list. `scopeName` stays "all" and the filter is left untouched.

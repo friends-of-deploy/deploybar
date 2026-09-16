@@ -26,6 +26,9 @@ struct AccountDetailView: View {
     let account: Account
 
     @State private var tab: AccountDetailTab = .information
+    /// Mirrors the persisted overrides so a pick repaints the swatches at once;
+    /// `SettingsStore` reads through to `UserDefaults` and isn't observable.
+    @State private var scopeColors: [String: Int] = [:]
 
     var body: some View {
         VStack(spacing: 0) {
@@ -79,8 +82,31 @@ struct AccountDetailView: View {
                             comment: "Account project count footer"))
                     .foregroundStyle(.secondary)
             }
+
+            Section {
+                // One row per scope: the account itself, plus every team it can
+                // reach. Each is a separate source in "All sources", so each
+                // carries its own marker.
+                ForEach(store.scopes(for: account)) { scope in
+                    LabeledContent(scope.teamName ?? account.label) {
+                        ScopeColorPicker(
+                            scopeId: ScopeRef(accountId: account.id, teamId: scope.teamId).id,
+                            allScopeIds: store.allScopeIds,
+                            settings: settings,
+                            overrides: $scopeColors
+                        )
+                    }
+                }
+            } header: {
+                Text(String(localized: "Marker color", comment: "Account detail section header"))
+            } footer: {
+                Text(String(localized: "The dot shown next to rows from this source in All sources. Automatic picks a color from the source's identity.",
+                            comment: "Marker color section footer"))
+                    .foregroundStyle(.secondary)
+            }
         }
         .formStyle(.grouped)
+        .onAppear { scopeColors = settings.scopeColorOverrides }
     }
 
     private var projects: [SourcedProject] {

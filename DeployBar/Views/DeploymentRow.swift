@@ -14,6 +14,9 @@ struct DeploymentRow: View {
     /// Account/team this row came from. Set only in the "All sources" view, where
     /// one list mixes scopes and two teams may share a project name.
     var scopeLabel: String? = nil
+    /// Palette slot for `scopeLabel`'s marker dot, resolved by the store so a
+    /// user override in Settings wins over the derived color.
+    var scopeColorIndex: Int = 0
     @State private var hovering = false
 
     var body: some View {
@@ -33,7 +36,7 @@ struct DeploymentRow: View {
                         .lineLimit(1)
                         .truncationMode(.tail)
                     if let scopeLabel {
-                        ScopeDot(label: scopeLabel)
+                        ScopeDot(label: scopeLabel, color: ScopeColor.color(at: scopeColorIndex))
                     }
                 }
                 Text(subtitle)

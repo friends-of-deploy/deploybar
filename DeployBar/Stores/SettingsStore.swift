@@ -19,6 +19,7 @@ final class SettingsStore {
         static let didMigrateFollow = "didMigrateFollowData"
         static let cachedTeams      = "cachedTeams"
         static let cachedRows       = "cachedRows"
+        static let scopeColors      = "scopeColorOverrides"
     }
 
     init(defaults: UserDefaults = .standard) {
@@ -93,6 +94,24 @@ final class SettingsStore {
             guard let data = try? JSONEncoder().encode(newValue) else { return }
             defaults.set(data, forKey: Keys.cachedRows)
         }
+    }
+
+    // MARK: - Scope colors
+
+    /// User-chosen palette slots, keyed by `ScopeRef.id`. Scopes absent here use
+    /// the color derived from their id, so this stays empty until someone
+    /// actually overrides something.
+    var scopeColorOverrides: [String: Int] {
+        get { defaults.dictionary(forKey: Keys.scopeColors) as? [String: Int] ?? [:] }
+        set { defaults.set(newValue, forKey: Keys.scopeColors) }
+    }
+
+    /// Assigns a palette slot to a scope, or clears the override when `index`
+    /// is nil so the scope falls back to its derived color.
+    func setScopeColor(_ index: Int?, for scopeId: String) {
+        var overrides = scopeColorOverrides
+        if let index { overrides[scopeId] = index } else { overrides.removeValue(forKey: scopeId) }
+        scopeColorOverrides = overrides
     }
 
     // MARK: - Follow API
