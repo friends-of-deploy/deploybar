@@ -13,7 +13,7 @@ struct MenuBarIcon: View {
     var body: some View {
         Image(nsImage: Self.image(for: state))
             .renderingMode(.template)
-            .accessibilityLabel(Self.accessibilityLabel(for: state))
+            .accessibilityLabel(Self.label(for: state))
     }
 
     /// Asset name for each state. The imagesets already declare
@@ -43,7 +43,7 @@ struct MenuBarIcon: View {
         return image
     }
 
-    static func accessibilityLabel(for state: IconState) -> String {
+    private static func label(for state: IconState) -> String {
         switch state {
         case .idle:      return "DeployBar — no recent deploys"
         case .ready:     return "DeployBar — all deploys ready"
