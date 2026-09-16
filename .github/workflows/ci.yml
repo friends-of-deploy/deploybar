@@ -47,3 +47,6 @@ jobs:
             -scheme DeployBar \
             -destination 'platform=macOS' \
             CODE_SIGNING_ALLOWED=NO
+
+      - name: Test appcast script
+        run: ./scripts/test-append-appcast.sh
