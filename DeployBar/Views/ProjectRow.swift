@@ -234,6 +234,12 @@ struct ProjectRow: View {
     }
 
     /// Shared ⋯ menu chrome around provider-specific links.
+    ///
+    /// Sized to the same 30pt box `IconActionButton` uses. A bare borderless
+    /// `Menu` is only ~15pt tall, so in the actions `HStack` it would re-center
+    /// itself vertically the moment the taller hover icons appeared beside it —
+    /// the "⋯ drops down, then the icons slide out" sequence. Matching heights
+    /// means nothing has to move.
     private func overflowMenu(@ViewBuilder _ content: () -> some View) -> some View {
         Menu {
             content()
@@ -241,7 +247,15 @@ struct ProjectRow: View {
             Image(systemName: "ellipsis.circle")
         }
         .menuStyle(.borderlessButton)
+        // Without this the menu draws its disclosure chevron beside the glyph,
+        // which makes the control ~14pt wider than the icons it sits next to
+        // and reads as a dropdown rather than one more action button.
+        .menuIndicator(.hidden)
         .fixedSize()
+        .frame(width: 18, height: 18)
+        .padding(.vertical, 6)
+        .padding(.horizontal, 3)
+        .contentShape(Rectangle())
         .tooltip(String(localized: "More actions", comment: "Overflow menu tooltip"))
         .pointingHandCursor()
     }
