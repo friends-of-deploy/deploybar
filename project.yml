@@ -48,10 +48,7 @@ targets:
         # lives only in the SPARKLE_PRIVATE_KEY Actions secret and the
         # maintainer's login Keychain.
         #
-        # TO FILL: run `generate_keys -p` from a Sparkle distribution and paste
-        # the printed key here. Until then the app builds and runs, but rejects
-        # every update as unsigned. See docs/releasing.md.
-        SUPublicEDKey: PUBLIC_KEY_NOT_SET
+        SUPublicEDKey: ALXbpEEByW2KIAMtGC69OHKfoA0ghWfqNkvT0xXTIvA=
         # First-launch default only. Once the user has a channel preference,
         # UpdaterController's delegate supplies the feed URL instead.
         SUFeedURL: https://friends-of-deploy.github.io/deploybar/appcast.xml
