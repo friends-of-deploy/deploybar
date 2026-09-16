@@ -25,7 +25,17 @@ jobs:
 
       - name: Derive version from tag
         id: version
-        run: echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+        run: |
+          set -euo pipefail
+          VERSION="${GITHUB_REF_NAME#v}"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          # A `-beta` suffix routes the release to the beta channel only, marks
+          # the GitHub Release as a prerelease, and skips the Homebrew bump.
+          if [[ "$VERSION" == *-beta* ]]; then
+            echo "is_beta=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "is_beta=false" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Select latest Xcode
         run: |
@@ -104,6 +114,18 @@ jobs:
             "$RUNNER_TEMP/export/DeployBar.app"
           echo "path=$DMG" >> "$GITHUB_OUTPUT"
 
+      - name: Build .zip for Sparkle
+        id: zip
+        run: |
+          set -euo pipefail
+          VERSION="${{ steps.version.outputs.version }}"
+          ZIP="$RUNNER_TEMP/DeployBar-$VERSION.zip"
+          # ditto preserves the bundle's symlinks and resource forks; `zip`
+          # does not, and a mangled bundle fails Gatekeeper on the other side.
+          ditto -c -k --sequesterRsrc --keepParent \
+            "$RUNNER_TEMP/export/DeployBar.app" "$ZIP"
+          echo "path=$ZIP" >> "$GITHUB_OUTPUT"
+
       - name: Notarize & staple
         env:
           NOTARY_KEY_ID: ${{ secrets.NOTARY_KEY_ID }}
@@ -112,12 +134,26 @@ jobs:
         run: |
           set -euo pipefail
           echo "$NOTARY_KEY_P8" | base64 --decode > "$RUNNER_TEMP/notary.p8"
-          xcrun notarytool submit "${{ steps.dmg.outputs.path }}" \
-            --key "$RUNNER_TEMP/notary.p8" \
-            --key-id "$NOTARY_KEY_ID" \
-            --issuer "$NOTARY_ISSUER_ID" \
-            --wait
+
+          submit() {
+            xcrun notarytool submit "$1" \
+              --key "$RUNNER_TEMP/notary.p8" \
+              --key-id "$NOTARY_KEY_ID" \
+              --issuer "$NOTARY_ISSUER_ID" \
+              --wait
+          }
+
+          submit "${{ steps.dmg.outputs.path }}"
           xcrun stapler staple "${{ steps.dmg.outputs.path }}"
+
+          # A .zip cannot be stapled; staple the .app and repack, so the
+          # unpacked copy carries its notarization ticket offline.
+          submit "${{ steps.zip.outputs.path }}"
+          xcrun stapler staple "$RUNNER_TEMP/export/DeployBar.app"
+          rm -f "${{ steps.zip.outputs.path }}"
+          ditto -c -k --sequesterRsrc --keepParent \
+            "$RUNNER_TEMP/export/DeployBar.app" "${{ steps.zip.outputs.path }}"
+
           rm -f "$RUNNER_TEMP/notary.p8"
 
       - name: Compute SHA-256
@@ -134,14 +170,79 @@ jobs:
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          files: ${{ steps.dmg.outputs.path }}
+          files: |
+            ${{ steps.dmg.outputs.path }}
+            ${{ steps.zip.outputs.path }}
           generate_release_notes: true
+          prerelease: ${{ steps.version.outputs.is_beta == 'true' }}
+
+      - name: Sign update & append to appcast
+        env:
+          SPARKLE_PRIVATE_KEY: ${{ secrets.SPARKLE_PRIVATE_KEY }}
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.version.outputs.version }}
+          IS_BETA: ${{ steps.version.outputs.is_beta }}
+          ZIP_PATH: ${{ steps.zip.outputs.path }}
+        run: |
+          set -euo pipefail
+
+          # Sparkle's signing tool, fetched rather than built: the release
+          # archive carries prebuilt binaries.
+          SPARKLE_VERSION="2.6.4"
+          curl -fsSL -o "$RUNNER_TEMP/sparkle.tar.xz" \
+            "https://github.com/sparkle-project/Sparkle/releases/download/$SPARKLE_VERSION/Sparkle-$SPARKLE_VERSION.tar.xz"
+          mkdir -p "$RUNNER_TEMP/sparkle"
+          tar xf "$RUNNER_TEMP/sparkle.tar.xz" -C "$RUNNER_TEMP/sparkle"
+          SIGN_UPDATE="$RUNNER_TEMP/sparkle/bin/sign_update"
+
+          echo "$SPARKLE_PRIVATE_KEY" > "$RUNNER_TEMP/sparkle_key"
+          # sign_update prints: sparkle:edSignature="..." length="..."
+          SIGN_OUTPUT="$("$SIGN_UPDATE" "$ZIP_PATH" -f "$RUNNER_TEMP/sparkle_key")"
+          rm -f "$RUNNER_TEMP/sparkle_key"
+
+          SIGNATURE="$(echo "$SIGN_OUTPUT" | sed -E 's/.*edSignature="([^"]+)".*/\1/')"
+          if [ -z "$SIGNATURE" ] || [ "$SIGNATURE" = "$SIGN_OUTPUT" ]; then
+            echo "could not parse a signature out of: $SIGN_OUTPUT" >&2
+            exit 1
+          fi
+
+          LENGTH="$(stat -f%z "$ZIP_PATH")"
+          BUILD="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' \
+            "$RUNNER_TEMP/export/DeployBar.app/Contents/Info.plist")"
+          ZIP_URL="https://github.com/${GITHUB_REPOSITORY}/releases/download/${GITHUB_REF_NAME}/$(basename "$ZIP_PATH")"
+
+          gh release view "$GITHUB_REF_NAME" --json body --jq .body > "$RUNNER_TEMP/notes.md"
+
+          git clone --branch gh-pages --single-branch \
+            "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" "$RUNNER_TEMP/pages"
+
+          append() {
+            ./scripts/append-appcast.sh "$RUNNER_TEMP/pages/$1" \
+              "$VERSION" "$BUILD" "$ZIP_URL" "$LENGTH" "$SIGNATURE" "$RUNNER_TEMP/notes.md"
+          }
+
+          # Beta testers should also receive stable releases, so a stable build
+          # goes to both feeds; a beta build goes only to the beta feed.
+          append appcast-beta.xml
+          if [ "$IS_BETA" != "true" ]; then
+            append appcast.xml
+          fi
+
+          xmllint --noout "$RUNNER_TEMP/pages/appcast.xml" "$RUNNER_TEMP/pages/appcast-beta.xml"
+
+          cd "$RUNNER_TEMP/pages"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add appcast.xml appcast-beta.xml
+          git commit -m "deploybar $VERSION"
+          git push
 
       # --- Optional: auto-bump the Homebrew cask in friends-of-deploy/homebrew-tap ---
       # Requires a TAP_REPO_TOKEN secret (a PAT with `contents:write` on the tap repo).
       # Remove this step if you prefer to update the cask by hand.
       - name: Bump Homebrew cask
-        if: ${{ env.TAP_REPO_TOKEN != '' }}
+        # The cask tracks stable only — a beta must never bump it.
+        if: ${{ env.TAP_REPO_TOKEN != '' && steps.version.outputs.is_beta == 'false' }}
         env:
           GH_TOKEN: ${{ env.TAP_REPO_TOKEN }}
           VERSION: ${{ steps.version.outputs.version }}

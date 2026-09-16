@@ -11,6 +11,7 @@ struct SettingsView: View {
     let settings: SettingsStore
     let store: DeploymentStore
     let accountStore: AccountStore
+    let updater: UpdaterController
 
     var body: some View {
         TabView {
@@ -34,6 +35,8 @@ struct SettingsView: View {
             GeneralSettingsTab(settings: settings, store: store)
         case .notifications:
             NotificationSettingsTab(settings: settings)
+        case .updates:
+            UpdatesSettingsTab(updater: updater)
         case .accounts:
             AccountsSettingsTab(settings: settings, store: store, accountStore: accountStore)
         }

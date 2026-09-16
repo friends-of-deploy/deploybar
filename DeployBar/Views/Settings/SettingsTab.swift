@@ -9,6 +9,8 @@ enum SettingsTab: String, CaseIterable, Identifiable, Sendable {
     case general
     case notifications
     case accounts
+    // Last: the tab a user opens once in a while, after the ones they live in.
+    case updates
 
     var id: String { rawValue }
 
@@ -17,6 +19,7 @@ enum SettingsTab: String, CaseIterable, Identifiable, Sendable {
         switch self {
         case .general:       return "gearshape"
         case .notifications: return "bell"
+        case .updates:       return "arrow.down.circle"
         case .accounts:      return "person.2.crop.square.stack"
         }
     }
@@ -27,6 +30,8 @@ enum SettingsTab: String, CaseIterable, Identifiable, Sendable {
             return String(localized: "General", comment: "Settings tab title")
         case .notifications:
             return String(localized: "Notifications", comment: "Settings tab title")
+        case .updates:
+            return String(localized: "Updates", comment: "Settings tab title")
         case .accounts:
             return String(localized: "Accounts", comment: "Settings tab title")
         }

@@ -7,6 +7,7 @@ struct DeployBarApp: App {
     @State private var store: DeploymentStore
     @State private var settings: SettingsStore
     @State private var accountStore: AccountStore
+    @State private var updater: UpdaterController
 
     init() {
         let settings = SettingsStore()
@@ -18,6 +19,7 @@ struct DeployBarApp: App {
         _settings = State(initialValue: settings)
         _accountStore = State(initialValue: accountStore)
         _store = State(initialValue: store)
+        _updater = State(initialValue: UpdaterController(settings: settings))
         // Start polling (and request notification authorization) at launch.
         // The popover's `.task` runs only when the menu bar item is first
         // opened, so relying on it alone meant a user who never opened the
@@ -37,7 +39,7 @@ struct DeployBarApp: App {
         .menuBarExtraStyle(.window)
 
         Settings {
-            SettingsView(settings: settings, store: store, accountStore: accountStore)
+            SettingsView(settings: settings, store: store, accountStore: accountStore, updater: updater)
         }
     }
 }

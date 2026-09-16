@@ -5,6 +5,11 @@ import Observation
 final class SettingsStore {
     @ObservationIgnored private let defaults: UserDefaults
 
+    /// The defaults key for the update channel, exposed because Sparkle's
+    /// updater delegate is `nonisolated` and reads the preference directly
+    /// rather than through this `@MainActor`-bound store.
+    static let updateChannelDefaultsKey = "updateChannel"
+
     private enum Keys {
         static let notifyOnFailure  = "notifyOnFailure"
         static let notifyOnSuccess  = "notifyOnSuccess"
@@ -20,6 +25,7 @@ final class SettingsStore {
         static let cachedTeams      = "cachedTeams"
         static let cachedRows       = "cachedRows"
         static let scopeColors      = "scopeColorOverrides"
+        static let updateChannel    = SettingsStore.updateChannelDefaultsKey
     }
 
     init(defaults: UserDefaults = .standard) {
@@ -53,6 +59,16 @@ final class SettingsStore {
     var pollIntervalSeconds: Int {
         get { max(10, defaults.integer(forKey: Keys.pollInterval)) }
         set { defaults.set(max(10, newValue), forKey: Keys.pollInterval) }
+    }
+
+    /// Which release stream this install follows.
+    ///
+    /// Sparkle's own preferences (automatic checks, automatic downloads, last
+    /// check time) are left in Sparkle's hands in this same defaults domain —
+    /// mirroring them here would give the Updates tab two sources of truth.
+    var updateChannel: UpdateChannel {
+        get { UpdateChannel.from(storedValue: defaults.string(forKey: Keys.updateChannel)) }
+        set { defaults.set(newValue.rawValue, forKey: Keys.updateChannel) }
     }
 
     /// The user-selected team id, or nil for personal / CLI default.
