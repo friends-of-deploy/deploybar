@@ -93,60 +93,35 @@ struct PopoverPanelStyler: NSViewRepresentable {
             follow = nil
         }
 
-        /// Gives the panel the translucent material AppKit does not.
+        /// Rounds the panel's window and gives it a shadow.
         ///
-        /// `MenuBarExtra(.window)` ships no `NSVisualEffectView` at all on
-        /// macOS 26 — dumped from a live panel, its content view holds only
-        /// two flat `_NSGraphicsView`s, one of them an **opaque** grey fill
-        /// (`0.96, 0.96, 0.96, alpha 1.0`). That opaque rectangle is the
-        /// "grey block" look; nothing behind the window shows through it.
+        /// Window-level only, and deliberately minimal. Two stronger things
+        /// were tried and both broke the panel outright, leaving it a blank
+        /// rectangle with no content at all:
         ///
-        /// So the material has to be supplied here. Two details make this safe
-        /// where an earlier router-menu attempt was not:
+        ///   * inserting an `NSVisualEffectView` under the content (router-menu,
+        ///     reverted there too), and
+        ///   * clearing the system's opaque grey fill on its own layer and
+        ///     slotting the effect view beneath it (1.2.2, reverted in 1.2.3).
         ///
-        ///   * The window's own `backgroundColor` is left ALONE. Clearing it
-        ///     permanently is half of what made that attempt render a blank
-        ///     panel.
-        ///   * The opaque fill is cleared on the layer rather than by removing
-        ///     the view, and the effect view goes underneath everything, so
-        ///     SwiftUI's own view tree is never restructured.
+        /// The second looked safe — the window's `backgroundColor` was left
+        /// intact and SwiftUI's view tree was never restructured — and it did
+        /// render translucent in a Debug build. It still shipped a panel that
+        /// drew nothing. `MenuBarExtraHostingView` will not tolerate having its
+        /// backing layers rewritten, however carefully.
         ///
-        /// Idempotent: `viewDidMoveToWindow` fires again whenever the panel is
-        /// rebuilt, and a second effect view would stack another wash of tint.
+        /// So the grey fill stays. `MenuBarExtra(.window)` ships no
+        /// `NSVisualEffectView` of its own on macOS 26 — verified by dumping a
+        /// live panel — and there is no supported way to give it one from here.
         private func styleWindow() {
             guard let window else { return }
             window.hasShadow = true
             guard let content = window.contentView else { return }
-
-            // The system's opaque grey fill. Only fully-opaque layers are
-            // cleared: the other graphics view is already semi-transparent and
-            // carries the panel's subtle tint, which is worth keeping.
-            for subview in content.subviews {
-                guard let layer = subview.layer,
-                      let background = layer.backgroundColor,
-                      let alpha = background.components?.last, alpha > 0.99 else { continue }
-                layer.backgroundColor = NSColor.clear.cgColor
-            }
-
-            guard !content.subviews.contains(where: { $0 is Backdrop }) else { return }
-            let backdrop = Backdrop(frame: content.bounds)
-            backdrop.material = .popover
-            backdrop.blendingMode = .behindWindow
-            // .active, not .followsWindowActiveState: the panel resigns key as
-            // soon as the user clicks another app, and a backdrop that goes
-            // solid grey on the way out is the bug this came to fix.
-            backdrop.state = .active
-            backdrop.autoresizingMask = [.width, .height]
-            backdrop.wantsLayer = true
-            backdrop.layer?.cornerRadius = Self.cornerRadius
-            backdrop.layer?.cornerCurve = .continuous
-            backdrop.layer?.masksToBounds = true
-            content.addSubview(backdrop, positioned: .below, relativeTo: nil)
+            content.wantsLayer = true
+            content.layer?.cornerRadius = Self.cornerRadius
+            content.layer?.cornerCurve = .continuous
+            content.layer?.masksToBounds = true
         }
-
-        /// A marker class, so the idempotence check cannot mistake some other
-        /// effect view for ours.
-        final class Backdrop: NSVisualEffectView {}
 
         /// Matches the rounding `MenuBarExtra(.window)` draws for itself.
         static let cornerRadius: CGFloat = 11
