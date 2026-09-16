@@ -1,6 +1,34 @@
 <?xml version="1.0" encoding="utf-8"?>
 <rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle">
   <channel>
+    <item>
+      <title>1.2.0</title>
+      <pubDate>Wed, 16 Sep 2026 07:25:03 +0000</pubDate>
+      <sparkle:version>4</sparkle:version>
+      <sparkle:shortVersionString>1.2.0</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <description><![CDATA[
+## What's Changed
+* Feat/GitHub cli integration by @Emphyr00 in https://github.com/friends-of-deploy/deploybar/pull/1
+
+## New Contributors
+* @Emphyr00 made their first contribution in https://github.com/friends-of-deploy/deploybar/pull/1
+
+**Full Changelog**: https://github.com/friends-of-deploy/deploybar/commits/v1.2.0
+
+## What's Changed
+* Feat/GitHub cli integration by @Emphyr00 in https://github.com/friends-of-deploy/deploybar/pull/1
+
+## New Contributors
+* @Emphyr00 made their first contribution in https://github.com/friends-of-deploy/deploybar/pull/1
+
+**Full Changelog**: https://github.com/friends-of-deploy/deploybar/commits/v1.2.0
+]]></description>
+      <enclosure url="https://github.com/friends-of-deploy/deploybar/releases/download/v1.2.0/DeployBar-1.2.0.zip"
+                 length="2800715"
+                 type="application/octet-stream"
+                 sparkle:edSignature="i+KxpVF70LYNoFKIjq2qwYttRV6qAZ/AIf+ji4PCMdLZ6nuLaoy69bAgp/iNckGzEb6/pzrTi6mxs3VWv5StCg==" />
+    </item>
     <title>DeployBar</title>
     <link>https://github.com/friends-of-deploy/deploybar</link>
     <description>DeployBar beta release feed</description>
