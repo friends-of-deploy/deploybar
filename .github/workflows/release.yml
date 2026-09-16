@@ -12,7 +12,7 @@ permissions:
 jobs:
   release:
     name: Build, sign, notarize & publish
-    runs-on: macos-14
+    runs-on: macos-15
 
     # Hoisted here because `secrets.*` cannot be used in a step-level `if:`.
     # The optional Homebrew step gates on `env.TAP_REPO_TOKEN` instead.
@@ -37,11 +37,23 @@ jobs:
             echo "is_beta=false" >> "$GITHUB_OUTPUT"
           fi
 
+      # The SDK the app is built against decides which AppKit behaviour it gets
+      # at runtime, and that is not cosmetic here: built against the macOS 15
+      # SDK (what macos-14 runners carry), clearing the panel window's
+      # background makes `MenuBarExtra` draw nothing at all on macOS 26 — the
+      # blank panel shipped in 1.0.0-beta and 1.0.2-beta. The same commit built
+      # against SDK 27 renders correctly. So the SDK is asserted, not assumed.
       - name: Select latest Xcode
         run: |
           latest="$(ls -d /Applications/Xcode_*.app 2>/dev/null | sort -V | tail -1)"
           if [ -n "$latest" ]; then sudo xcode-select -s "$latest"; fi
           xcodebuild -version
+          SDK="$(xcrun --sdk macosx --show-sdk-version)"
+          echo "macOS SDK: $SDK"
+          if [ "${SDK%%.*}" -lt 26 ]; then
+            echo "::error::macOS SDK $SDK is too old — the panel ships blank on macOS 26. Need SDK 26+."
+            exit 1
+          fi
 
       - name: Install tooling
         run: brew install xcodegen create-dmg
