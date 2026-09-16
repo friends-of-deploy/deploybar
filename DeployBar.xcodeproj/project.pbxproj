@@ -7,9 +7,9 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		01004238FB89D3E8C00F0118 /* MenuBarPanelController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0D499B913CF6646E71D3E6F8 /* MenuBarPanelController.swift */; };
 		016AFD377DEC5B02FD4A996F /* FaviconURLTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A565EC3685728189B46842D /* FaviconURLTests.swift */; };
 		05C5DC3821F44316BEF1AB6F /* RowCacheTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD8C9B80B12960AB8FDE3310 /* RowCacheTests.swift */; };
-		060F0A6D2739EAD215446EB4 /* PopoverPanelStyler.swift in Sources */ = {isa = PBXBuildFile; fileRef = E87C0A46EA1C79D07E3FBC9C /* PopoverPanelStyler.swift */; };
 		07B64DF81DBFA035F3A497E5 /* LinkBuilderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 763A1647FC4087F1B296F1CB /* LinkBuilderTests.swift */; };
 		097FE5A449308A30B1FB17B9 /* LaunchAtLogin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 495A27E8C5B6857938455B86 /* LaunchAtLogin.swift */; };
 		0DC0A4563D56EFBDE8ED2412 /* TokenProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 53BE5B3FDF2A642AB49455F0 /* TokenProvider.swift */; };
@@ -69,7 +69,6 @@
 		8ADE2698F4D4F3D56F40EDD1 /* GeneralSettingsTab.swift in Sources */ = {isa = PBXBuildFile; fileRef = 61C6C0E528AB81F8016D2AB2 /* GeneralSettingsTab.swift */; };
 		8C083282B50F0307EB2B6667 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5EA45595184BB5C619B00160 /* SettingsView.swift */; };
 		8C0B9DD03B52BF70005BC746 /* ProjectDecodingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B57F9E97129C129C7E64B1A6 /* ProjectDecodingTests.swift */; };
-		92445811318C4A1EE90D50E6 /* PopoverPanelStylerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2C30E9EF17AC65757B97B307 /* PopoverPanelStylerTests.swift */; };
 		9536605F66CE469E3CBA3849 /* GitHubClientTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C78421F137D7C180CDB1C9B1 /* GitHubClientTests.swift */; };
 		966900807BC98D14698FC12F /* SettingsStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF7365E6FD34AFF0BCAF17FD /* SettingsStore.swift */; };
 		A14097599D9F23EA187355AF /* GitHubActionsErrorReport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7DD458B00EA53255D53F877F /* GitHubActionsErrorReport.swift */; };
@@ -103,6 +102,7 @@
 		DB5F0EC341C2FD7019C2CF8F /* DeploymentTimingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D5E363F13659177F6BA23F3C /* DeploymentTimingTests.swift */; };
 		DC9547D3465D5C1E1092B049 /* Pasteboard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 786C5ED6FABCA725D4A7E3FA /* Pasteboard.swift */; };
 		E085B66D1F7B0C7BB7F8AEF5 /* GitHubClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C45520C48C2F7C0E83C4E00 /* GitHubClient.swift */; };
+		E43DDC87720D737EBB6A50DF /* MenuBarPanelControllerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 455C2290E674E0C3114A0D55 /* MenuBarPanelControllerTests.swift */; };
 		E4958471E03527EFAB8FE397 /* AccountsSettingsTab.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1206DC41804427440745479 /* AccountsSettingsTab.swift */; };
 		E54A019AC5667E1E2D5F1503 /* DeploymentStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 16ECF961AF63E983AF0B0995 /* DeploymentStoreTests.swift */; };
 		E8C88C6284FB182EB9D3D48F /* UserLoadingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5E5C2ED9666F903534AFD74 /* UserLoadingTests.swift */; };
@@ -134,6 +134,7 @@
 		08B3FD0A4A7D2B851A5D900F /* Scope.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Scope.swift; sourceTree = "<group>"; };
 		08CB8CC4D570FB5256D83340 /* Provider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Provider.swift; sourceTree = "<group>"; };
 		0CD31943215A1B07BE618266 /* TeamsClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TeamsClient.swift; sourceTree = "<group>"; };
+		0D499B913CF6646E71D3E6F8 /* MenuBarPanelController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuBarPanelController.swift; sourceTree = "<group>"; };
 		1049A05673BFAD96CAD2455D /* ScopeColorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScopeColorTests.swift; sourceTree = "<group>"; };
 		10909CFA5E939D84F76594A7 /* FaviconCache.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FaviconCache.swift; sourceTree = "<group>"; };
 		131BF5CDDE6315FDAC94ECC2 /* ScopeResolverTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScopeResolverTests.swift; sourceTree = "<group>"; };
@@ -149,7 +150,6 @@
 		2889E76BF8CB729413458744 /* FollowSettingsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FollowSettingsTests.swift; sourceTree = "<group>"; };
 		2977426DBA5270B1F7B70BF6 /* RowCache.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RowCache.swift; sourceTree = "<group>"; };
 		2B583275940E87AD51F09C7B /* GitHubTokenProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GitHubTokenProvider.swift; sourceTree = "<group>"; };
-		2C30E9EF17AC65757B97B307 /* PopoverPanelStylerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PopoverPanelStylerTests.swift; sourceTree = "<group>"; };
 		2CE629B98A536D72C8515A98 /* NotificationGatingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationGatingTests.swift; sourceTree = "<group>"; };
 		33530944BBEC4C65CE574498 /* StateBadge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StateBadge.swift; sourceTree = "<group>"; };
 		36AA5583B032CB5277D863A6 /* GitHubDTO.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GitHubDTO.swift; sourceTree = "<group>"; };
@@ -159,6 +159,7 @@
 		42320F70CBF5D94E3917DBFD /* UserClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserClient.swift; sourceTree = "<group>"; };
 		4431075D715348146A140C1A /* DeploymentDecodingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeploymentDecodingTests.swift; sourceTree = "<group>"; };
 		44D380D53D1059B6E606EF12 /* SettingsTab.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsTab.swift; sourceTree = "<group>"; };
+		455C2290E674E0C3114A0D55 /* MenuBarPanelControllerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuBarPanelControllerTests.swift; sourceTree = "<group>"; };
 		495A27E8C5B6857938455B86 /* LaunchAtLogin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LaunchAtLogin.swift; sourceTree = "<group>"; };
 		4A9A41B399199C4BEA314887 /* AppInfo.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppInfo.swift; sourceTree = "<group>"; };
 		4CEFB6EADC920D69D0FD23BA /* UpdaterController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UpdaterController.swift; sourceTree = "<group>"; };
@@ -231,7 +232,6 @@
 		DCF0236F9C974998867E7582 /* ScaffoldTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScaffoldTests.swift; sourceTree = "<group>"; };
 		DD43A2A6C53DEA9D5514D087 /* DeployBar.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = DeployBar.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		E40F36E39BA8022AA11834F2 /* UpdatesSettingsTab.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UpdatesSettingsTab.swift; sourceTree = "<group>"; };
-		E87C0A46EA1C79D07E3FBC9C /* PopoverPanelStyler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PopoverPanelStyler.swift; sourceTree = "<group>"; };
 		ECB5A270A7B7428A8E5C8A40 /* StatusDot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatusDot.swift; sourceTree = "<group>"; };
 		EDD7066A7A7BB011FEF8D8FE /* DiffTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiffTests.swift; sourceTree = "<group>"; };
 		EF7365E6FD34AFF0BCAF17FD /* SettingsStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsStore.swift; sourceTree = "<group>"; };
@@ -330,8 +330,8 @@
 				C57598226CA9E5B62C77E446 /* GitHubStateMappingTests.swift */,
 				763A1647FC4087F1B296F1CB /* LinkBuilderTests.swift */,
 				574C2BE2B1BB100DD7A95EEE /* LocalizationTests.swift */,
+				455C2290E674E0C3114A0D55 /* MenuBarPanelControllerTests.swift */,
 				2CE629B98A536D72C8515A98 /* NotificationGatingTests.swift */,
-				2C30E9EF17AC65757B97B307 /* PopoverPanelStylerTests.swift */,
 				B57F9E97129C129C7E64B1A6 /* ProjectDecodingTests.swift */,
 				8BFEF6A835586543257A17DB /* ProjectOrganizationTests.swift */,
 				AD8C9B80B12960AB8FDE3310 /* RowCacheTests.swift */,
@@ -415,8 +415,8 @@
 				920576907DA14B3B2C60D8C9 /* FaviconView.swift */,
 				521936E65E32DAABFE8B7FAC /* IconActionButton.swift */,
 				5FAF19E220235027CEA50E14 /* MenuBarIcon.swift */,
+				0D499B913CF6646E71D3E6F8 /* MenuBarPanelController.swift */,
 				3D14A9CF3E0DC37311897779 /* PointingHandCursor.swift */,
-				E87C0A46EA1C79D07E3FBC9C /* PopoverPanelStyler.swift */,
 				F55B6D06AC03EFD4C34F5FFE /* PopoverView.swift */,
 				92A9BB449648310287F6A1DF /* ProjectRow.swift */,
 				F636EAE8EC866902D73AA356 /* ScopeColor.swift */,
@@ -592,11 +592,11 @@
 				097FE5A449308A30B1FB17B9 /* LaunchAtLogin.swift in Sources */,
 				7D5875945050DAC70C139259 /* LinkBuilder.swift in Sources */,
 				64575E9A8DCD043C94A7AACD /* MenuBarIcon.swift in Sources */,
+				01004238FB89D3E8C00F0118 /* MenuBarPanelController.swift in Sources */,
 				74B7E5BDEA03B046BF7B2809 /* NotificationManager.swift in Sources */,
 				80B96109ACA736872E7B0742 /* NotificationSettingsTab.swift in Sources */,
 				DC9547D3465D5C1E1092B049 /* Pasteboard.swift in Sources */,
 				E90437B0B4EF08FAB479BD78 /* PointingHandCursor.swift in Sources */,
-				060F0A6D2739EAD215446EB4 /* PopoverPanelStyler.swift in Sources */,
 				FEBF1D1B29F1946E1092AE77 /* PopoverView.swift in Sources */,
 				8971BC1CC5B759EC21D3E4FE /* Project.swift in Sources */,
 				D409A6EB4214C25CE3BDBC4A /* ProjectFollow.swift in Sources */,
@@ -655,8 +655,8 @@
 				4D67FDCED0C88D07A02796B2 /* GitHubStateMappingTests.swift in Sources */,
 				07B64DF81DBFA035F3A497E5 /* LinkBuilderTests.swift in Sources */,
 				50458C3F6FDFA791DA82FB4D /* LocalizationTests.swift in Sources */,
+				E43DDC87720D737EBB6A50DF /* MenuBarPanelControllerTests.swift in Sources */,
 				49C2EE31CFAB1309715A1B50 /* NotificationGatingTests.swift in Sources */,
-				92445811318C4A1EE90D50E6 /* PopoverPanelStylerTests.swift in Sources */,
 				8C0B9DD03B52BF70005BC746 /* ProjectDecodingTests.swift in Sources */,
 				81FDCFFE93131D68C360C388 /* ProjectOrganizationTests.swift in Sources */,
 				05C5DC3821F44316BEF1AB6F /* RowCacheTests.swift in Sources */,

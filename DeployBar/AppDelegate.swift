@@ -1,46 +1,62 @@
 import AppKit
 import SwiftUI
 
-/// Adds a right-click context menu ("Settings", "Quit") to the menu bar icon.
+/// Owns the menu bar presence: the status item, the panel it drops down, and
+/// the icon's right-click menu.
 ///
-/// The app uses SwiftUI's `MenuBarExtra` (window style) for the left-click
-/// popover. `MenuBarExtra` doesn't expose right-click handling, so we locate the
-/// status item's button after launch and install a local event monitor that pops
-/// up an `NSMenu` on right mouse-down. Left-click continues to open the popover.
+/// The panel is a `MenuBarPanelController` rather than SwiftUI's `MenuBarExtra`,
+/// because `MenuBarExtra(.window)` cannot be given a translucent material — see
+/// that type for the measurements behind it. A side benefit: finding the status
+/// button used to mean rummaging through `NSApp.windows` for SwiftUI's private
+/// one, and it is now simply ours.
+@MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
-    private var rightClickMonitor: Any?
+    private var panelController: MenuBarPanelController?
+    /// Keeps the menu bar icon in step with the store without a SwiftUI view to
+    /// observe it. Cancelled on deinit by virtue of being the only reference.
+    private var iconObservation: Task<Void, Never>?
+
+    /// Set by `DeployBarApp.init`, which builds the stores — the delegate is
+    /// constructed by `@NSApplicationDelegateAdaptor` before those exist.
+    var makePanel: (() -> MenuBarPanelController)?
+    /// Polled to drive the icon. Same reason as `makePanel`.
+    var currentIconState: (() -> IconState)?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-        // The status button isn't created until the first run-loop pass after
-        // launch, so install on the next tick.
-        DispatchQueue.main.async { [weak self] in
-            self?.installRightClickMenu()
+        guard let makePanel else { return }
+        let controller = makePanel()
+        panelController = controller
+        if let state = currentIconState?() {
+            controller.setIcon(for: state)
+        }
+        startTrackingIconState()
+    }
+
+    /// Mirrors the store's icon state onto the status item.
+    ///
+    /// A poll rather than an Observation tracking closure: `withObservationTracking`
+    /// fires once per change and has to be re-armed, which is easy to get subtly
+    /// wrong, and the icon only has five states that change on a network tick
+    /// anyway. One second is far below the refresh interval and costs nothing.
+    private func startTrackingIconState() {
+        iconObservation?.cancel()
+        iconObservation = Task { @MainActor [weak self] in
+            var last: IconState?
+            while !Task.isCancelled {
+                guard let self, let state = self.currentIconState?() else { return }
+                if state != last {
+                    last = state
+                    self.panelController?.setIcon(for: state)
+                }
+                try? await Task.sleep(for: .seconds(1))
+            }
         }
     }
 
-    private func installRightClickMenu() {
-        guard let button = Self.statusButton() else { return }
-
-        rightClickMonitor = NSEvent.addLocalMonitorForEvents(matching: .rightMouseDown) { [weak button] event in
-            guard let button, event.window == button.window else { return event }
-            Self.showContextMenu(for: button)
-            return nil  // swallow the event so the popover doesn't also toggle
-        }
-    }
-
-    /// The `NSStatusItem` button SwiftUI created for the `MenuBarExtra`.
-    private static func statusButton() -> NSStatusBarButton? {
-        for window in NSApp.windows {
-            if let button = window.contentView?.subviews
-                .compactMap({ $0 as? NSStatusBarButton }).first {
-                return button
-            }
-            if let button = window.contentView as? NSStatusBarButton {
-                return button
-            }
-        }
-        // Fallback: some macOS versions expose the button directly on a window.
-        return NSApp.windows.compactMap { $0.value(forKey: "statusItem") as? NSStatusItem }.first?.button
+    /// Pops the icon's context menu. Handed to the panel controller, which owns
+    /// the button and routes right clicks here.
+    func showContextMenu(for button: NSStatusBarButton) {
+        Self.showContextMenu(for: button)
     }
 
     private static func showContextMenu(for button: NSStatusBarButton) {
