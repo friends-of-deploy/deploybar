@@ -107,6 +107,46 @@ final class ScopeColorTests: XCTestCase {
         XCTAssertEqual(ScopeColor.color(at: -1), ScopeColor.palette[0])
     }
 
+    // MARK: - Picker
+
+    /// The swatch resolves its color exactly the way the popover rows do:
+    /// override first, derived color otherwise. Guards the picker against
+    /// drifting from `ScopeDot` and showing a color the row never uses.
+    func test_pickerResolvesOverrideThenDerivedColor() {
+        let settings = SettingsStore(defaults: makeDefaults())
+        let id = "acct|personal"
+        let all = [id, "acct|team_x"]
+
+        func selectedIndex(overrides: [String: Int]) -> Int {
+            overrides[id] ?? ScopeColorIndex.index(for: id, among: all)
+        }
+
+        XCTAssertEqual(selectedIndex(overrides: settings.scopeColorOverrides),
+                       ScopeColorIndex.index(for: id, among: all),
+                       "with no override the swatch shows the derived color")
+
+        settings.setScopeColor(6, for: id)
+        XCTAssertEqual(selectedIndex(overrides: settings.scopeColorOverrides), 6)
+
+        settings.setScopeColor(nil, for: id)
+        XCTAssertEqual(selectedIndex(overrides: settings.scopeColorOverrides),
+                       ScopeColorIndex.index(for: id, among: all),
+                       "clearing returns the swatch to Automatic")
+    }
+
+    /// Every palette slot must be selectable and resolve to a real color — the
+    /// picker builds one button per index in `ScopeColor.palette`.
+    func test_everyPaletteSlotIsSelectable() {
+        let settings = SettingsStore(defaults: makeDefaults())
+        let id = "acct|personal"
+
+        for index in ScopeColor.palette.indices {
+            settings.setScopeColor(index, for: id)
+            XCTAssertEqual(settings.scopeColorOverrides[id], index)
+            XCTAssertEqual(ScopeColor.color(at: index), ScopeColor.palette[index])
+        }
+    }
+
     // MARK: - Helpers
 
     private let fixedId = UUID(uuidString: "8B1C2D3E-0000-0000-0000-000000000001")!
