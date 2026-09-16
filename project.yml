@@ -71,10 +71,20 @@ targets:
         # Sparkle's keys are set under `info:` below, not here: the
         # INFOPLIST_KEY_ prefix only carries Apple's known keys into a
         # generated plist, and silently drops anything else.
-        # Default (Debug + CI): unsigned, no certs needed.
+        # Default (CI): unsigned, no certs needed.
         CODE_SIGN_STYLE: Automatic
         CODE_SIGNING_ALLOWED: "NO"
       configs:
+        # Debug: properly signed, because Sparkle 2 refuses to start its updater
+        # in a host whose resources are not sealed — an ad-hoc signed build
+        # fails with "The updater failed to start" before it ever reads a feed.
+        # CI overrides this with CODE_SIGNING_ALLOWED=NO, which is why the
+        # unsigned build still works there.
+        Debug:
+          CODE_SIGNING_ALLOWED: "YES"
+          CODE_SIGN_STYLE: Automatic
+          CODE_SIGN_IDENTITY: "Apple Development"
+          DEVELOPMENT_TEAM: 7S3F9767BM
         # Release: Developer ID signing + Hardened Runtime, required for notarization.
         # The signing identity is supplied at build time via xcodebuild
         # (CODE_SIGN_IDENTITY / DEVELOPMENT_TEAM), so local Release builds
