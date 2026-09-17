@@ -1,6 +1,11 @@
 import Foundation
 import Observation
 
+/// Main-actor bound, as the `updateChannelDefaultsKey` comment below already
+/// assumed: every caller (the stores, the views, Sparkle's `@MainActor`
+/// delegate) is on the main actor, and stating it makes an `@Observable`
+/// class's isolation explicit rather than inferred.
+@MainActor
 @Observable
 final class SettingsStore {
     @ObservationIgnored private let defaults: UserDefaults
@@ -8,7 +13,7 @@ final class SettingsStore {
     /// The defaults key for the update channel, exposed because Sparkle's
     /// updater delegate is `nonisolated` and reads the preference directly
     /// rather than through this `@MainActor`-bound store.
-    static let updateChannelDefaultsKey = "updateChannel"
+    nonisolated static let updateChannelDefaultsKey = "updateChannel"
 
     private enum Keys {
         static let notifyOnFailure  = "notifyOnFailure"

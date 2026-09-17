@@ -50,6 +50,14 @@ struct GHRunsResponse: Decodable, Sendable {
 
 struct GHCommit: Decodable, Sendable {
     let message: String?
+    let author: GHCommitAuthor?
+}
+
+/// The commit's own author as reported on a workflow run's `head_commit` — a
+/// raw git identity (name/email), with no login or avatar attached.
+struct GHCommitAuthor: Decodable, Sendable {
+    let name: String?
+    let email: String?
 }
 
 struct GHJobsResponse: Decodable, Sendable {

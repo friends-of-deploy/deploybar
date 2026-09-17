@@ -60,6 +60,8 @@ struct VercelClient: Sendable {
 
         let (data, response) = try await fetch(req)
         guard let http = response as? HTTPURLResponse else { throw VercelClientError.http(-1) }
+        // Before the auth check: a throttled 403 is not a credential problem.
+        if http.isRateLimited { throw VercelClientError.rateLimited(retryAfter: http.retryAfterSeconds) }
         if http.statusCode == 401 || http.statusCode == 403 { throw VercelClientError.unauthorized }
         guard (200..<300).contains(http.statusCode) else { throw VercelClientError.http(http.statusCode) }
         return data

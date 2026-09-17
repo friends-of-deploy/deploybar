@@ -1,6 +1,6 @@
 import Foundation
 
-enum DeploymentState: String {
+enum DeploymentState: String, Sendable {
     case ready, building, queued, error, canceled, unknown
 
     init(apiValue: String) {
@@ -27,11 +27,11 @@ enum DeploymentState: String {
     }
 }
 
-struct DeploymentsResponse: Decodable {
+struct DeploymentsResponse: Decodable, Sendable {
     let deployments: [Deployment]
 }
 
-struct Deployment: Decodable, Identifiable {
+struct Deployment: Decodable, Identifiable, Sendable {
     let uid: String
     let name: String          // project name
     let stateRaw: String
@@ -49,6 +49,13 @@ struct Deployment: Decodable, Identifiable {
     let commitSha: String?
     let commitRef: String?
     let commitMessage: String?
+    /// GitHub login of whoever authored the commit, when the provider reports
+    /// one. Distinct from `creatorUsername`, which is who triggered the deploy —
+    /// a CLI deploy or a bot run makes those two differ.
+    let commitAuthorLogin: String?
+    /// Direct avatar image URL, when the provider hands one over (GitHub does).
+    /// Vercel doesn't, so `CommitAuthorAvatar` derives one from the login.
+    let commitAuthorAvatarURL: String?
 
     /// Provider-supplied canonical web page for this deployment/run. When set it
     /// takes precedence over the Vercel host-based link building in the row.
@@ -66,6 +73,7 @@ struct Deployment: Decodable, Identifiable {
     private enum CreatorKeys: String, CodingKey { case username }
     private enum MetaKeys: String, CodingKey {
         case githubCommitOrg, githubCommitRepo, githubCommitSha, githubCommitRef, githubCommitMessage
+        case githubCommitAuthorLogin
     }
 
     /// Memberwise initializer for non-Vercel providers (e.g. `GitHubClient`) that
@@ -74,7 +82,9 @@ struct Deployment: Decodable, Identifiable {
          url: String, inspectorUrl: String? = nil, createdAt: Double,
          buildingAt: Double? = nil, ready: Double? = nil, creatorUsername: String? = nil,
          commitOrg: String? = nil, commitRepo: String? = nil, commitSha: String? = nil,
-         commitRef: String? = nil, commitMessage: String? = nil, webURL: URL? = nil) {
+         commitRef: String? = nil, commitMessage: String? = nil,
+         commitAuthorLogin: String? = nil, commitAuthorAvatarURL: String? = nil,
+         webURL: URL? = nil) {
         self.uid = uid
         self.name = name
         self.stateRaw = stateRaw
@@ -90,6 +100,8 @@ struct Deployment: Decodable, Identifiable {
         self.commitSha = commitSha
         self.commitRef = commitRef
         self.commitMessage = commitMessage
+        self.commitAuthorLogin = commitAuthorLogin
+        self.commitAuthorAvatarURL = commitAuthorAvatarURL
         self.webURL = webURL
     }
 
@@ -116,8 +128,12 @@ struct Deployment: Decodable, Identifiable {
             commitSha = try mc.decodeIfPresent(String.self, forKey: .githubCommitSha)
             commitRef = try mc.decodeIfPresent(String.self, forKey: .githubCommitRef)
             commitMessage = try mc.decodeIfPresent(String.self, forKey: .githubCommitMessage)
+            commitAuthorLogin = try mc.decodeIfPresent(String.self, forKey: .githubCommitAuthorLogin)
         } else {
             commitOrg = nil; commitRepo = nil; commitSha = nil; commitRef = nil; commitMessage = nil
+            commitAuthorLogin = nil
         }
+        // Vercel reports only the login; the avatar is derived from it downstream.
+        commitAuthorAvatarURL = nil
     }
 }

@@ -26,6 +26,13 @@ struct KeychainCredentialStore: CredentialStore {
          kSecAttrAccount as String: account]
     }
 
+    /// Stated rather than left to the OS default (`kSecAttrAccessibleWhenUnlocked`).
+    /// These are API tokens for one machine's menu bar app: they are never needed
+    /// while the Mac is locked, and `ThisDeviceOnly` also keeps them out of
+    /// Keychain sync and encrypted backups, so a token can't silently travel to
+    /// another device.
+    private static let accessibility = kSecAttrAccessibleWhenUnlockedThisDeviceOnly
+
     func token(for account: String) -> String? {
         var query = baseQuery(account)
         query[kSecReturnData as String] = true
@@ -40,12 +47,16 @@ struct KeychainCredentialStore: CredentialStore {
 
     func setToken(_ token: String, for account: String) {
         let data = Data(token.utf8)
-        // Try update first; insert if missing.
+        // Try update first; insert if missing. The update also rewrites the
+        // accessibility attribute, so tokens stored by an earlier build (which
+        // took the OS default) migrate on their next write.
         let updated = SecItemUpdate(baseQuery(account) as CFDictionary,
-                                    [kSecValueData as String: data] as CFDictionary)
+                                    [kSecValueData as String: data,
+                                     kSecAttrAccessible as String: Self.accessibility] as CFDictionary)
         if updated == errSecItemNotFound {
             var add = baseQuery(account)
             add[kSecValueData as String] = data
+            add[kSecAttrAccessible as String] = Self.accessibility
             let added = SecItemAdd(add as CFDictionary, nil)
             if added != errSecSuccess {
                 os_log("keychain setToken add failed: %d", added)

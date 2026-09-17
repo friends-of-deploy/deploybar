@@ -4,6 +4,7 @@ import XCTest
 /// `UpdaterController` owns a live Sparkle updater, so what is worth pinning
 /// here is the pure part: the feed string the delegate hands Sparkle, which is
 /// the thing that decides whether a tester ever sees a beta build.
+@MainActor
 final class UpdaterFeedSelectionTests: XCTestCase {
     func test_feedStringMatchesTheChannelsAppcast() {
         XCTAssertEqual(UpdaterController.feedURLString(for: .stable),

@@ -18,15 +18,11 @@ struct DeploymentRow: View {
     /// user override in Settings wins over the derived color.
     var scopeColorIndex: Int = 0
     @State private var hovering = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         HStack(spacing: 12) {
-            // Status dot + favicon cluster
-            HStack(spacing: 6) {
-                StatusDot(state: deployment.state)
-                FaviconView(host: faviconHost, directURL: faviconDirectURL)
-                    .frame(width: 18, height: 18)
-            }
+            projectIcon
 
             VStack(alignment: .leading, spacing: 3) {
                 HStack(spacing: 6) {
@@ -39,15 +35,29 @@ struct DeploymentRow: View {
                         ScopeDot(label: scopeLabel, color: ScopeColor.color(at: scopeColorIndex))
                     }
                 }
-                Text(subtitle)
-                    .font(.callout)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
-                    .truncationMode(.tail)
-                Text(timing)
-                    .font(.caption)
-                    .foregroundStyle(.tertiary)
-                    .lineLimit(1)
+                // The author sits beside the commit and timing lines only — the
+                // project name above stays flush with the row's text column —
+                // and is centered against both, since it belongs to the commit
+                // as a whole rather than to either line.
+                HStack(alignment: .center, spacing: 7) {
+                    CommitAuthorAvatar(
+                        login: deployment.commitAuthorLogin,
+                        avatarURL: deployment.commitAuthorAvatarURL,
+                        creatorUsername: deployment.creatorUsername
+                    )
+
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text(subtitle)
+                            .font(.callout)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                            .truncationMode(.tail)
+                        Text(timing)
+                            .font(.caption)
+                            .foregroundStyle(.tertiary)
+                            .lineLimit(1)
+                    }
+                }
             }
             // Claim the row's slack here rather than via a trailing `Spacer`:
             // a spacer would soak up the width freed by hiding the action
@@ -65,10 +75,39 @@ struct DeploymentRow: View {
         // briefly drawing past it.
         .clipped()
         .onHover { hovering in
-            withAnimation(.easeOut(duration: 0.1)) { self.hovering = hovering }
+            withAnimation(reduceMotion ? nil : .easeOut(duration: 0.1)) { self.hovering = hovering }
         }
         .onTapGesture { openPrimary() }
         .pointingHandCursor()
+        // `onTapGesture` is a gesture, not a control: it is invisible to Full
+        // Keyboard Access and VoiceOver, which would leave the row's PRIMARY
+        // action (open site / open logs) reachable only by mouse. The row can't
+        // simply become a `Button` — it already contains the hover-revealed
+        // action buttons, and nesting controls breaks both focus and hit
+        // testing — so the row advertises the action itself while leaving its
+        // child buttons as their own elements (`.contain`, not `.combine`,
+        // which would swallow them).
+        .accessibilityElement(children: .contain)
+        .accessibilityAddTraits(.isButton)
+        .accessibilityLabel(accessibilityLabel)
+        .accessibilityHint(primaryHelp)
+        .accessibilityAction { openPrimary() }
+    }
+
+    /// Spoken description of the row: project, state, and the commit/timing
+    /// context a sighted user reads off the two subtitle lines.
+    private var accessibilityLabel: String {
+        var parts = [deployment.name, deployment.state.label]
+        if let scopeLabel { parts.append(scopeLabel) }
+        parts.append(subtitle)
+        parts.append(timing)
+        return parts.filter { !$0.isEmpty }.joined(separator: ", ")
+    }
+
+    // MARK: - Project icon (favicon + status badge)
+
+    private var projectIcon: some View {
+        SourceIcon(state: deployment.state, host: faviconHost, directURL: faviconDirectURL)
     }
 
     // MARK: - Primary row action (ready → open site, failed → open logs)
@@ -136,7 +175,7 @@ struct DeploymentRow: View {
         HStack(spacing: 2) {
             if hovering {
                 secondaryActions
-                    .transition(.move(edge: .trailing).combined(with: .opacity))
+                    .transition(reduceMotion ? .opacity : .move(edge: .trailing).combined(with: .opacity))
             }
             primaryAction
         }
@@ -179,7 +218,7 @@ struct DeploymentRow: View {
         if deployment.webURL != nil,
            let actions = LinkBuilder.githubActions(org: deployment.commitOrg, repo: deployment.commitRepo) {
             IconActionButton(
-                systemImage: "list.bullet.rectangle",
+                systemImage: "bolt.fill",
                 url: actions,
                 help: String(localized: "Open Actions", comment: "Action tooltip")
             )
@@ -190,7 +229,7 @@ struct DeploymentRow: View {
             sha: deployment.commitSha
         ) {
             IconActionButton(
-                systemImage: "apple.terminal",
+                systemImage: "chevron.left.forwardslash.chevron.right",
                 url: commit,
                 help: String(localized: "Open commit on the repository", comment: "Action tooltip")
             )

@@ -4,6 +4,7 @@ import SwiftUI
 
 /// Scope marker colors: stable defaults, working overrides, and the invariant
 /// tying the pure index math to the SwiftUI palette.
+@MainActor
 final class ScopeColorTests: XCTestCase {
 
     /// `ScopeColorIndex` can't see `ScopeColor.palette` (it deliberately avoids

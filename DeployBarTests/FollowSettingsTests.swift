@@ -1,6 +1,7 @@
 import XCTest
 @testable import DeployBar
 
+@MainActor
 final class FollowSettingsTests: XCTestCase {
     private func fresh() -> SettingsStore { SettingsStore(defaults: UserDefaults(suiteName: UUID().uuidString)!) }
     private func key(_ pid: String, _ acct: UUID = UUID()) -> ProjectKey {

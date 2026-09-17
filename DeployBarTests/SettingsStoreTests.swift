@@ -1,6 +1,7 @@
 import XCTest
 @testable import DeployBar
 
+@MainActor
 final class SettingsStoreTests: XCTestCase {
     private func freshDefaults() -> UserDefaults { UserDefaults(suiteName: UUID().uuidString)! }
 
@@ -34,6 +35,7 @@ final class SettingsStoreTests: XCTestCase {
 
 /// The channel has to survive a relaunch and has to default to stable, since
 /// an install that never visited the Updates tab must not be handed betas.
+@MainActor
 final class UpdateChannelSettingsTests: XCTestCase {
     private func makeStore() -> SettingsStore {
         SettingsStore(defaults: UserDefaults(suiteName: UUID().uuidString)!)

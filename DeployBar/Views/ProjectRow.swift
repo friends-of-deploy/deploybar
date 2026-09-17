@@ -16,21 +16,24 @@ struct ProjectRow: View {
     /// Palette slot for `scopeLabel`'s marker dot, resolved by the store so a
     /// user override in Settings wins over the derived color.
     var scopeColorIndex: Int = 0
+    /// The Vercel team / account that owns this project, shown as the title's
+    /// `org/` prefix. Unlike `scopeLabel` this is set in every view, not just
+    /// "All sources" — the owner is part of the project's name, not a marker.
+    var ownerLabel: String? = nil
     @State private var hovering = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
-        HStack(alignment: .top, spacing: 12) {
-            FaviconView(host: project.faviconHost, directURL: project.iconURL)
-                .frame(width: 18, height: 18)
-                .padding(.top, 1)
+        HStack(spacing: 12) {
+            // Centered against the row's text, and carrying its own status dot —
+            // the same cluster the deployments list uses. See `SourceIcon`.
+            SourceIcon(state: displayState,
+                       host: project.faviconHost,
+                       directURL: project.iconURL)
 
             VStack(alignment: .leading, spacing: 4) {
                 HStack(spacing: 6) {
-                    Text(project.name)
-                        .font(.body)
-                        .fontWeight(.semibold)
-                        .lineLimit(1)
-                        .truncationMode(.tail)
+                    titleLine
                     if let scopeLabel {
                         ScopeDot(label: scopeLabel, color: ScopeColor.color(at: scopeColorIndex))
                     }
@@ -43,10 +46,10 @@ struct ProjectRow: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.trailing, 8)
 
-            VStack(alignment: .trailing, spacing: 6) {
-                StateBadge(state: displayState)
-                actions
-            }
+            // No state badge: the icon's status dot and its tooltip already say
+            // what the row's state is, and the badge spent ~60pt repeating it.
+            // The icons now sit in one centered row, as in `DeploymentRow`.
+            actions
         }
         .padding(.vertical, 11)
         .padding(.horizontal, 14)
@@ -55,8 +58,34 @@ struct ProjectRow: View {
         .background(hovering ? Color.primary.opacity(0.06) : Color.clear)
         .clipped()
         .onHover { hovering in
-            withAnimation(.easeOut(duration: 0.1)) { self.hovering = hovering }
+            withAnimation(reduceMotion ? nil : .easeOut(duration: 0.1)) { self.hovering = hovering }
         }
+    }
+
+    // MARK: - Title (owner / project)
+
+    /// "org/project", with the owner dimmed so the project name still reads as
+    /// the row's subject. One `Text` rather than an `HStack`: concatenated runs
+    /// truncate as a single string, so a long owner shortens the whole title
+    /// instead of squeezing the project name out of the row.
+    private var titleLine: some View {
+        Group {
+            if let owner = ProjectTitle.owner(scopeLabel: ownerLabel, project: project.name) {
+                Text(owner + "/")
+                    .fontWeight(.regular)
+                    .foregroundStyle(.secondary)
+                + Text(ProjectTitle.leaf(project.name))
+                    .fontWeight(.semibold)
+            } else {
+                Text(ProjectTitle.leaf(project.name))
+                    .fontWeight(.semibold)
+            }
+        }
+        .font(.body)
+        .lineLimit(1)
+        // The owner prefix is the least important part of the title, so trim
+        // there rather than at the project name's tail.
+        .truncationMode(.head)
     }
 
     // MARK: - Metadata line (icon + value pairs)
@@ -150,7 +179,7 @@ struct ProjectRow: View {
         HStack(spacing: 2) {
             if hovering {
                 linkActions
-                    .transition(.move(edge: .trailing).combined(with: .opacity))
+                    .transition(reduceMotion ? .opacity : .move(edge: .trailing).combined(with: .opacity))
             }
 
             // Overflow menu holds provider-specific deep links.
@@ -272,5 +301,38 @@ private struct MetaItem: View {
                 .imageScale(.small)
             Text(text)
         }
+    }
+}
+
+/// Splits a project title into its owner prefix and the project's own name.
+///
+/// The two providers disagree on what `Project.name` holds: `GitHubClient` sets
+/// it to the repo's full name (`owner/repo`), while Vercel sets a bare project
+/// name and puts the owner in the scope. These rules produce one `owner/project`
+/// title from either shape without ever doubling the owner up.
+enum ProjectTitle {
+    /// The owner to show before the project name, or nil when there is none to
+    /// show (no scope, or a name that already carries its own owner).
+    static func owner(scopeLabel: String?, project: String) -> String? {
+        // A name like "octocat/hello" is already qualified — its own prefix wins,
+        // otherwise a GitHub repo would render as "GitHub CLI/octocat/hello".
+        if let embedded = embeddedOwner(project) { return embedded }
+        guard let trimmed = scopeLabel?.trimmingCharacters(in: .whitespacesAndNewlines),
+              !trimmed.isEmpty
+        else { return nil }
+        return trimmed
+    }
+
+    /// The project's own name, with any embedded owner stripped.
+    static func leaf(_ project: String) -> String {
+        guard let slash = project.firstIndex(of: "/") else { return project }
+        return String(project[project.index(after: slash)...])
+    }
+
+    /// The owner baked into a `owner/repo` style name, if there is one.
+    private static func embeddedOwner(_ project: String) -> String? {
+        guard let slash = project.firstIndex(of: "/") else { return nil }
+        let owner = String(project[..<slash])
+        return owner.isEmpty ? nil : owner
     }
 }

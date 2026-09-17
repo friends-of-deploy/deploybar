@@ -10,9 +10,9 @@ import AppKit
 /// router-menu, where the same bug was measured on a live panel: the window
 /// stayed 286pt while the laid-out content had already shrunk to 104pt.
 ///
-/// DeployBar pins its list to a fixed 320pt height, so the height only moves
-/// when the optional error `StatusBar` appears or disappears. The math is
-/// guarded all the same — the panel must track whatever height it is given.
+/// DeployBar pins its list to a fixed 320pt height, so in practice the popover
+/// barely changes size at all. The math is guarded all the same — the panel must
+/// track whatever height it is given.
 final class PopoverPanelStylerTests: XCTestCase {
     private let tall = NSRect(x: 100, y: 100, width: 380, height: 420)
 

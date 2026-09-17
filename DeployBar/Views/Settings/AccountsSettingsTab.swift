@@ -163,6 +163,10 @@ struct AccountsSettingsTab: View {
         guard let account = selectedAccount, !account.isReadOnly else { return }
         accountStore.removeAccount(account)
         selection = accountStore.accounts.first.map { .account($0.id) }
+        // The popover caches rows per source; without this the removed account's
+        // projects keep showing until some later poll happens to overwrite the
+        // snapshot — and if this was the last account, forever.
+        Task { await store.accountsChanged() }
     }
 
     static func sourceCaption(for account: Account) -> String {

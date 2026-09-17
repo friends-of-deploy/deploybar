@@ -1,6 +1,7 @@
 import XCTest
 @testable import DeployBar
 
+@MainActor
 final class NotificationGatingTests: XCTestCase {
     private func settings(failure: Bool = true, success: Bool = true,
                           started: Bool = false, canceled: Bool = false) -> SettingsStore {

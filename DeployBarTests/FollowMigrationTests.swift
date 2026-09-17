@@ -1,6 +1,7 @@
 import XCTest
 @testable import DeployBar
 
+@MainActor
 final class FollowMigrationTests: XCTestCase {
     func test_disabledProjectsMigrateToUnfollowed() {
         let d = UserDefaults(suiteName: UUID().uuidString)!

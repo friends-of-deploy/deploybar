@@ -7,6 +7,7 @@ struct PopoverView: View {
     /// Which way the last tab change moved, so content slides toward the side
     /// the user came from rather than always the same direction.
     @State private var movingForward = true
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         VStack(spacing: 0) {
@@ -32,15 +33,13 @@ struct PopoverView: View {
             }
             .frame(height: 320)
             // The outgoing list slides out as the incoming one slides in; without
-            // clipping they would both draw over the tab bar and status bar.
+            // clipping they would both draw over the tab bar.
             .clipped()
-
-            if let error = store.errorMessage {
-                Divider()
-                StatusBar(message: error)
-            }
         }
         .frame(width: 380)
+        // Draws every tooltip in the popover. Installed here so a bubble can
+        // overhang the row that triggered it — see `Tooltip.swift`.
+        .tooltipHost()
         // Rounds the panel's window and keeps its height on the content.
         // `MenuBarExtra(.window)` does neither by itself.
         .background(PopoverPanelStyler())
@@ -54,7 +53,10 @@ struct PopoverView: View {
     /// the incoming one enters from the opposite edge, so the two tabs read as
     /// panels side by side rather than a cross-fade in place.
     private var slide: AnyTransition {
-        .asymmetric(
+        // Reduce Motion: cross-fade the panes instead of sliding them across
+        // the popover.
+        guard !reduceMotion else { return .opacity }
+        return .asymmetric(
             insertion: .move(edge: movingForward ? .trailing : .leading)
                 .combined(with: .opacity),
             removal: .move(edge: movingForward ? .leading : .trailing)
@@ -82,6 +84,7 @@ struct PopoverView: View {
                                                            teamId: sourced.teamId)
                 )
             }
+            .animation(PopoverMotion.listUpdate(reduceMotion: reduceMotion), value: store.sourcedDeployments.map(\.id))
         }
     }
 
@@ -102,8 +105,16 @@ struct PopoverView: View {
                            scopeLabel: store.rowScopeLabel(accountId: sourced.account.id,
                                                            teamId: sourced.teamId),
                            scopeColorIndex: store.scopeColorIndex(accountId: sourced.account.id,
-                                                                  teamId: sourced.teamId))
+                                                                  teamId: sourced.teamId),
+                           // Set in every view, not only "All sources": the owner
+                           // is part of the project's name, not a source marker.
+                           ownerLabel: store.projectOwnerLabel(
+                               accountId: sourced.account.id, teamId: sourced.teamId))
             }
+            // Only rows entering or leaving move; a poll that returns the same
+            // projects (the normal case) animates nothing, because the sorted
+            // list is identical and `ForEach` identity is stable.
+            .animation(PopoverMotion.listUpdate(reduceMotion: reduceMotion), value: store.sourcedProjects.map(\.id))
         }
     }
 }
@@ -134,6 +145,24 @@ enum PopoverMotion {
     /// underline tracks a finger-flick gesture in feel, and a touch of
     /// overshoot-free settle keeps it crisp at this short duration.
     static let tabSwitch = Animation.spring(response: 0.28, dampingFraction: 0.86)
+
+    /// A row arriving or leaving after a poll. Deliberately quiet: this fires
+    /// while the user is reading the list, not in response to anything they did,
+    /// so it should register as a change without pulling the eye off the row
+    /// they were looking at.
+    static let listUpdate = Animation.easeOut(duration: 0.22)
+
+    /// Reduce Motion variants. The transitions these drive are positional
+    /// (rows sliding in, panes cross-sliding), which is exactly what the
+    /// setting asks us to drop — returning `nil` makes the change cut instead,
+    /// so the state still updates without travelling across the popover.
+    static func tabSwitch(reduceMotion: Bool) -> Animation? {
+        reduceMotion ? nil : tabSwitch
+    }
+
+    static func listUpdate(reduceMotion: Bool) -> Animation? {
+        reduceMotion ? nil : listUpdate
+    }
 }
 
 // MARK: - Top bar (filter dropdown + actions)
@@ -145,6 +174,13 @@ private struct TopBar: View {
     var body: some View {
         HStack(spacing: 8) {
             filterMenu
+            // Sits with the scope picker rather than the trailing actions: it
+            // reports on the sources that picker selects from.
+            HealthDot(
+                issues: store.healthIssues,
+                isRefreshing: store.isRefreshing,
+                refresh: { Task { await store.poll() } }
+            )
             Spacer()
             Button(action: openSettings) {
                 Image(systemName: "gearshape")
@@ -204,10 +240,11 @@ private struct TopBar: View {
                                     let name = scope.teamName
                                         ?? store.rowScopeLabelIgnoringFilter(accountId: account.id, teamId: scope.teamId)
                                         ?? account.label
+                                    let indented = ScopeMenuLabel.text(name, isTeam: scope.teamId != nil)
                                     if isActive {
-                                        Label(name, systemImage: "checkmark")
+                                        Label(indented, systemImage: "checkmark")
                                     } else {
-                                        Text(name)
+                                        Text(indented)
                                     }
                                 }
                             }
@@ -225,7 +262,7 @@ private struct TopBar: View {
                 openSettings()
             }
         } label: {
-            Text("▲ \(filterLabel)").fontWeight(.bold)
+            Text(filterLabel).fontWeight(.bold)
         }
         .menuStyle(.borderlessButton)
         .fixedSize()
@@ -244,6 +281,7 @@ private struct TabSelector: View {
     /// Ties the single underline to whichever tab owns it, so selecting a
     /// neighbor slides the bar across instead of cutting to it.
     @Namespace private var underline
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         HStack(spacing: 0) {
@@ -251,7 +289,7 @@ private struct TabSelector: View {
                 TabButton(tab: tab, isSelected: selection == tab, namespace: underline) {
                     guard selection != tab else { return }
                     willSelect(tab)
-                    withAnimation(PopoverMotion.tabSwitch) { selection = tab }
+                    withAnimation(PopoverMotion.tabSwitch(reduceMotion: reduceMotion)) { selection = tab }
                 }
             }
         }
@@ -313,26 +351,6 @@ private struct TabButton: View {
     }
 }
 
-// MARK: - Bottom status bar (errors/warnings only)
-
-private struct StatusBar: View {
-    let message: String
-
-    var body: some View {
-        HStack(spacing: 12) {
-            Label(message, systemImage: "exclamationmark.triangle.fill")
-                .foregroundStyle(.orange)
-                .lineLimit(1)
-                .truncationMode(.tail)
-                .tooltip(message)
-            Spacer()
-        }
-        .font(.caption)
-        .padding(.horizontal, 12)
-        .padding(.vertical, 8)
-    }
-}
-
 // MARK: - Shared subviews
 
 private struct EmptyListPlaceholder: View {
@@ -344,5 +362,24 @@ private struct EmptyListPlaceholder: View {
             .foregroundStyle(.tertiary)
             .frame(maxWidth: .infinity, alignment: .center)
             .padding(.vertical, 20)
+    }
+}
+
+// MARK: - Scope menu labels
+
+/// Indents a Vercel team under the account it belongs to in the scope menu.
+///
+/// A Vercel account's teams are sub-accounts of it, and the flat menu gave no
+/// hint of that — a team read as a sibling of the account that owns it. SwiftUI
+/// exposes no `indentationLevel` for menu items built from `Button`/`Text`
+/// (the AppKit property exists on `NSMenuItem`, but the items here are
+/// synthesized by SwiftUI), so the nesting is drawn with leading space.
+enum ScopeMenuLabel {
+    /// Spaces rather than a tab: menu items render in a proportional font where
+    /// a tab's width is unspecified, while four spaces are predictable.
+    static let indent = "    "
+
+    static func text(_ name: String, isTeam: Bool) -> String {
+        isTeam ? indent + name : name
     }
 }

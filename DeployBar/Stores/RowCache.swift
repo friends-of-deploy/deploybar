@@ -31,6 +31,8 @@ struct RowCache: Codable {
         var commitSha: String?
         var commitRef: String?
         var commitMessage: String?
+        var commitAuthorLogin: String?
+        var commitAuthorAvatarURL: String?
         var webURL: URL?
 
         init(_ sd: SourcedDeployment) {
@@ -52,6 +54,8 @@ struct RowCache: Codable {
             commitSha = d.commitSha
             commitRef = d.commitRef
             commitMessage = d.commitMessage
+            commitAuthorLogin = d.commitAuthorLogin
+            commitAuthorAvatarURL = d.commitAuthorAvatarURL
             webURL = d.webURL
         }
 
@@ -63,7 +67,8 @@ struct RowCache: Codable {
                 inspectorUrl: inspectorUrl, createdAt: createdAt, buildingAt: buildingAt,
                 ready: ready, creatorUsername: creatorUsername, commitOrg: commitOrg,
                 commitRepo: commitRepo, commitSha: commitSha, commitRef: commitRef,
-                commitMessage: commitMessage, webURL: webURL)
+                commitMessage: commitMessage, commitAuthorLogin: commitAuthorLogin,
+                commitAuthorAvatarURL: commitAuthorAvatarURL, webURL: webURL)
             return SourcedDeployment(deployment: deployment, account: account, teamId: teamId)
         }
     }

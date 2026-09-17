@@ -1,4 +1,5 @@
 import Foundation
+import os
 
 /// Read-only GitHub Actions client. Maps repositories to `Project`s and workflow
 /// runs to `Deployment`s so GitHub sources merge into the same aggregator surface
@@ -41,17 +42,38 @@ struct GitHubClient: Sendable {
         guard !repos.isEmpty else { return [] }
         let perRepo = min(100, max(1, limit / repos.count) + 5)
 
-        let merged = await withTaskGroup(of: [Deployment].self) { group in
+        // Per-repo failures stay best-effort — one repo with Actions disabled or
+        // a PAT scope gap must not blank the whole account. Throttling is the
+        // exception: it would silently empty the list for every repo at once and
+        // read as "no deployments", so it is reported instead of swallowed.
+        let merged = await withTaskGroup(of: Result<[Deployment], Error>.self) { group in
             for repo in repos {
                 group.addTask {
-                    (try? await self.runs(for: repo, perPage: perRepo)) ?? []
+                    do { return .success(try await self.runs(for: repo, perPage: perRepo)) }
+                    catch { return .failure(error) }
                 }
             }
             var all: [Deployment] = []
-            for await chunk in group { all.append(contentsOf: chunk) }
-            return all
+            var throttled: ProviderClientError?
+            for await chunk in group {
+                switch chunk {
+                case .success(let deps):
+                    all.append(contentsOf: deps)
+                case .failure(let error):
+                    if case ProviderClientError.rateLimited = error {
+                        throttled = error as? ProviderClientError
+                    } else {
+                        os_log("github runs fetch failed for a repo: %{public}@",
+                               error.localizedDescription)
+                    }
+                }
+            }
+            return (all, throttled)
         }
-        return Array(merged.sorted { $0.createdAt > $1.createdAt }.prefix(limit))
+        // Only when throttling left us with nothing at all: a partial result
+        // is still worth showing.
+        if let throttled = merged.1, merged.0.isEmpty { throw throttled }
+        return Array(merged.0.sorted { $0.createdAt > $1.createdAt }.prefix(limit))
     }
 
     // MARK: - Requests
@@ -116,6 +138,9 @@ struct GitHubClient: Sendable {
 
         let (data, response) = try await fetch(req)
         guard let http = response as? HTTPURLResponse else { throw ProviderClientError.http(-1) }
+        // Before the auth check: GitHub signals an exhausted rate limit with
+        // 403, which must not be mistaken for a revoked token.
+        if http.isRateLimited { throw ProviderClientError.rateLimited(retryAfter: http.retryAfterSeconds) }
         if http.statusCode == 401 || http.statusCode == 403 { throw ProviderClientError.unauthorized }
         guard (200..<300).contains(http.statusCode) else { throw ProviderClientError.http(http.statusCode) }
         return data
@@ -159,6 +184,11 @@ struct GitHubClient: Sendable {
             commitSha: run.headSHA,
             commitRef: run.headBranch,
             commitMessage: run.displayTitle ?? run.headCommit?.message ?? run.name,
+            // `actor` is who the run ran as and carries a ready avatar; the commit's
+            // own author has only a name/email on the run payload, so it serves as
+            // the display-name fallback when there is no actor to show.
+            commitAuthorLogin: run.actor?.login ?? run.headCommit?.author?.name,
+            commitAuthorAvatarURL: run.actor?.avatarURL,
             webURL: URL(string: run.htmlURL)
         )
     }

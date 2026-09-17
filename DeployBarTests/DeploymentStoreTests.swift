@@ -32,7 +32,7 @@ final class DeploymentStoreTests: XCTestCase {
         let store = makeStore(deploymentsData: try fixture("deployments"))
         await store.poll()
         XCTAssertFalse(store.deployments.isEmpty)
-        XCTAssertNil(store.errorMessage)
+        XCTAssertTrue(store.healthIssues.isEmpty)
         XCTAssertNotNil(store.lastUpdated)
     }
 
@@ -56,7 +56,7 @@ final class DeploymentStoreTests: XCTestCase {
         // A lone 401 is treated as transient — no scary banner, no loggedOut icon.
         let store = alwaysUnauthorizedStore()
         await store.poll()
-        XCTAssertNil(store.errorMessage, "a single auth blip must not surface the banner")
+        XCTAssertTrue(store.healthIssues.isEmpty, "a single auth blip must not surface an issue")
         XCTAssertNotEqual(store.iconState, .loggedOut)
     }
 
@@ -64,8 +64,8 @@ final class DeploymentStoreTests: XCTestCase {
         // A genuine logout fails every poll; after the threshold the banner shows.
         let store = alwaysUnauthorizedStore()
         for _ in 0..<5 { await store.poll() }
-        XCTAssertNotNil(store.errorMessage)
-        XCTAssertTrue(store.errorMessage!.lowercased().contains("logged in"))
+        XCTAssertFalse(store.healthIssues.isEmpty)
+        XCTAssertTrue(store.healthIssues.contains { $0.lowercased().contains("logged in") })
         XCTAssertEqual(store.iconState, .loggedOut)
     }
 
@@ -88,7 +88,7 @@ final class DeploymentStoreTests: XCTestCase {
         failNow = true
         await store.poll()
         XCTAssertEqual(store.deployments.count, countAfterGood, "keeps last-known data")
-        XCTAssertNotNil(store.errorMessage, "shows stale indicator")
+        XCTAssertFalse(store.healthIssues.isEmpty, "shows stale indicator")
     }
 
     func test_rotatedTokenRecoversWithoutLoggedOut() async throws {
@@ -119,7 +119,7 @@ final class DeploymentStoreTests: XCTestCase {
         )
         await store.poll()
         XCTAssertFalse(store.deployments.isEmpty, "recovers using the rotated token")
-        XCTAssertNil(store.errorMessage)
+        XCTAssertTrue(store.healthIssues.isEmpty)
         XCTAssertNotEqual(store.iconState, .loggedOut)
     }
 
@@ -142,6 +142,79 @@ final class DeploymentStoreTests: XCTestCase {
         authed = true
         await store.poll()
         XCTAssertNotEqual(store.iconState, .loggedOut)
-        XCTAssertNil(store.errorMessage)
+        XCTAssertTrue(store.healthIssues.isEmpty)
+    }
+
+    // MARK: - Health dot (replaces the bottom status bar)
+
+    func test_healthIssuesEmptyOnGoodPoll() async throws {
+        let store = makeStore(deploymentsData: try fixture("deployments"))
+        await store.poll()
+        XCTAssertTrue(store.healthIssues.isEmpty, "a healthy poll has nothing to report")
+    }
+
+    func test_healthIssuesReportLogoutAfterRepeatedUnauthorized() async {
+        let store = alwaysUnauthorizedStore()
+        for _ in 0..<5 { await store.poll() }
+        XCTAssertFalse(store.healthIssues.isEmpty)
+        XCTAssertTrue(store.healthIssues.contains { $0.lowercased().contains("logged in") })
+    }
+
+    func test_healthIssuesReportStaleSource() async throws {
+        // Same shape as the stale-data test: a good poll, then a network failure.
+        var failNow = false
+        let creds = VercelCredentials(token: "x", teamId: nil)
+        let depData = try fixture("deployments")
+        let client = VercelClient(credentials: creds) { req in
+            if failNow { throw URLError(.notConnectedToInternet) }
+            let isDeployments = req.url!.path.contains("deployments")
+            return (isDeployments ? depData : Data(#"{"projects":[]}"#.utf8),
+                    HTTPURLResponse(url: req.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!)
+        }
+        let store = DeploymentStore(
+            client: client,
+            settings: SettingsStore(defaults: UserDefaults(suiteName: UUID().uuidString)!),
+            scopeName: "test",
+            reloadToken: { nil }
+        )
+        await store.poll()
+        XCTAssertTrue(store.healthIssues.isEmpty)
+
+        failNow = true
+        await store.poll()
+        XCTAssertFalse(store.healthIssues.isEmpty, "a failed source is listed on the dot")
+    }
+
+    /// One line per failing source — the dot's tooltip lists them all, where the
+    /// old status bar could only show the first.
+    func test_healthIssuesAreStableAcrossPolls() async throws {
+        var failNow = false
+        let creds = VercelCredentials(token: "x", teamId: nil)
+        let depData = try fixture("deployments")
+        let client = VercelClient(credentials: creds) { req in
+            if failNow { throw URLError(.notConnectedToInternet) }
+            let isDeployments = req.url!.path.contains("deployments")
+            return (isDeployments ? depData : Data(#"{"projects":[]}"#.utf8),
+                    HTTPURLResponse(url: req.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!)
+        }
+        let store = DeploymentStore(
+            client: client,
+            settings: SettingsStore(defaults: UserDefaults(suiteName: UUID().uuidString)!),
+            scopeName: "test",
+            reloadToken: { nil }
+        )
+        await store.poll()
+        failNow = true
+        await store.poll()
+        let first = store.healthIssues
+        await store.poll()
+        XCTAssertEqual(first, store.healthIssues, "the list must not reshuffle between polls")
+    }
+
+    func test_isRefreshingIsFalseOncePollSettles() async throws {
+        let store = makeStore(deploymentsData: try fixture("deployments"))
+        XCTAssertFalse(store.isRefreshing, "idle before the first poll")
+        await store.poll()
+        XCTAssertFalse(store.isRefreshing, "cleared once the poll finishes")
     }
 }

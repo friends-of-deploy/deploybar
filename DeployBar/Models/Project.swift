@@ -1,17 +1,17 @@
 import Foundation
 
-struct ProjectsResponse: Decodable {
+struct ProjectsResponse: Decodable, Sendable {
     let projects: [Project]
     let pagination: ProjectsPagination?
 }
 
 /// Vercel paginates `/v9/projects` at 100 per page. `next` is a cursor (a
 /// timestamp) to pass back as `until` for the next page; it's nil on the last page.
-struct ProjectsPagination: Decodable {
+struct ProjectsPagination: Decodable, Sendable {
     let next: Double?
 }
 
-struct Project: Decodable, Identifiable {
+struct Project: Decodable, Identifiable, Sendable {
     let id: String
     let name: String
     let repoType: String?     // "github"

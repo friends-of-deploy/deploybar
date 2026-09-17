@@ -1,3 +1,4 @@
+import AppKit
 import Foundation
 import Observation
 
@@ -14,7 +15,26 @@ final class DeploymentStore {
     private(set) var sourcedDeployments: [SourcedDeployment] = []
     private(set) var sourcedProjects: [SourcedProject] = []
     private(set) var filter: ScopeFilter = .all
-    private(set) var sourceErrors: [UUID: String] = [:]
+    /// One message per *failing scope* (account+team), not per account: in "All"
+    /// mode a single Vercel account fans out into personal + one scope per team,
+    /// and those fail independently. Keying by account alone let a healthy team
+    /// hide a broken one, and concurrent failures of the same account overwrote
+    /// each other in completion order.
+    private(set) var scopeErrors: [ScopeRef: String] = [:]
+
+    /// Account-keyed view of `scopeErrors`, for callers that think in accounts.
+    /// When several scopes of one account fail, the messages are joined in a
+    /// stable order so repeated polls don't reshuffle the text.
+    var sourceErrors: [UUID: String] {
+        Dictionary(grouping: scopeErrors, by: { $0.key.accountId })
+            .mapValues { $0.map(\.value).sorted().joined(separator: "\n") }
+    }
+
+    /// True while a poll is in flight. Observed (unlike `isPollInFlight`, which
+    /// is a plain re-entrancy guard) so the health dot can show that a manual
+    /// refresh is actually doing something — a click with no feedback reads as
+    /// a dead control.
+    private(set) var isRefreshing = false
 
     /// True until the first poll completes. Lets the popover say "Loading…"
     /// instead of "No projects", which reads as an empty account.
@@ -34,21 +54,6 @@ final class DeploymentStore {
     /// Projects tab, so follow toggles stay reachable regardless of the active scope.
     var allSourcedProjects: [SourcedProject] { unfilteredProjects }
 
-    /// Derived from `sourceErrors`: none → nil; one → its message; many → summary.
-    var errorMessage: String? {
-        // Only show the CLI-specific "run vercel login" copy when a CLI account
-        // actually exists; otherwise fall through to the sourceErrors-derived message
-        // (which tells the user to reconnect the keychain token account instead).
-        if isLoggedOut, accountStore.cliAccount != nil {
-            return "Not logged in — run `vercel login`"
-        }
-        switch sourceErrors.count {
-        case 0:  return isLoggedOut ? (sourceErrors.values.first ?? "Not signed in") : nil
-        case 1:  return sourceErrors.values.first
-        default: return "\(sourceErrors.count) accounts couldn't refresh"
-        }
-    }
-
     // MARK: Dependencies
     @ObservationIgnored private let accountStore: AccountStore
     @ObservationIgnored private let settings: SettingsStore
@@ -61,11 +66,21 @@ final class DeploymentStore {
     // MARK: Polling machinery
     @ObservationIgnored private var timer: Timer?
     @ObservationIgnored private var isPollInFlight = false
+    /// The poll currently running (or the last one chained onto it). Lets
+    /// `poll()` coalesce racing callers instead of dropping their request.
+    @ObservationIgnored private var currentPoll: Task<Void, Never>?
+    /// Wake observer, so a sleeping Mac refreshes the moment it comes back.
+    @ObservationIgnored private var wakeObserver: NSObjectProtocol?
     @ObservationIgnored private var isLoggedOut = false
 
-    /// Per-account consecutive auth-failure counters. A real logout fails every
+    /// Per-*scope* consecutive auth-failure counters. A real logout fails every
     /// poll; a transient 401 recovers on the next tick.
-    @ObservationIgnored private var consecutiveAuthFailures: [UUID: Int] = [:]
+    ///
+    /// Keyed by scope rather than account for the same reason as `scopeErrors`:
+    /// one team's success used to zero the counter for every other team of the
+    /// same account, so a genuinely revoked team scope never reached the
+    /// threshold and never reported itself.
+    @ObservationIgnored private var consecutiveAuthFailures: [ScopeRef: Int] = [:]
 
     /// Re-reads the CLI token from disk (rotated periodically by the Vercel CLI).
     @ObservationIgnored private let reloadToken: () -> String?
@@ -151,7 +166,12 @@ final class DeploymentStore {
 
         let byId = Dictionary(uniqueKeysWithValues: accountStore.accounts.map { ($0.id, $0) })
         unfilteredDeployments = cache.deployments.compactMap { $0.restore(accounts: byId) }
-        unfilteredProjects = cache.projects.compactMap { $0.restore(accounts: byId) }
+        // Sorted on the way in, not trusted from disk: a snapshot written before
+        // `displayOrder` existed would otherwise paint in its old arbitrary order
+        // and then visibly jump when the first poll lands.
+        unfilteredProjects = cache.projects
+            .compactMap { $0.restore(accounts: byId) }
+            .sorted(by: SourcedProject.displayOrder)
         guard !unfilteredDeployments.isEmpty || !unfilteredProjects.isEmpty else { return }
 
         applyDisplayFilter()
@@ -243,6 +263,33 @@ final class DeploymentStore {
     /// All connected accounts (mirrors AccountStore.accounts).
     var connectedAccounts: [Account] { accountStore.accounts }
 
+    // MARK: - Health (view-facing)
+
+    /// Every current problem, one line per failing source, ordered by account so
+    /// the list doesn't reshuffle between polls (`sourceErrors` is a dictionary).
+    ///
+    /// Replaces the bottom status bar: the same information now hangs off the
+    /// health dot beside the scope picker.
+    var healthIssues: [String] {
+        // A full logout isn't attributable to one source — `sourceErrors` may
+        // even be empty — so it is reported on its own.
+        if isLoggedOut {
+            if accountStore.cliAccount != nil {
+                return [String(localized: "Not logged in — run `vercel login`",
+                               comment: "Health issue: the Vercel CLI has no session")]
+            }
+            if let first = sourceErrors.values.sorted().first { return [first] }
+            return [String(localized: "Not signed in",
+                           comment: "Health issue: no account is connected")]
+        }
+        // Ordered by the account list, then by id for sources with no account,
+        // so repeated polls produce a stable list.
+        let ordered = accountStore.accounts.compactMap { sourceErrors[$0.id] }
+        let known = Set(accountStore.accounts.map(\.id))
+        let orphans = sourceErrors.filter { !known.contains($0.key) }.values.sorted()
+        return ordered + orphans
+    }
+
     /// Scopes the user can SELECT for an account in the dropdown. For a Vercel CLI
     /// account this is personal + every team it belongs to (from the loaded `teams`
     /// list); for other accounts, just their single scope. Distinct from
@@ -310,6 +357,22 @@ final class DeploymentStore {
         guard let acct = account(accountId) else { return nil }
         guard let tid = teamId else { return acct.label }
         return teamDisplayName(tid) ?? tid
+    }
+
+    /// The organization a project belongs to, for the `owner/project` title.
+    ///
+    /// Distinct from `rowScopeLabelIgnoringFilter`: for the *personal* scope that
+    /// returns the account's label ("Vercel CLI"), which is this app's name for
+    /// the credential, not an org. Vercel itself scopes personal projects under
+    /// the user's own username, so use that — giving "konrad-8lines/social"
+    /// rather than "Vercel CLI/social".
+    func projectOwnerLabel(accountId: UUID, teamId: String?) -> String? {
+        if let teamId { return teamDisplayName(teamId) }
+        guard let acct = account(accountId) else { return nil }
+        // GitHub repos already carry their owner in the project name, so only
+        // Vercel's personal scope needs the username substituted in.
+        guard acct.provider == .vercel else { return nil }
+        return user?.username ?? nil
     }
 
     /// Like `rowScopeLabel` but independent of the active filter — for the scope
@@ -466,7 +529,7 @@ final class DeploymentStore {
         currentTeamId = teamId
         settings.selectedTeamId = teamId ?? "__personal__"
         previousSnapshots = nil               // silent re-seed for the new scope
-        sourceErrors = [:]
+        scopeErrors = [:]
         // Deliberately NOT clearing the row lists: `applyDisplayFilter` re-derives
         // them from the unfiltered merge, so the popover shows the new scope's
         // known rows immediately instead of flashing empty until the poll lands.
@@ -494,6 +557,38 @@ final class DeploymentStore {
         Task { await loadTeams() }
         Task { await loadUser() }
         scheduleTimer()
+        observeWake()
+    }
+
+    /// The app keeps one store for its whole lifetime, so this never fires in
+    /// production — it stops tests (which build a store per case) from leaving
+    /// live `Timer`s, wake observers and chained poll tasks behind.
+    deinit {
+        timer?.invalidate()
+        currentPoll?.cancel()
+        if let wakeObserver {
+            NSWorkspace.shared.notificationCenter.removeObserver(wakeObserver)
+        }
+    }
+
+    /// Refresh as soon as the Mac wakes.
+    ///
+    /// A `Timer` does not fire while the machine is asleep and does not catch
+    /// up afterwards, so without this the first thing seen after opening the
+    /// lid is whatever was on screen when it closed — potentially hours stale —
+    /// until the next tick comes round.
+    private func observeWake() {
+        wakeObserver = NSWorkspace.shared.notificationCenter.addObserver(
+            forName: NSWorkspace.didWakeNotification, object: nil, queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor in
+                guard let self else { return }
+                // Restart the interval from the wake instant too, so the next
+                // scheduled tick isn't a leftover fraction of the pre-sleep one.
+                self.scheduleTimer()
+                await self.poll()
+            }
+        }
     }
 
     /// Re-creatable so SettingsView can reschedule when the poll interval changes.
@@ -515,12 +610,45 @@ final class DeploymentStore {
         let projects: [Project]
     }
 
+    /// Refresh every scope.
+    ///
+    /// Overlapping calls are *coalesced*, not dropped. `switchTeam`/`selectAll`
+    /// mutate the active scope and then `await poll()` to fetch it; when the
+    /// periodic timer happened to be mid-poll, the old `guard` returned without
+    /// fetching and the popover sat on the previous scope's rows — under a new
+    /// label — until the next tick (up to the full poll interval). Now the
+    /// racing caller waits for the in-flight poll and then gets its own run,
+    /// so the data always catches up with the scope the user picked.
     func poll() async {
-        guard !isPollInFlight else { return }
+        // Mid-poll: chain onto the current run so we start only once it is done,
+        // and record that chained task so further callers join it rather than
+        // stacking a run each.
+        if let inFlight = currentPoll {
+            let chained = Task { @MainActor [weak self] in
+                _ = await inFlight.value
+                guard let self else { return }
+                await self.runPoll()
+            }
+            currentPoll = chained
+            await chained.value
+            if currentPoll == chained { currentPoll = nil }
+            return
+        }
+        let task = Task { @MainActor [weak self] in
+            guard let self else { return }
+            await self.runPoll()
+        }
+        currentPoll = task
+        await task.value
+        if currentPoll == task { currentPoll = nil }
+    }
+
+    private func runPoll() async {
         isPollInFlight = true
+        isRefreshing = true
         // Whatever the outcome, the first attempt is over — the popover must stop
         // showing "Loading…" even when there is nothing to show.
-        defer { isPollInFlight = false; isLoadingInitial = false }
+        defer { isPollInFlight = false; isRefreshing = false; isLoadingInitial = false }
 
         let scopes = availableScopes
         guard !scopes.isEmpty else {
@@ -529,7 +657,7 @@ final class DeploymentStore {
         }
 
         var merged: [ScopeResult] = []
-        var errors: [UUID: String] = [:]
+        var errors: [ScopeRef: String] = [:]
         var freshSuccessCount = 0
 
         // Fan out one fetch per scope. withTaskGroup keeps per-source isolation:
@@ -545,14 +673,14 @@ final class DeploymentStore {
                 let ref = ScopeRef(accountId: scope.account.id, teamId: scope.teamId)
                 switch result {
                 case .success(let (deps, projs)):
-                    consecutiveAuthFailures[scope.account.id] = 0
+                    consecutiveAuthFailures[ref] = 0
                     freshSuccessCount += 1
                     let res = ScopeResult(account: scope.account, teamId: scope.teamId,
                                           deployments: deps, projects: projs)
                     lastGood[ref] = res
                     merged.append(res)
                 case .failure(let error):
-                    record(error: error, for: scope.account, into: &errors)
+                    record(error: error, for: scope, ref: ref, into: &errors)
                     // Keep this source's last-known rows so a transient failure
                     // doesn't blank the menu (mirrors the old "stale" behavior).
                     if let prev = lastGood[ref] { merged.append(prev) }
@@ -570,7 +698,7 @@ final class DeploymentStore {
             res.projects.map {
                 SourcedProject(project: $0, account: res.account, teamId: res.teamId)
             }
-        }
+        }.sorted(by: SourcedProject.displayOrder)
 
         // Polling several teams of one account can return the same deployment
         // twice (a project visible in more than one scope). Keep the first —
@@ -598,7 +726,7 @@ final class DeploymentStore {
             alertAcknowledged = false
         }
 
-        self.sourceErrors = errors
+        self.scopeErrors = errors
         self.lastUpdated = Date()
         applyDisplayFilter()
 
@@ -615,7 +743,8 @@ final class DeploymentStore {
         // loggedOut only when there are zero usable sources (no fresh successful
         // fetch this tick AND every account is past the auth-failure threshold).
         let allAuthFailing = scopes.allSatisfy {
-            (consecutiveAuthFailures[$0.account.id] ?? 0) >= Self.authFailureThreshold
+            let ref = ScopeRef(accountId: $0.account.id, teamId: $0.teamId)
+            return (consecutiveAuthFailures[ref] ?? 0) >= Self.authFailureThreshold
         }
         isLoggedOut = freshSuccessCount == 0 && allAuthFailing
 
@@ -623,7 +752,31 @@ final class DeploymentStore {
         // preventing unbounded growth when accounts are removed.
         let liveIds = Set(accountStore.accounts.map(\.id))
         lastGood = lastGood.filter { liveIds.contains($0.key.accountId) }
-        consecutiveAuthFailures = consecutiveAuthFailures.filter { liveIds.contains($0.key) }
+        consecutiveAuthFailures = consecutiveAuthFailures.filter { liveIds.contains($0.key.accountId) }
+    }
+
+    /// Drop every trace of accounts that are no longer connected, then re-poll.
+    ///
+    /// Removing a provider is the one moment the project list is *expected* to
+    /// change, and the caches all had to be told: `lastGood` would otherwise keep
+    /// replaying the removed source's rows on every failed tick, and
+    /// `settings.cachedRows` would survive on disk — a poll that fetches nothing
+    /// (the removed account was the only source) never overwrites the snapshot,
+    /// so the rows would come back at the next launch.
+    func accountsChanged() async {
+        let live = Set(accountStore.accounts.map(\.id))
+        lastGood = lastGood.filter { live.contains($0.key.accountId) }
+        consecutiveAuthFailures = consecutiveAuthFailures.filter { live.contains($0.key.accountId) }
+        scopeErrors = scopeErrors.filter { live.contains($0.key.accountId) }
+        unfilteredDeployments.removeAll { !live.contains($0.account.id) }
+        unfilteredProjects.removeAll { !live.contains($0.account.id) }
+        // Rewrite the snapshot now rather than waiting for a successful poll,
+        // which may never come.
+        settings.cachedRows = RowCache(deployments: unfilteredDeployments,
+                                       projects: unfilteredProjects,
+                                       savedAt: Date())
+        applyDisplayFilter()
+        await poll()
     }
 
     /// Apply the follow filter + active ScopeFilter to the unfiltered merge.
@@ -719,15 +872,31 @@ final class DeploymentStore {
         return true
     }
 
-    private func record(error: Error, for account: Account, into errors: inout [UUID: String]) {
+    private func record(error: Error, for scope: Scope, ref: ScopeRef,
+                        into errors: inout [ScopeRef: String]) {
+        // Name the team when there is one, so "reconnect Acme" doesn't leave the
+        // user guessing which of an account's teams actually went bad.
+        let label = scope.displayLabel
+        // Throttling is not an auth failure: leave the counter alone so a long
+        // rate-limit window can't be mistaken for a logout, and say what is
+        // actually happening instead of "stale".
+        if case VercelClientError.rateLimited(let retryAfter) = error {
+            if let retryAfter, retryAfter >= 60 {
+                let minutes = Int((retryAfter / 60).rounded(.up))
+                errors[ref] = "\(label): rate limited — retrying in ~\(minutes) min"
+            } else {
+                errors[ref] = "\(label): rate limited — retrying shortly"
+            }
+            return
+        }
         if case VercelClientError.unauthorized = error {
-            consecutiveAuthFailures[account.id, default: 0] += 1
-            if (consecutiveAuthFailures[account.id] ?? 0) >= Self.authFailureThreshold {
-                errors[account.id] = "Not logged in — reconnect \(account.label)"
+            consecutiveAuthFailures[ref, default: 0] += 1
+            if (consecutiveAuthFailures[ref] ?? 0) >= Self.authFailureThreshold {
+                errors[ref] = "Not logged in — reconnect \(label)"
             }
             // Below threshold: stay quiet, keep last-known rows; the timer retries.
         } else {
-            errors[account.id] = "Couldn't refresh \(account.label) (stale)"
+            errors[ref] = "Couldn't refresh \(label) (stale)"
         }
     }
 }

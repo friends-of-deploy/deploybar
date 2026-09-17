@@ -2,6 +2,9 @@ import Foundation
 import UserNotifications
 import os
 
+// Reads `SettingsStore`, which is main-actor bound; every caller
+// (`DeploymentStore.handle`) is already on the main actor.
+@MainActor
 enum NotificationGate {
     static func shouldNotify(_ t: StateTransition, settings: SettingsStore) -> Bool {
         guard settings.isFollowed(t.key) else { return false }
@@ -14,6 +17,7 @@ enum NotificationGate {
     }
 }
 
+@MainActor
 struct NotificationManager {
     let settings: SettingsStore
     var center: UNUserNotificationCenter = .current()
