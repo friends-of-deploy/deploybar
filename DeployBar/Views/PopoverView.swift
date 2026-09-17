@@ -278,15 +278,17 @@ private struct TabSelector: View {
     /// Called just before the selection changes, so the owner can record which
     /// direction the content should slide.
     let willSelect: (PopoverTab) -> Void
-    /// Ties the single underline to whichever tab owns it, so selecting a
-    /// neighbor slides the bar across instead of cutting to it.
-    @Namespace private var underline
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    /// Index of the selected tab, for the single underline below.
+    private var selectedIndex: Int {
+        tabs.firstIndex(of: selection) ?? 0
+    }
 
     var body: some View {
         HStack(spacing: 0) {
             ForEach(tabs, id: \.self) { tab in
-                TabButton(tab: tab, isSelected: selection == tab, namespace: underline) {
+                TabButton(tab: tab, isSelected: selection == tab) {
                     guard selection != tab else { return }
                     willSelect(tab)
                     withAnimation(PopoverMotion.tabSwitch(reduceMotion: reduceMotion)) { selection = tab }
@@ -294,14 +296,35 @@ private struct TabSelector: View {
             }
         }
         .padding(.top, 10)
+        .overlay(alignment: .bottomLeading) { underlineBar }
         .overlay(alignment: .bottom) { Divider() }
+    }
+
+    /// The selected tab's underline.
+    ///
+    /// Drawn ONCE here and slid with an offset, rather than rendered inside the
+    /// selected `TabButton` and moved with `matchedGeometryEffect`. The effect
+    /// needs its `@Namespace` to stay identical across rebuilds to pair the two
+    /// views up; `MenuBarExtra` hands SwiftUI a fresh view tree every time the
+    /// panel opens, so the namespace changed and the bar was animated in from
+    /// the origin — the panel's content appeared to fly in from the top-left on
+    /// a loop. A plain offset has no such pairing to get wrong.
+    @ViewBuilder private var underlineBar: some View {
+        GeometryReader { proxy in
+            let slot = proxy.size.width / CGFloat(max(tabs.count, 1))
+            Capsule()
+                .fill(Color.accentColor)
+                .frame(width: slot, height: 2)
+                .offset(x: slot * CGFloat(selectedIndex))
+                .animation(PopoverMotion.tabSwitch(reduceMotion: reduceMotion), value: selectedIndex)
+        }
+        .frame(height: 2)
     }
 }
 
 private struct TabButton: View {
     let tab: PopoverTab
     let isSelected: Bool
-    let namespace: Namespace.ID
     let action: () -> Void
 
     var body: some View {
@@ -327,7 +350,8 @@ private struct TabButton: View {
                 // keeps that width instead of letting the tab's full-width
                 // frame re-center the two layers independently.
                 .fixedSize()
-                underlineTrack
+                // Space the bar occupies; the bar itself is drawn by the parent.
+                Color.clear.frame(height: 2)
             }
             .padding(.top, 4)
             .frame(maxWidth: .infinity)
@@ -337,18 +361,6 @@ private struct TabButton: View {
         .pointingHandCursor()
     }
 
-    @ViewBuilder private var underlineTrack: some View {
-        // Only the selected tab renders the bar; `matchedGeometryEffect` moves
-        // that one view between tabs rather than fading two in and out.
-        if isSelected {
-            Capsule()
-                .fill(Color.accentColor)
-                .frame(height: 2)
-                .matchedGeometryEffect(id: "tabUnderline", in: namespace)
-        } else {
-            Color.clear.frame(height: 2)
-        }
-    }
 }
 
 // MARK: - Shared subviews
