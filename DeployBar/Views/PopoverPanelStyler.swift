@@ -65,8 +65,13 @@ struct PopoverPanelStyler: NSViewRepresentable {
             styleWindow()
             refit()
             stopFollowing()
-            // No window means the panel just closed; nothing to follow.
-            guard window != nil else { return }
+            // No window means the panel just closed; nothing to follow. Forget
+            // the fitted height too, so the next presentation re-fits from
+            // scratch instead of matching a stale value and skipping.
+            guard window != nil else {
+                lastFittedHeight = nil
+                return
+            }
             follow = Task { @MainActor [weak self] in
                 while !Task.isCancelled {
                     try? await Task.sleep(for: .milliseconds(100))
@@ -143,6 +148,10 @@ struct PopoverPanelStyler: NSViewRepresentable {
         /// Matches the rounding `MenuBarExtra(.window)` draws for itself.
         static let cornerRadius: CGFloat = 11
 
+        /// Height the window was last fitted to, so the follow loop can tell a
+        /// real content change from "nothing happened since the last tick".
+        private var lastFittedHeight: CGFloat?
+
         func refit() {
             // After the in-flight layout pass: the superview's frame is stale
             // until SwiftUI has finished laying the new content out.
@@ -155,6 +164,20 @@ struct PopoverPanelStyler: NSViewRepresentable {
                       let frame = PopoverPanelStyler.fittedFrame(
                           for: window.frame,
                           contentHeight: host.frame.height) else { return }
+                // Only act when the content height actually moved since the
+                // last fit.
+                //
+                // `setFrame(display: true)` forces a redraw of the whole
+                // window, and the follow loop calls this ten times a second.
+                // Re-issuing it on every tick kept the panel in a permanent
+                // redraw cycle: with the material backdrop underneath, the
+                // content visibly crept across the panel and the status badges
+                // detached from their icons — the "content flying from the
+                // top-left to the bottom-right on a loop". Measured: with the
+                // loop running, 15 of 15 captured frames differed; with it
+                // disabled, 12 of 12 were byte-identical.
+                guard self.lastFittedHeight != host.frame.height else { return }
+                self.lastFittedHeight = host.frame.height
                 window.setFrame(frame, display: true)
             }
         }
