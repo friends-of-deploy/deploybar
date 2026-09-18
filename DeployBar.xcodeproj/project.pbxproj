@@ -21,6 +21,7 @@
 		2270AB2D0E85F3BE2137022F /* ProjectListStabilityTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1B8BEBE2545535F8401D31AC /* ProjectListStabilityTests.swift */; };
 		231C256FA93A2C46D73F43D1 /* FaviconURL.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE793AAA24E87F302F47F6BA /* FaviconURL.swift */; };
 		27B2977BC195025852589715 /* UpdateChannel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C29717717C676DD2D14C378 /* UpdateChannel.swift */; };
+		2A5C23D403D459A09E7F0314 /* DemoProviderClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2BB7896309D0050B7618FF20 /* DemoProviderClient.swift */; };
 		2ABA840B17F54B6B2A517989 /* SourcedItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4DB4B342E203F63C747D601A /* SourcedItem.swift */; };
 		2EBCA0BBD186032E5F886BAA /* ScaffoldTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = DCF0236F9C974998867E7582 /* ScaffoldTests.swift */; };
 		30E704ADB7DAFE6D8042D4B0 /* GitHubTokenProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B583275940E87AD51F09C7B /* GitHubTokenProvider.swift */; };
@@ -109,6 +110,7 @@
 		C969290F82BA3BC8E2005921 /* DeploymentDiffer.swift in Sources */ = {isa = PBXBuildFile; fileRef = B7B2A3C52B577758FC96D59E /* DeploymentDiffer.swift */; };
 		CC165BF8EEAE82A96A44CE7B /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = CB9D4EBA17ACC04E8F2C9252 /* Assets.xcassets */; };
 		CE04B0246BA9011F69FF0883 /* DiffTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = EDD7066A7A7BB011FEF8D8FE /* DiffTests.swift */; };
+		D04750DC8E328C5F07471E97 /* DemoProviderClientTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6755EAC604ED634C4E4DE8B0 /* DemoProviderClientTests.swift */; };
 		D1A9FF9FFF609666896FF5D9 /* ScopeResolver.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4EC059A6A8C152E20A42C7D7 /* ScopeResolver.swift */; };
 		D1EC28F9F946031F12E50E3A /* ScopeColorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1049A05673BFAD96CAD2455D /* ScopeColorTests.swift */; };
 		D28A2FA36668065AAAB17B77 /* Scope.swift in Sources */ = {isa = PBXBuildFile; fileRef = 08B3FD0A4A7D2B851A5D900F /* Scope.swift */; };
@@ -170,6 +172,7 @@
 		2889E76BF8CB729413458744 /* FollowSettingsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FollowSettingsTests.swift; sourceTree = "<group>"; };
 		2977426DBA5270B1F7B70BF6 /* RowCache.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RowCache.swift; sourceTree = "<group>"; };
 		2B583275940E87AD51F09C7B /* GitHubTokenProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GitHubTokenProvider.swift; sourceTree = "<group>"; };
+		2BB7896309D0050B7618FF20 /* DemoProviderClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DemoProviderClient.swift; sourceTree = "<group>"; };
 		2C30E9EF17AC65757B97B307 /* PopoverPanelStylerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PopoverPanelStylerTests.swift; sourceTree = "<group>"; };
 		2CE629B98A536D72C8515A98 /* NotificationGatingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationGatingTests.swift; sourceTree = "<group>"; };
 		2D98CD1DA787CB017E6E1380 /* RateLimitTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RateLimitTests.swift; sourceTree = "<group>"; };
@@ -201,6 +204,7 @@
 		5FAF19E220235027CEA50E14 /* MenuBarIcon.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuBarIcon.swift; sourceTree = "<group>"; };
 		61C6C0E528AB81F8016D2AB2 /* GeneralSettingsTab.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeneralSettingsTab.swift; sourceTree = "<group>"; };
 		63E0030A9C2CF9E29B7C1CB4 /* AccountStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountStore.swift; sourceTree = "<group>"; };
+		6755EAC604ED634C4E4DE8B0 /* DemoProviderClientTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DemoProviderClientTests.swift; sourceTree = "<group>"; };
 		689898515F337BEFDB922498 /* SettingsStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsStoreTests.swift; sourceTree = "<group>"; };
 		6986FE48CCD06BAF2A15F578 /* SourceIcon.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SourceIcon.swift; sourceTree = "<group>"; };
 		6DBD9CAD49574C68D9EED507 /* TeamsClientTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TeamsClientTests.swift; sourceTree = "<group>"; };
@@ -351,6 +355,7 @@
 				6E209E87DAC8B3AAB1BA5534 /* CommitAuthorTests.swift */,
 				B8DE5F4F4C0E1B6710C5682C /* CredentialStoreTests.swift */,
 				21B1DB99E8DEB4901FB3580F /* DemoClockTests.swift */,
+				6755EAC604ED634C4E4DE8B0 /* DemoProviderClientTests.swift */,
 				908C842333BEA52F88B4AD69 /* DemoScenarioTests.swift */,
 				4431075D715348146A140C1A /* DeploymentDecodingTests.swift */,
 				58F7B38F64649B26A1DFA747 /* DeploymentFaviconTests.swift */,
@@ -403,6 +408,7 @@
 			isa = PBXGroup;
 			children = (
 				2182648C63548B446EE0E8DE /* DemoClock.swift */,
+				2BB7896309D0050B7618FF20 /* DemoProviderClient.swift */,
 				6DBEC7038CC0B370E3BDA0E7 /* DemoScenario.swift */,
 			);
 			path = Demo;
@@ -631,6 +637,7 @@
 				4843FB0A460BEC29D54BFF46 /* CopyBuildErrorButton.swift in Sources */,
 				41749D7A00D20E348FEA4E56 /* CredentialStore.swift in Sources */,
 				A6B6D0826C24CD9026218FF2 /* DemoClock.swift in Sources */,
+				2A5C23D403D459A09E7F0314 /* DemoProviderClient.swift in Sources */,
 				3CF30243B8D9115BD63F488A /* DemoScenario.swift in Sources */,
 				F490B46C416C421A1E4E265B /* DeployBarApp.swift in Sources */,
 				6EA9051C98C744DB19AAABF6 /* Deployment.swift in Sources */,
@@ -704,6 +711,7 @@
 				64A70D20133C1347CC797C83 /* CommitAuthorTests.swift in Sources */,
 				D8DDDA3ED14B61EF084C9C0D /* CredentialStoreTests.swift in Sources */,
 				3C8DE367391D3D73327FE1AB /* DemoClockTests.swift in Sources */,
+				D04750DC8E328C5F07471E97 /* DemoProviderClientTests.swift in Sources */,
 				5B7FB94F8CE17B4A0162B32F /* DemoScenarioTests.swift in Sources */,
 				531B6F2AD2811DF4662B4A6F /* DeploymentDecodingTests.swift in Sources */,
 				4266433E97ABB2A58A9FDFC3 /* DeploymentFaviconTests.swift in Sources */,
