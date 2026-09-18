@@ -10,6 +10,23 @@ struct DeployBarApp: App {
     @State private var updater: UpdaterController
 
     init() {
+        // Demo mode: an invented world for documentation screenshots, off unless
+        // DEPLOYBAR_DEMO=1. Everything below this branch — views, aggregation,
+        // polling — is the production path, so a screenshot shows the real app
+        // rather than a mock-up.
+        if let demo = DemoEnvironment.buildFromEnvironment() {
+            let store = DeploymentStore(accountStore: demo.accountStore,
+                                        settings: demo.settings,
+                                        makeClient: demo.makeClient)
+            store.teams = demo.teams
+            _settings = State(initialValue: demo.settings)
+            _accountStore = State(initialValue: demo.accountStore)
+            _store = State(initialValue: store)
+            _updater = State(initialValue: UpdaterController(settings: demo.settings))
+            store.start()
+            return
+        }
+
         let settings = SettingsStore()
         let accountStore = AccountStore()
         if let cli = accountStore.cliAccount {
