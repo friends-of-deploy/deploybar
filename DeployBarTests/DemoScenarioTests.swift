@@ -93,4 +93,32 @@ final class DemoScenarioTests: XCTestCase {
         XCTAssertTrue(scenario.projects.contains { $0.followed }, "no followed projects to show")
         XCTAssertTrue(scenario.projects.contains { !$0.followed }, "no unfollowed projects to show")
     }
+
+    /// `DemoEnvironment.freezeOffsetSeconds` must sit at or past the shipped
+    /// fixture's last timeline event, or `--freeze` silently regresses to
+    /// capturing an intermediate state instead of the settled end-state
+    /// (the exact defect this whole feature branch was fixed for). The doc
+    /// comment on the constant says as much, but a comment doesn't enforce
+    /// anything — this test does, against the real shipped fixture rather
+    /// than a value hardcoded here.
+    func test_freezeOffsetCoversTheShippedFixturesTimeline() throws {
+        let appBundle = try XCTUnwrap(
+            Bundle(identifier: "io.eightlines.deploybar.DeployBar"),
+            "app bundle not loaded"
+        )
+        let scenario = try DemoScenarioLoader.load(named: "default", bundle: appBundle)
+
+        guard let lastEventSeconds = scenario.timeline.map(\.atSeconds).max() else {
+            // No timeline events means there's nothing the freeze offset could
+            // possibly miss; the invariant holds vacuously.
+            return
+        }
+
+        XCTAssertGreaterThanOrEqual(
+            DemoEnvironment.freezeOffsetSeconds, lastEventSeconds,
+            "the fixture's timeline now extends to \(lastEventSeconds)s, so " +
+            "freezeOffsetSeconds must be raised past it or --freeze will " +
+            "capture an intermediate state instead of the settled end-state"
+        )
+    }
 }
