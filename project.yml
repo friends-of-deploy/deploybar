@@ -24,7 +24,14 @@ targets:
     type: application
     platform: macOS
     sources:
-      - DeployBar
+      - path: DeployBar
+        excludes:
+          - Demo/Fixtures
+      # Fixture JSON must be copied, not compiled: a bare `- DeployBar` entry
+      # makes XcodeGen treat everything beneath it as a source, and the JSON
+      # would never reach the bundle. Mirrors the DeployBarTests/Fixtures setup.
+      - path: DeployBar/Demo/Fixtures
+        buildPhase: resources
     entitlements:
       path: DeployBar/DeployBar.entitlements
     dependencies:

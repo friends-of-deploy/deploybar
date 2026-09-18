@@ -51,4 +51,46 @@ final class DemoScenarioTests: XCTestCase {
             XCTAssertEqual(name, "no-such-scenario")
         }
     }
+
+    /// The shipped fixture must always decode. A typo would otherwise surface as
+    /// an empty popover in the middle of a screenshot session.
+    func test_shippedDefaultFixtureDecodesAndIsWellFormed() throws {
+        let appBundle = try XCTUnwrap(
+            Bundle(identifier: "io.eightlines.deploybar.DeployBar"),
+            "app bundle not loaded"
+        )
+        let scenario = try DemoScenarioLoader.load(named: "default", bundle: appBundle)
+
+        XCTAssertEqual(scenario.accounts.count, 3)
+        XCTAssertGreaterThanOrEqual(scenario.projects.count, 15)
+        XCTAssertGreaterThanOrEqual(scenario.deployments.count, 20)
+
+        // Every project and deployment must point at a declared account.
+        let keys = Set(scenario.accounts.map(\.key))
+        for p in scenario.projects {
+            XCTAssertTrue(keys.contains(p.accountKey), "project \(p.name) has unknown account \(p.accountKey)")
+        }
+        for d in scenario.deployments {
+            XCTAssertTrue(keys.contains(d.accountKey), "deployment \(d.uid) has unknown account \(d.accountKey)")
+        }
+
+        // Every timeline event must point at a declared deployment.
+        let uids = Set(scenario.deployments.map(\.uid))
+        for e in scenario.timeline {
+            XCTAssertTrue(uids.contains(e.deploymentUid), "timeline references unknown deployment \(e.deploymentUid)")
+        }
+
+        // The screenshot value of the fixture is its variety of states.
+        let states = Set(scenario.deployments.map(\.state))
+        for expected in ["READY", "BUILDING", "QUEUED", "ERROR", "CANCELED"] {
+            XCTAssertTrue(states.contains(expected), "fixture is missing a \(expected) deployment")
+        }
+
+        // Exactly one CLI account, carrying the two team scopes.
+        let cli = try XCTUnwrap(scenario.accounts.first { $0.sourceKind == .vercelCLI })
+        XCTAssertEqual(cli.teams.count, 2)
+
+        XCTAssertTrue(scenario.projects.contains { $0.followed }, "no followed projects to show")
+        XCTAssertTrue(scenario.projects.contains { !$0.followed }, "no unfollowed projects to show")
+    }
 }
