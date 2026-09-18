@@ -37,10 +37,19 @@ xcodebuild build \
   CODE_SIGNING_ALLOWED=NO \
   -quiet
 
-APP_PATH="$(xcodebuild -project DeployBar.xcodeproj -scheme DeployBar \
+BUILD_SETTINGS="$(xcodebuild -project DeployBar.xcodeproj -scheme DeployBar \
   -configuration "$CONFIGURATION" -destination 'platform=macOS' \
-  -showBuildSettings 2>/dev/null \
-  | awk -F' = ' '/ BUILT_PRODUCTS_DIR /{d=$2} / FULL_PRODUCT_NAME /{n=$2} END{print d"/"n}')"
+  -showBuildSettings 2>/dev/null)"
+
+BUILT_PRODUCTS_DIR="$(awk -F' = ' '/ BUILT_PRODUCTS_DIR /{print $2; exit}' <<<"$BUILD_SETTINGS")"
+FULL_PRODUCT_NAME="$(awk -F' = ' '/ FULL_PRODUCT_NAME /{print $2; exit}' <<<"$BUILD_SETTINGS")"
+
+if [[ -z "$BUILT_PRODUCTS_DIR" || -z "$FULL_PRODUCT_NAME" ]]; then
+  echo "could not determine the build output location (BUILT_PRODUCTS_DIR='$BUILT_PRODUCTS_DIR', FULL_PRODUCT_NAME='$FULL_PRODUCT_NAME') — xcodebuild -showBuildSettings output may have changed" >&2
+  exit 1
+fi
+
+APP_PATH="$BUILT_PRODUCTS_DIR/$FULL_PRODUCT_NAME"
 
 if [[ ! -d "$APP_PATH" ]]; then
   echo "could not locate the built app (looked for: $APP_PATH)" >&2
@@ -58,5 +67,13 @@ if [[ -n "$FREEZE" ]]; then
   DEMO_ENV+=(DEPLOYBAR_DEMO_FREEZE=1)
 fi
 env "${DEMO_ENV[@]}" "$APP_PATH/Contents/MacOS/DeployBar" &
+
+# The launch is backgrounded, so `set -e` cannot see a failure here — confirm
+# the process actually stayed up before declaring success.
+sleep 1
+if ! pgrep -x DeployBar >/dev/null 2>&1; then
+  echo "DeployBar did not stay running after launch — re-run without the trailing & (drop the backgrounding in this script) to see the underlying error" >&2
+  exit 1
+fi
 
 echo "==> Running. Stop with: pkill -x DeployBar"
