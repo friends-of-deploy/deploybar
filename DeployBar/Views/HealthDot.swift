@@ -96,12 +96,23 @@ struct HealthDot: View {
                         .trim(from: 0, to: 0.7)
                         .stroke(style: StrokeStyle(lineWidth: 1.5, lineCap: .round))
                         .rotationEffect(.degrees(turning ? 360 : 0))
+                        // Scoped to the rotation, NOT applied with
+                        // `withAnimation`.
+                        //
+                        // `withAnimation` sets the animation for the whole
+                        // transaction, and `repeatForever` means it never ends.
+                        // Every geometry change that followed — including the
+                        // panel's own window height — got swept into an
+                        // infinite 0.9s linear repeat, so the popover resized
+                        // itself on a loop and the content appeared to crawl
+                        // from the top-left to the bottom-right. Measured from
+                        // a screen recording: the panel collapsed and regrew
+                        // every 54 frames at 60fps, exactly this duration.
+                        .animation(.linear(duration: 0.9).repeatForever(autoreverses: false),
+                                   value: turning)
                         .onAppear {
                             guard !reduceMotion else { return }
-                            turning = false
-                            withAnimation(.linear(duration: 0.9).repeatForever(autoreverses: false)) {
-                                turning = true
-                            }
+                            turning = true
                         }
                         .onDisappear { turning = false }
                         .transition(reduceMotion

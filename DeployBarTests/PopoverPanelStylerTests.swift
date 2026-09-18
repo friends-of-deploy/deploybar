@@ -43,4 +43,38 @@ final class PopoverPanelStylerTests: XCTestCase {
         XCTAssertNil(PopoverPanelStyler.fittedFrame(for: tall, contentHeight: 0))
         XCTAssertNil(PopoverPanelStyler.fittedFrame(for: tall, contentHeight: -50))
     }
+
+    // MARK: - Oscillation
+
+    // The panel bug behind 1.0.0-1.0.2: the window grew and collapsed on a
+    // loop while the content, pinned to its bottom-right, appeared to crawl
+    // across the panel from the top-left. The measured height alternated
+    // instead of settling, so a guard that only compares against the previous
+    // value never fired.
+
+    func test_settledHeightsAreNotOscillation() {
+        XCTAssertFalse(PopoverPanelStyler.isOscillating([420, 420, 420, 420]))
+    }
+
+    func test_alternatingHeightsAreOscillation() {
+        XCTAssertTrue(PopoverPanelStyler.isOscillating([400, 420, 400, 420]))
+    }
+
+    func test_aGenuineContentChangeIsNotOscillation() {
+        // A row arriving steps to a new height and stays there.
+        XCTAssertFalse(PopoverPanelStyler.isOscillating([400, 420, 420, 420]))
+    }
+
+    func test_tooFewSamplesNeverReportOscillation() {
+        // Startup must be free to resize; the loop only exists once a pattern
+        // has had a chance to form.
+        XCTAssertFalse(PopoverPanelStyler.isOscillating([400, 420]))
+        XCTAssertFalse(PopoverPanelStyler.isOscillating([400, 420, 400]))
+    }
+
+    func test_subPointJitterIsNotOscillation() {
+        // Differences below the threshold that would actually resize the
+        // window must not trip the breaker.
+        XCTAssertFalse(PopoverPanelStyler.isOscillating([420, 420.2, 420, 420.1]))
+    }
 }

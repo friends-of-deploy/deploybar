@@ -40,6 +40,28 @@ struct PopoverPanelStyler: NSViewRepresentable {
         return fitted
     }
 
+    /// Whether the heights the panel has been asked to take are failing to
+    /// settle on one value.
+    ///
+    /// The signal is a height *returning* after the panel has moved away from
+    /// it. A genuine content change — a row arriving — steps to a new height
+    /// and stays there, never revisiting the old one, so it must not be
+    /// mistaken for the loop; only an A-B-A pattern means the measurement and
+    /// the window disagree and are chasing each other.
+    ///
+    /// Half-point rounding matches the sub-point tolerance in `fittedFrame`, so
+    /// jitter below the threshold that would actually resize the window does
+    /// not read as oscillation.
+    nonisolated static func isOscillating(_ heights: [CGFloat]) -> Bool {
+        guard heights.count >= 4 else { return false }
+        let keys = heights.suffix(4).map { ($0 * 2).rounded() }
+        // Collapse runs of the same height: [400, 420, 420, 420] settles,
+        // while [400, 420, 400, 420] keeps coming back.
+        var transitions: [CGFloat] = []
+        for key in keys where key != transitions.last { transitions.append(key) }
+        return transitions.count > Set(transitions).count
+    }
+
     func makeNSView(context: Context) -> TrackerView { TrackerView() }
 
     func updateNSView(_ view: TrackerView, context: Context) {
@@ -70,6 +92,7 @@ struct PopoverPanelStyler: NSViewRepresentable {
             // scratch instead of matching a stale value and skipping.
             guard window != nil else {
                 lastFittedHeight = nil
+                recentHeights.removeAll()
                 return
             }
             follow = Task { @MainActor [weak self] in
@@ -152,34 +175,85 @@ struct PopoverPanelStyler: NSViewRepresentable {
         /// real content change from "nothing happened since the last tick".
         private var lastFittedHeight: CGFloat?
 
+        /// The last few heights this view asked the window to take.
+        ///
+        /// The guard on `lastFittedHeight` alone only catches a height that
+        /// repeats *immediately*; it cannot see an A-B-A-B oscillation, which is
+        /// exactly the shape this loop takes. See `isOscillating`.
+        private var recentHeights: [CGFloat] = []
+
+        /// True once the recent heights stop converging on a single value.
+        ///
+        /// Two distinct heights alternating means the measurement disagrees with
+        /// what the window becomes when it is applied — resizing again would
+        /// just feed the loop, so the fit is abandoned until the content really
+        /// changes.
+        private var isOscillating: Bool {
+            PopoverPanelStyler.isOscillating(recentHeights)
+        }
+
         func refit() {
             // After the in-flight layout pass: the superview's frame is stale
             // until SwiftUI has finished laying the new content out.
             DispatchQueue.main.async { [weak self] in
-                guard let self,
-                      let window = self.window,
-                      // `superview`, NOT `window.contentView` — see the note on
-                      // the type: the hosting view's fittingSize is always zero.
-                      let host = self.superview,
-                      let frame = PopoverPanelStyler.fittedFrame(
-                          for: window.frame,
-                          contentHeight: host.frame.height) else { return }
-                // Only act when the content height actually moved since the
-                // last fit.
+                guard let self, let window = self.window else { return }
+
+                // Measure what the content *wants*, not what the window
+                // currently gives it.
                 //
-                // `setFrame(display: true)` forces a redraw of the whole
-                // window, and the follow loop calls this ten times a second.
-                // Re-issuing it on every tick kept the panel in a permanent
-                // redraw cycle: with the material backdrop underneath, the
-                // content visibly crept across the panel and the status badges
-                // detached from their icons — the "content flying from the
-                // top-left to the bottom-right on a loop". Measured: with the
-                // loop running, 15 of 15 captured frames differed; with it
-                // disabled, 12 of 12 were byte-identical.
-                guard self.lastFittedHeight != host.frame.height else { return }
-                self.lastFittedHeight = host.frame.height
+                // This view is installed with `.background(...)`, so its
+                // superview is sized to match the popover — which is sized by
+                // the window this code resizes. Measuring that superview closes
+                // a feedback loop: window height → SwiftUI layout → measured
+                // height → setFrame → window height. While the two agree it is
+                // quiet, but any disagreement of more than a point sets it
+                // oscillating, and the window then grows and collapses on a
+                // loop while the content, pinned to its bottom-right, appears
+                // to crawl across the panel from the top-left. That is the bug
+                // reported against 1.0.0 through 1.0.2.
+                //
+                // `fittingSize` on the hosting view is the intrinsic height of
+                // the SwiftUI content and does not depend on the window, so
+                // feeding it back cannot drive the loop.
+                let intrinsic = self.hostingView?.fittingSize.height ?? 0
+                let measured = intrinsic > 0 ? intrinsic : (self.superview?.frame.height ?? 0)
+
+                guard let frame = PopoverPanelStyler.fittedFrame(
+                    for: window.frame,
+                    contentHeight: measured) else {
+                    // Converged: the window already fits. Forget the history so
+                    // a later, genuine content change starts from a clean slate.
+                    self.recentHeights.removeAll()
+                    return
+                }
+
+                // Only act when the content height actually moved since the
+                // last fit. `setFrame(display: true)` forces a redraw of the
+                // whole window and the follow loop calls this ten times a
+                // second.
+                guard self.lastFittedHeight != measured else { return }
+
+                self.recentHeights.append(measured)
+                if self.recentHeights.count > 6 { self.recentHeights.removeFirst() }
+                guard !self.isOscillating else { return }
+
+                self.lastFittedHeight = measured
                 window.setFrame(frame, display: true)
             }
+        }
+
+        /// The `NSHostingView` this styler lives inside, if it can be found.
+        ///
+        /// Walked rather than assumed: SwiftUI is free to insert containers
+        /// between the background view and the hosting view, and the exact depth
+        /// is not contractual.
+        private var hostingView: NSView? {
+            var candidate: NSView? = self.superview
+            while let view = candidate {
+                if String(describing: type(of: view)).contains("NSHostingView") { return view }
+                candidate = view.superview
+            }
+            return nil
         }
     }
 }
