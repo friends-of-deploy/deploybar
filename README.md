@@ -204,6 +204,33 @@ xcodebuild test \
   -destination 'platform=macOS'
 ```
 
+### Demo mode
+
+Screenshots for the docs are taken against an invented fixture world rather than
+real accounts, so images stay clean and comparable between releases.
+
+```bash
+scripts/demo.sh                      # live: builds progress, new runs arrive
+scripts/demo.sh --freeze             # pins the demo data clock
+scripts/demo.sh --release --freeze   # same, from the Release artifact
+scripts/demo.sh --scenario onboarding
+```
+
+Demo mode is off unless `DEPLOYBAR_DEMO=1` is set, runs on a throwaway defaults
+suite and an in-memory credential store, and never touches real accounts,
+settings or the Keychain.
+
+Scenarios live in `DeployBar/Demo/Fixtures/*.json`. To add one, copy
+`default.json`, edit it, and pass its name to `--scenario`. Deployment times are
+relative (`ageSeconds`), so fixtures never go stale. `DemoScenarioTests` verifies
+the shipped fixture decodes and is internally consistent — run the suite after
+editing one.
+
+`--freeze` pins the demo data clock, so build states stop progressing and no new
+deployments arrive. Known limitation: relative timestamps in the UI (e.g.
+"started 7m ago") are still formatted against the live system clock, so two runs
+taken minutes apart will still differ in those strings.
+
 ---
 
 ## Contributing
