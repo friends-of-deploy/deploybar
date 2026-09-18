@@ -61,6 +61,13 @@ final class AccountStore {
         return acct
     }
 
+    /// Inserts a pre-built account directly. Demo mode only: CLI-backed accounts
+    /// are auto-detected in production, so there is no other way to seed one.
+    func adoptDemoAccount(_ account: Account) {
+        accounts.append(account)
+        persist()
+    }
+
     func removeAccount(_ account: Account) {
         if case .keychain(let name) = account.source { credentials.removeToken(for: name) }
         accounts.removeAll { $0.id == account.id }
