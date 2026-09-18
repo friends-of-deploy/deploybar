@@ -40,4 +40,15 @@ final class DemoScenarioTests: XCTestCase {
         let scenario = try JSONDecoder().decode(DemoScenario.self, from: Data(json.utf8))
         XCTAssertTrue(scenario.accounts[0].teams.isEmpty)
     }
+
+    func test_loaderThrowsNotFoundForAMissingScenario() {
+        XCTAssertThrowsError(
+            try DemoScenarioLoader.load(named: "no-such-scenario", bundle: Bundle(for: Self.self))
+        ) { error in
+            guard case DemoScenarioLoader.LoadError.notFound(let name) = error else {
+                return XCTFail("expected .notFound, got \(error)")
+            }
+            XCTAssertEqual(name, "no-such-scenario")
+        }
+    }
 }

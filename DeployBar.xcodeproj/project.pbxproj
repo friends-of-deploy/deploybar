@@ -110,6 +110,7 @@
 		C969290F82BA3BC8E2005921 /* DeploymentDiffer.swift in Sources */ = {isa = PBXBuildFile; fileRef = B7B2A3C52B577758FC96D59E /* DeploymentDiffer.swift */; };
 		CC165BF8EEAE82A96A44CE7B /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = CB9D4EBA17ACC04E8F2C9252 /* Assets.xcassets */; };
 		CE04B0246BA9011F69FF0883 /* DiffTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = EDD7066A7A7BB011FEF8D8FE /* DiffTests.swift */; };
+		CF4E4820505BD1EA90655EE9 /* DemoScenarioLoader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7522AE768E7B12A0D5993405 /* DemoScenarioLoader.swift */; };
 		D04750DC8E328C5F07471E97 /* DemoProviderClientTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6755EAC604ED634C4E4DE8B0 /* DemoProviderClientTests.swift */; };
 		D1A9FF9FFF609666896FF5D9 /* ScopeResolver.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4EC059A6A8C152E20A42C7D7 /* ScopeResolver.swift */; };
 		D1EC28F9F946031F12E50E3A /* ScopeColorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1049A05673BFAD96CAD2455D /* ScopeColorTests.swift */; };
@@ -214,6 +215,7 @@
 		6FC4D6FE5731A17EE474B0FF /* Account.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Account.swift; sourceTree = "<group>"; };
 		718BC1490051E62D3E4B4334 /* ScopeColorPicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScopeColorPicker.swift; sourceTree = "<group>"; };
 		74299387DF1EA4D4C946A81F /* DeploymentProviderClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeploymentProviderClient.swift; sourceTree = "<group>"; };
+		7522AE768E7B12A0D5993405 /* DemoScenarioLoader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DemoScenarioLoader.swift; sourceTree = "<group>"; };
 		763A1647FC4087F1B296F1CB /* LinkBuilderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LinkBuilderTests.swift; sourceTree = "<group>"; };
 		786C5ED6FABCA725D4A7E3FA /* Pasteboard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Pasteboard.swift; sourceTree = "<group>"; };
 		7980906E6FC0224B449DA634 /* FaviconCacheTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FaviconCacheTests.swift; sourceTree = "<group>"; };
@@ -410,6 +412,7 @@
 				2182648C63548B446EE0E8DE /* DemoClock.swift */,
 				2BB7896309D0050B7618FF20 /* DemoProviderClient.swift */,
 				6DBEC7038CC0B370E3BDA0E7 /* DemoScenario.swift */,
+				7522AE768E7B12A0D5993405 /* DemoScenarioLoader.swift */,
 			);
 			path = Demo;
 			sourceTree = "<group>";
@@ -639,6 +642,7 @@
 				A6B6D0826C24CD9026218FF2 /* DemoClock.swift in Sources */,
 				2A5C23D403D459A09E7F0314 /* DemoProviderClient.swift in Sources */,
 				3CF30243B8D9115BD63F488A /* DemoScenario.swift in Sources */,
+				CF4E4820505BD1EA90655EE9 /* DemoScenarioLoader.swift in Sources */,
 				F490B46C416C421A1E4E265B /* DeployBarApp.swift in Sources */,
 				6EA9051C98C744DB19AAABF6 /* Deployment.swift in Sources */,
 				C969290F82BA3BC8E2005921 /* DeploymentDiffer.swift in Sources */,
