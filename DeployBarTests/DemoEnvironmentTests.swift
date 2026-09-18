@@ -106,6 +106,43 @@ final class DemoEnvironmentTests: XCTestCase {
         XCTAssertEqual(built.accountStore.githubCLIAccount?.id, gh.id)
     }
 
+    /// Regression test for the freeze-offset defect: freezing the clock must
+    /// actually apply timeline events that fire before the pinned offset, not
+    /// just report the fixture's base state. Ties the assertion to the real
+    /// `DemoEnvironment.freezeOffsetSeconds` production constant (rather than
+    /// a number hardcoded here) so a future regression that reverts the
+    /// offset back to 0 fails this test instead of shipping silently.
+    func test_frozenClockAppliesTimelineEventsBeforeTheFreezeOffset() async throws {
+        let json = """
+        {
+          "accounts": [
+            {"key": "cli", "provider": "vercel", "label": "Vercel CLI", "sourceKind": "vercelCLI"}
+          ],
+          "projects": [],
+          "deployments": [
+            {"accountKey": "cli", "teamId": null, "uid": "d1", "projectName": "alpha",
+             "state": "QUEUED", "ageSeconds": 60, "url": "alpha.example.app"}
+          ],
+          "timeline": [
+            {"atSeconds": 10, "deploymentUid": "d1", "newState": "READY"}
+          ]
+        }
+        """
+        let scenario = try JSONDecoder().decode(DemoScenario.self, from: Data(json.utf8))
+
+        let built = DemoEnvironment.build(
+            scenario: scenario,
+            clock: .frozen(at: DemoEnvironment.freezeOffsetSeconds))
+        let cli = try XCTUnwrap(built.accountStore.cliAccount)
+        let client = try XCTUnwrap(built.makeClient(cli, nil))
+
+        let deps = try await client.deployments(limit: 100)
+
+        XCTAssertEqual(deps.map(\.stateRaw), ["READY"],
+                        "the production freeze offset must sit past the timeline event, " +
+                        "so the frozen frame reflects the post-event state, not the fixture's base state")
+    }
+
     func test_reapsStaleDemoSuitesOnBuild() throws {
         let strayDomain = "io.eightlines.deploybar.demo.\(UUID().uuidString)"
         let strayDefaults = try XCTUnwrap(UserDefaults(suiteName: strayDomain))

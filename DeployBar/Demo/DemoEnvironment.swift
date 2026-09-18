@@ -27,6 +27,21 @@ enum DemoEnvironment {
 
     static var isEnabled: Bool { isEnabled() }
 
+    /// The offset `DEPLOYBAR_DEMO_FREEZE` pins the clock to.
+    ///
+    /// The shipped fixture's timeline (`DeployBar/Demo/Fixtures/default.json`)
+    /// fires its last event at 140s, so 150s sits past every authored
+    /// transition: freezing here yields the settled END-STATE with all
+    /// timeline events applied, which is the most representative frame for a
+    /// documentation screenshot. Freezing at 0 (the old default) instead
+    /// captured the fixture's BASE state — literally the one frame the
+    /// timeline was authored to move away from.
+    ///
+    /// If a future fixture's timeline extends past 150s, this constant must
+    /// be raised to match, or `--freeze` will silently go back to capturing
+    /// an intermediate state instead of the settled end-state.
+    static let freezeOffsetSeconds: Double = 150
+
     static func buildFromEnvironment(
         environment: [String: String] = ProcessInfo.processInfo.environment
     ) -> Built? {
@@ -37,7 +52,8 @@ enum DemoEnvironment {
             assertionFailure("demo scenario '\(name)' failed to load")
             return nil
         }
-        let clock: DemoClock = environment["DEPLOYBAR_DEMO_FREEZE"] == "1" ? .frozen() : .live()
+        let clock: DemoClock = environment["DEPLOYBAR_DEMO_FREEZE"] == "1"
+            ? .frozen(at: freezeOffsetSeconds) : .live()
         return build(scenario: scenario, clock: clock)
     }
 
