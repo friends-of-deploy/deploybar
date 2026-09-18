@@ -430,6 +430,17 @@
         }
       }
     },
+    "Mute this project's notifications" : {
+      "comment" : "Notification action that silences one project",
+      "localizations" : {
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wycisz powiadomienia dla tego projektu"
+          }
+        }
+      }
+    },
     "Name" : {
       "comment" : "Account field label",
       "localizations" : {

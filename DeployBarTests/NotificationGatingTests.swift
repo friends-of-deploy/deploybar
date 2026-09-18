@@ -49,4 +49,17 @@ final class NotificationGatingTests: XCTestCase {
         s.setFollowed(key("other"), false)
         XCTAssertTrue(NotificationGate.shouldNotify(t(.failure, project: "p"), settings: s))
     }
+    func test_mutedProjectBlocksNotificationWithoutBeingUnfollowed() {
+        let s = settings()
+        s.setNotificationsMuted(true, for: key("p"))
+
+        XCTAssertTrue(s.isFollowed(key("p")))
+        XCTAssertFalse(NotificationGate.shouldNotify(t(.failure, project: "p"), settings: s))
+    }
+    func test_mutedProjectDoesNotAffectOtherProjects() {
+        let s = settings()
+        s.setNotificationsMuted(true, for: key("other"))
+
+        XCTAssertTrue(NotificationGate.shouldNotify(t(.failure, project: "p"), settings: s))
+    }
 }

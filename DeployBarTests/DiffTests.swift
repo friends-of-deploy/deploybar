@@ -61,4 +61,15 @@ final class DiffTests: XCTestCase {
         let t = DeploymentDiffer.transitions(previous: [dep("1", "READY")], current: [dep("1", "READY"), dep("2", "WHATEVER")])
         XCTAssertTrue(t.isEmpty)
     }
+
+    func test_transitionCarriesBuildDestination() {
+        let destination = URL(string: "https://vercel.com/acme/app/build-1")!
+        let current = DeploymentSnapshot(uid: "1", name: "proj", state: .error,
+                                         key: Self.key, destinationURL: destination)
+
+        let transition = DeploymentDiffer.transitions(previous: [dep("1", "BUILDING")],
+                                                       current: [current]).first
+
+        XCTAssertEqual(transition?.destinationURL, destination)
+    }
 }

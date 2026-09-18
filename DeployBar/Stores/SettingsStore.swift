@@ -25,6 +25,7 @@ final class SettingsStore {
         static let selectedTeamId   = "selectedTeamId"
         static let followedKeys     = "followedProjectKeys"
         static let unfollowedKeys   = "unfollowedProjectKeys"
+        static let mutedNotificationKeys = "mutedNotificationProjectKeys"
         static let autoFollowNew    = "autoFollowNewProjects"
         static let didMigrateFollow = "didMigrateFollowData"
         static let cachedTeams      = "cachedTeams"
@@ -164,6 +165,17 @@ final class SettingsStore {
         else        { unfollowedSet.insert(s); followedSet.remove(s) }
         store(followedSet, Keys.followedKeys)
         store(unfollowedSet, Keys.unfollowedKeys)
+    }
+
+    func areNotificationsMuted(for key: ProjectKey) -> Bool {
+        storedSet(Keys.mutedNotificationKeys).contains(key.storageString)
+    }
+
+    func setNotificationsMuted(_ muted: Bool, for key: ProjectKey) {
+        var keys = storedSet(Keys.mutedNotificationKeys)
+        if muted { keys.insert(key.storageString) }
+        else { keys.remove(key.storageString) }
+        store(keys, Keys.mutedNotificationKeys)
     }
 
     /// One-time import of the old `disabledProjects` (name-keyed) into the new

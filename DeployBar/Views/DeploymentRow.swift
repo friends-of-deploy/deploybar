@@ -130,14 +130,7 @@ struct DeploymentRow: View {
 
     /// Pure rule for the row's default click target.
     static func primaryDestination(for d: Deployment) -> URL? {
-        // A provider-supplied canonical page (e.g. a GitHub run) always wins.
-        if let web = d.webURL { return web }
-        if d.state == .error {
-            return d.inspectorUrl.flatMap(URL.init(string:))
-                ?? LinkBuilder.liveURL(host: d.url)   // fall back to site if no logs URL
-        }
-        return LinkBuilder.liveURL(host: d.url)
-            ?? d.inspectorUrl.flatMap(URL.init(string:))
+        LinkBuilder.deploymentDestination(for: d)
     }
 
     // MARK: - Subtitle

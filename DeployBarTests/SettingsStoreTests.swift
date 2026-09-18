@@ -31,6 +31,28 @@ final class SettingsStoreTests: XCTestCase {
         d.set(2, forKey: "pollIntervalSeconds")   // simulate an out-of-band sub-minimum value
         XCTAssertEqual(SettingsStore(defaults: d).pollIntervalSeconds, 10)
     }
+
+    func test_notificationMutePersistsWithoutUnfollowingProject() {
+        let defaults = freshDefaults()
+        let key = ProjectKey(provider: .vercel, accountId: UUID(), projectId: "dashboard")
+        let settings = SettingsStore(defaults: defaults)
+
+        settings.setNotificationsMuted(true, for: key)
+
+        XCTAssertTrue(settings.areNotificationsMuted(for: key))
+        XCTAssertTrue(settings.isFollowed(key))
+        XCTAssertTrue(SettingsStore(defaults: defaults).areNotificationsMuted(for: key))
+    }
+
+    func test_notificationMuteCanBeRemoved() {
+        let settings = SettingsStore(defaults: freshDefaults())
+        let key = ProjectKey(provider: .github, accountId: UUID(), projectId: "acme/app")
+        settings.setNotificationsMuted(true, for: key)
+
+        settings.setNotificationsMuted(false, for: key)
+
+        XCTAssertFalse(settings.areNotificationsMuted(for: key))
+    }
 }
 
 /// The channel has to survive a relaunch and has to default to stable, since

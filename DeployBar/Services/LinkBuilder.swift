@@ -1,6 +1,18 @@
 import Foundation
 
 enum LinkBuilder {
+    /// The same primary target is used by deployment rows and notification clicks.
+    /// Provider pages win; failed Vercel builds prefer their logs over the live URL.
+    static func deploymentDestination(for deployment: Deployment) -> URL? {
+        if let web = deployment.webURL { return web }
+        if deployment.state == .error {
+            return deployment.inspectorUrl.flatMap(URL.init(string:))
+                ?? liveURL(host: deployment.url)
+        }
+        return liveURL(host: deployment.url)
+            ?? deployment.inspectorUrl.flatMap(URL.init(string:))
+    }
+
     static func liveURL(host: String?) -> URL? {
         guard let host, !host.isEmpty else { return nil }
         return URL(string: "https://\(host)")
