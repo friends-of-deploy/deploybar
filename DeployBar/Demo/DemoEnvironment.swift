@@ -43,8 +43,14 @@ enum DemoEnvironment {
 
     // MARK: - Construction
 
+    /// Shared prefix for every demo suite name, so a plist on disk can be
+    /// recognized as "ours" without also matching the app's real domain.
+    private static let suitePrefix = "io.eightlines.deploybar.demo."
+
     static func build(scenario: DemoScenario, clock: DemoClock) -> Built {
-        let suite = "io.eightlines.deploybar.demo.\(UUID().uuidString)"
+        reapStaleSuites()
+
+        let suite = "\(suitePrefix)\(UUID().uuidString)"
         let defaults = UserDefaults(suiteName: suite)!
         let settings = SettingsStore(defaults: defaults)
         let accountStore = AccountStore(defaults: defaults,
@@ -99,5 +105,46 @@ enum DemoEnvironment {
 
         return Built(settings: settings, accountStore: accountStore,
                      makeClient: makeClient, teams: teams)
+    }
+
+    // MARK: - Housekeeping
+
+    /// Removes `UserDefaults` persistent domains left behind by earlier demo
+    /// runs.
+    ///
+    /// Isolation and cleanup are independent axes. A UUID-named suite is
+    /// always created empty, so the "every run starts from the same state"
+    /// guarantee only requires that a run *starts* clean — never that the
+    /// suite survives. But the app keeps using the `settings`/`accountStore`
+    /// returned by `build` live for the whole session, so the *current* run's
+    /// suite can't be torn down from inside `build` itself. Reaping *previous*
+    /// runs' suites on the way in is therefore the right shape: it's
+    /// self-healing, needs no app-lifecycle hook, and covers both test runs
+    /// and real launches the same way.
+    ///
+    /// Best-effort: a failure to enumerate `~/Library/Preferences` is
+    /// housekeeping trivia, not a reason to block demo startup.
+    ///
+    /// `removePersistentDomain(forName:)` clears the domain from
+    /// `UserDefaults`/`cfprefsd`'s cache, which is what actually matters:
+    /// without it, a later read through `UserDefaults(suiteName:)` for the
+    /// same reused name (however unlikely with a UUID) could resurrect the
+    /// stale values from the cache. But it does not reliably delete the
+    /// backing plist on disk — that write-back is async and owned by
+    /// `cfprefsd`, so the file the maintainer actually sees littering
+    /// `~/Library/Preferences` can outlive the call. The file is therefore
+    /// also removed directly.
+    private static func reapStaleSuites() {
+        let preferencesDirectory = FileManager.default.urls(for: .libraryDirectory, in: .userDomainMask)
+            .first?.appendingPathComponent("Preferences")
+        guard let preferencesDirectory,
+              let contents = try? FileManager.default.contentsOfDirectory(atPath: preferencesDirectory.path)
+        else { return }
+
+        for filename in contents where filename.hasPrefix(suitePrefix) && filename.hasSuffix(".plist") {
+            let domain = String(filename.dropLast(".plist".count))
+            UserDefaults.standard.removePersistentDomain(forName: domain)
+            try? FileManager.default.removeItem(at: preferencesDirectory.appendingPathComponent(filename))
+        }
     }
 }

@@ -25,6 +25,23 @@ final class DemoEnvironmentTests: XCTestCase {
         return try JSONDecoder().decode(DemoScenario.self, from: Data(json.utf8))
     }
 
+    /// A second fixture, kept separate from `scenario()` so the githubCLI
+    /// coverage below doesn't disturb the account count/label assertions the
+    /// other tests already make against the shared fixture.
+    private func scenarioWithGitHubCLI() throws -> DemoScenario {
+        let json = """
+        {
+          "accounts": [
+            {"key": "cli", "provider": "vercel", "label": "Vercel CLI", "sourceKind": "vercelCLI"},
+            {"key": "gh", "provider": "github", "label": "GitHub CLI", "sourceKind": "githubCLI"}
+          ],
+          "projects": [],
+          "deployments": []
+        }
+        """
+        return try JSONDecoder().decode(DemoScenario.self, from: Data(json.utf8))
+    }
+
     func test_seedsOneAccountPerScenarioAccount() throws {
         let built = DemoEnvironment.build(scenario: try scenario(), clock: .frozen(at: 0))
 
@@ -78,5 +95,30 @@ final class DemoEnvironmentTests: XCTestCase {
         XCTAssertTrue(DemoEnvironment.isEnabled(in: ["DEPLOYBAR_DEMO": "1"]))
         XCTAssertFalse(DemoEnvironment.isEnabled(in: ["DEPLOYBAR_DEMO": "yes"]))
         XCTAssertFalse(DemoEnvironment.isEnabled(in: [:]))
+    }
+
+    func test_seedsAGitHubCLIAccount() throws {
+        let built = DemoEnvironment.build(scenario: try scenarioWithGitHubCLI(), clock: .frozen(at: 0))
+
+        let gh = try XCTUnwrap(built.accountStore.accounts.first { $0.label == "GitHub CLI" })
+        XCTAssertEqual(gh.provider, .github)
+        XCTAssertEqual(gh.source, .githubCLI)
+        XCTAssertEqual(built.accountStore.githubCLIAccount?.id, gh.id)
+    }
+
+    func test_reapsStaleDemoSuitesOnBuild() throws {
+        let strayDomain = "io.eightlines.deploybar.demo.\(UUID().uuidString)"
+        let strayDefaults = try XCTUnwrap(UserDefaults(suiteName: strayDomain))
+        strayDefaults.set(true, forKey: "leftoverFromAnEarlierRun")
+        addTeardownBlock {
+            UserDefaults.standard.removePersistentDomain(forName: strayDomain)
+        }
+        XCTAssertNotNil(UserDefaults.standard.persistentDomain(forName: strayDomain),
+                        "the stray domain must exist before build() runs, or this test proves nothing")
+
+        _ = DemoEnvironment.build(scenario: try scenario(), clock: .frozen(at: 0))
+
+        XCTAssertNil(UserDefaults.standard.persistentDomain(forName: strayDomain),
+                     "build() should reap suites left behind by earlier demo runs")
     }
 }
