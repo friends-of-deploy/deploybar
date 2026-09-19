@@ -355,21 +355,29 @@ final class DeploymentStore {
         accountStore.accounts.first { $0.id == id }
     }
 
-    /// Every selectable scope's id, sorted — the input to default color
-    /// assignment, so each source gets a distinct slot while slots last.
+    /// Account-level scope ids, sorted — the input to default colour assignment.
+    ///
+    /// Organizations are deliberately excluded. They inherit their account's
+    /// colour, so including them would both waste palette slots and let
+    /// discovering a new organization reshuffle every existing account's colour.
     var allScopeIds: [String] {
-        connectedAccounts.flatMap { account in
-            scopes(for: account).map { ScopeRef(accountId: account.id, teamId: $0.teamId).id }
-        }
+        connectedAccounts.map { ScopeRef(accountId: $0.id, teamId: nil).id }
     }
 
-    /// Palette slot for a scope's marker — the user's override if set, else its
-    /// position among all known scopes. Keyed on identity rather than the
-    /// display label so renaming a team (or two teams sharing a name) can't
-    /// shuffle colors. Views turn this into a `Color` via `ScopeColor.palette`.
+    /// Palette slot for a scope's marker, resolved in order: an explicit
+    /// override, else the account's colour for an organization scope, else the
+    /// slot derived from the account's position.
+    ///
+    /// Inheritance is what keeps a 30-organization account readable: one colour
+    /// per account until an organization is deliberately given its own.
     func scopeColorIndex(accountId: UUID, teamId: String?) -> Int {
         let id = ScopeRef(accountId: accountId, teamId: teamId).id
         if let override = settings.scopeColorOverrides[id] { return override }
+        if teamId != nil {
+            let accountId_ = ScopeRef(accountId: accountId, teamId: nil).id
+            if let inherited = settings.scopeColorOverrides[accountId_] { return inherited }
+            return ScopeColorIndex.index(for: accountId_, among: allScopeIds)
+        }
         return ScopeColorIndex.index(for: id, among: allScopeIds)
     }
 
@@ -670,6 +678,66 @@ final class DeploymentStore {
 
     // MARK: - Polling (fan out across scopes)
 
+    /// Tick counter driving the round-robin rotation. Monotonic; only its
+    /// remainder matters.
+    @ObservationIgnored private var pollTick = 0
+
+    /// Estimated requests one scope costs per poll: a repository listing plus
+    /// the bounded per-repo runs fan-out that `GitHubClient` already performs.
+    private static let estimatedRequestsPerScope = 6
+
+    /// Provider hourly request ceiling used to size the budget.
+    private func hourlyLimit(for account: Account) -> Int {
+        switch account.provider {
+        case .github:      return 5000     // authenticated REST limit
+        case .vercel:      return 2000     // conservative; Vercel is per-minute
+        case .azureDevOps: return 1000
+        }
+    }
+
+    /// How often any one of this account's scopes actually refreshes. Equal to
+    /// the poll interval until the account has more scopes than one tick can
+    /// afford, after which they rotate. Surfaced in Settings.
+    func effectiveRefreshInterval(for account: Account) -> Int {
+        let count = availableScopes.filter { $0.account.id == account.id }.count
+        let budget = ScopePollBudget.requestsPerTick(
+            scopeCount: count,
+            pollIntervalSeconds: settings.pollIntervalSeconds,
+            hourlyLimit: hourlyLimit(for: account),
+            requestsPerScope: Self.estimatedRequestsPerScope)
+        return ScopePollBudget.effectiveIntervalSeconds(
+            scopeCount: count, budget: budget,
+            pollIntervalSeconds: settings.pollIntervalSeconds)
+    }
+
+    /// The scopes this tick may fetch: per account, at most what its budget
+    /// affords, rotating so every scope comes round in turn.
+    private func scopesToPollThisTick() -> [Scope] {
+        let byAccount = Dictionary(grouping: availableScopes, by: { $0.account.id })
+        return byAccount.flatMap { accountId, scopes -> [Scope] in
+            guard let account = account(accountId) else { return [] }
+            let budget = ScopePollBudget.requestsPerTick(
+                scopeCount: scopes.count,
+                pollIntervalSeconds: settings.pollIntervalSeconds,
+                hourlyLimit: hourlyLimit(for: account),
+                requestsPerScope: Self.estimatedRequestsPerScope)
+            let ids = scopes.map { ScopeRef(accountId: accountId, teamId: $0.teamId).id }
+            let chosen = Set(ScopePollBudget.slice(scopeIds: ids, budget: budget, tick: pollTick))
+            return scopes.filter {
+                chosen.contains(ScopeRef(accountId: accountId, teamId: $0.teamId).id)
+            }
+        }
+    }
+
+    /// Forgets a scope's cached rows so re-enabling it shows fresh data rather
+    /// than a snapshot from before it was switched off.
+    func scopeEnablementChanged(accountId: UUID, teamId: String?) {
+        let ref = ScopeRef(accountId: accountId, teamId: teamId)
+        lastGood.removeValue(forKey: ref)
+        scopeErrors.removeValue(forKey: ref)
+        applyDisplayFilter()
+    }
+
     private struct ScopeResult {
         let account: Account
         /// Vercel team the rows came from; nil for personal / non-Vercel.
@@ -718,26 +786,41 @@ final class DeploymentStore {
         // showing "Loading…" even when there is nothing to show.
         defer { isPollInFlight = false; isRefreshing = false; isLoadingInitial = false }
 
-        let scopes = availableScopes
-        guard !scopes.isEmpty else {
+        guard !availableScopes.isEmpty else {
             isLoggedOut = true        // no connected accounts at all
             return
         }
+
+        pollTick &+= 1
+        let scopes = scopesToPollThisTick()
 
         var merged: [ScopeResult] = []
         var errors: [ScopeRef: String] = [:]
         var freshSuccessCount = 0
 
-        // Fan out one fetch per scope. withTaskGroup keeps per-source isolation:
-        // one source throwing never cancels the others.
+        // Fan out one fetch per scope, capped to at most maxConcurrentFetches in
+        // flight at once. withTaskGroup keeps per-source isolation: one source
+        // throwing never cancels the others.
         await withTaskGroup(of: (Scope, Result<([Deployment], [Project]), Error>).self) { group in
-            for scope in scopes {
+            var pending = scopes.makeIterator()
+            var inFlight = 0
+            // Cap concurrent fetches: 40 organizations opening at once reads to
+            // the provider as a burst rather than a poll.
+            while inFlight < ScopePollBudget.maxConcurrentFetches, let scope = pending.next() {
                 group.addTask { @MainActor in
                     do { return (scope, .success(try await self.fetch(for: scope))) }
                     catch { return (scope, .failure(error)) }
                 }
+                inFlight += 1
             }
+
             for await (scope, result) in group {
+                if let next = pending.next() {
+                    group.addTask { @MainActor in
+                        do { return (next, .success(try await self.fetch(for: next))) }
+                        catch { return (next, .failure(error)) }
+                    }
+                }
                 let ref = ScopeRef(accountId: scope.account.id, teamId: scope.teamId)
                 switch result {
                 case .success(let (deps, projs)):
@@ -754,6 +837,16 @@ final class DeploymentStore {
                     if let prev = lastGood[ref] { merged.append(prev) }
                 }
             }
+        }
+
+        // Scopes deferred to a later tick keep their last-known rows, so
+        // rotation never blanks a source that is merely waiting its turn.
+        let polled = Set(scopes.map { ScopeRef(accountId: $0.account.id, teamId: $0.teamId) })
+        for (ref, previous) in lastGood where !polled.contains(ref) {
+            guard availableScopes.contains(where: {
+                ScopeRef(accountId: $0.account.id, teamId: $0.teamId) == ref
+            }) else { continue }
+            merged.append(previous)
         }
 
         // Tag + merge across all sources (unfiltered).
@@ -809,8 +902,11 @@ final class DeploymentStore {
         }
 
         // loggedOut only when there are zero usable sources (no fresh successful
-        // fetch this tick AND every account is past the auth-failure threshold).
-        let allAuthFailing = scopes.allSatisfy {
+        // fetch this tick AND every enabled scope is past the auth-failure
+        // threshold). Checked against every available scope, not just the ones
+        // this tick's budget polled — a scope merely deferred to a later tick
+        // must not be mistaken for one that is actually failing auth.
+        let allAuthFailing = availableScopes.allSatisfy {
             let ref = ScopeRef(accountId: $0.account.id, teamId: $0.teamId)
             return (consecutiveAuthFailures[ref] ?? 0) >= Self.authFailureThreshold
         }

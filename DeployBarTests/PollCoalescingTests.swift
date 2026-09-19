@@ -111,4 +111,54 @@ final class PollCoalescingTests: XCTestCase {
 
         XCTAssertEqual(recorder.fetches, 2)
     }
+
+    // MARK: - Budget
+
+    func test_effectiveIntervalGrowsWithManyOrganizations() {
+        let (store, _, settings) = Self.makeStore(accounts: [Self.gitHubAccount])
+        settings.pollIntervalSeconds = 30
+        store.setOrganizations((0..<40).map { Team(id: "org\($0)", slug: "org\($0)", name: "org\($0)") },
+                               for: Self.gitHubAccount.id)
+
+        // 41 scopes cannot all be polled every 30s inside GitHub's hourly limit.
+        XCTAssertGreaterThan(store.effectiveRefreshInterval(for: Self.gitHubAccount), 30)
+    }
+
+    func test_effectiveIntervalIsThePollIntervalWithFewOrganizations() {
+        let (store, _, settings) = Self.makeStore(accounts: [Self.gitHubAccount])
+        settings.pollIntervalSeconds = 30
+        store.setOrganizations([Team(id: "Vorciu", slug: "Vorciu", name: "Vorciu")],
+                               for: Self.gitHubAccount.id)
+
+        XCTAssertEqual(store.effectiveRefreshInterval(for: Self.gitHubAccount), 30)
+    }
+
+    // MARK: - Budget fixtures
+
+    /// A fixed-identity GitHub account, mirroring `ScopeColorTests`' fixture —
+    /// these tests never poll it (no organizations client is wired up), they
+    /// only exercise the pure budget math through `effectiveRefreshInterval`.
+    private static let gitHubAccount = Account(
+        id: UUID(uuidString: "8B1C2D3E-0000-0000-0000-0000000000B1")!,
+        provider: .github, label: "GitHub", source: .keychain(account: "gh-budget-fixture"))
+
+    /// Builds a `DeploymentStore` around a fresh `AccountStore` seeded with the
+    /// given accounts. `DeploymentStore.settings` is private, so the
+    /// `SettingsStore` used to build the store is returned alongside it for
+    /// tests that need `pollIntervalSeconds` directly.
+    private static func makeStore(accounts: [Account]) -> (DeploymentStore, [Account], SettingsStore) {
+        let accountStore = AccountStore(defaults: UserDefaults(suiteName: UUID().uuidString)!,
+                                        credentials: InMemoryCredentialStore(),
+                                        detectCLI: { false }, reloadCLIToken: { nil },
+                                        detectGitHubCLI: { false })
+        for account in accounts {
+            accountStore.adoptDemoAccount(account)
+        }
+        let settings = SettingsStore(defaults: UserDefaults(suiteName: UUID().uuidString)!)
+        let store = DeploymentStore(
+            accountStore: accountStore, settings: settings,
+            makeClient: { _, _ in nil },
+            reloadToken: { nil }, authRetryBackoff: .zero)
+        return (store, accounts, settings)
+    }
 }

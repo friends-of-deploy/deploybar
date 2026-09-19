@@ -148,6 +148,41 @@ final class ScopeColorTests: XCTestCase {
         }
     }
 
+    // MARK: - Organization inheritance
+
+    func test_organizationInheritsTheAccountColorByDefault() {
+        let (store, _, _) = Self.makeStore(accounts: [Self.gitHubAccount])
+        store.setOrganizations([Team(id: "Vorciu", slug: "Vorciu", name: "Vorciu")],
+                               for: Self.gitHubAccount.id)
+
+        let account = store.scopeColorIndex(accountId: Self.gitHubAccount.id, teamId: nil)
+        let org = store.scopeColorIndex(accountId: Self.gitHubAccount.id, teamId: "Vorciu")
+
+        XCTAssertEqual(org, account,
+                       "an org with no override must read as part of its account")
+    }
+
+    func test_organizationOverrideWinsOverInheritance() {
+        let (store, _, settings) = Self.makeStore(accounts: [Self.gitHubAccount])
+        store.setOrganizations([Team(id: "Vorciu", slug: "Vorciu", name: "Vorciu")],
+                               for: Self.gitHubAccount.id)
+        let ref = ScopeRef(accountId: Self.gitHubAccount.id, teamId: "Vorciu").id
+        settings.setScopeColor(5, for: ref)
+
+        XCTAssertEqual(store.scopeColorIndex(accountId: Self.gitHubAccount.id, teamId: "Vorciu"), 5)
+    }
+
+    func test_addingOrganizationsDoesNotChangeAccountColors() {
+        let (store, _, _) = Self.makeStore(accounts: [Self.gitHubAccount, Self.vercelAccount])
+        let before = store.scopeColorIndex(accountId: Self.vercelAccount.id, teamId: nil)
+
+        store.setOrganizations((0..<12).map { Team(id: "org\($0)", slug: "org\($0)", name: "org\($0)") },
+                               for: Self.gitHubAccount.id)
+
+        XCTAssertEqual(store.scopeColorIndex(accountId: Self.vercelAccount.id, teamId: nil), before,
+                       "account colors must not reshuffle when orgs are discovered")
+    }
+
     // MARK: - Helpers
 
     private let fixedId = UUID(uuidString: "8B1C2D3E-0000-0000-0000-000000000001")!
@@ -157,5 +192,38 @@ final class ScopeColorTests: XCTestCase {
         let defaults = UserDefaults(suiteName: suite)!
         defaults.removePersistentDomain(forName: suite)
         return defaults
+    }
+
+    /// A fixed-identity GitHub account so tests can share `store.scopeColorIndex`
+    /// expectations without re-deriving the account's UUID each time.
+    private static let gitHubAccount = Account(
+        id: UUID(uuidString: "8B1C2D3E-0000-0000-0000-0000000000A1")!,
+        provider: .github, label: "GitHub", source: .keychain(account: "gh-fixture"))
+
+    /// A fixed-identity Vercel account, distinct from `gitHubAccount`, so tests
+    /// can assert one account's colour is unaffected by the other's changes.
+    private static let vercelAccount = Account(
+        id: UUID(uuidString: "8B1C2D3E-0000-0000-0000-0000000000A2")!,
+        provider: .vercel, label: "Vercel", source: .keychain(account: "vc-fixture"))
+
+    /// Builds a `DeploymentStore` around a fresh `AccountStore` seeded with the
+    /// given (already keychain-shaped) accounts. These tests never poll, so the
+    /// client factory is a no-op. `DeploymentStore.settings` is private, so the
+    /// `SettingsStore` used to build the store is returned alongside it for
+    /// tests that need `scopeColorOverrides` directly.
+    private static func makeStore(accounts: [Account]) -> (DeploymentStore, [Account], SettingsStore) {
+        let accountStore = AccountStore(defaults: UserDefaults(suiteName: UUID().uuidString)!,
+                                        credentials: InMemoryCredentialStore(),
+                                        detectCLI: { false }, reloadCLIToken: { nil },
+                                        detectGitHubCLI: { false })
+        for account in accounts {
+            accountStore.adoptDemoAccount(account)
+        }
+        let settings = SettingsStore(defaults: UserDefaults(suiteName: UUID().uuidString)!)
+        let store = DeploymentStore(
+            accountStore: accountStore, settings: settings,
+            makeClient: { _, _ in nil },
+            reloadToken: { nil }, authRetryBackoff: .zero)
+        return (store, accounts, settings)
     }
 }
