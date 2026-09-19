@@ -46,6 +46,7 @@
 		4266433E97ABB2A58A9FDFC3 /* DeploymentFaviconTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 58F7B38F64649B26A1DFA747 /* DeploymentFaviconTests.swift */; };
 		4398C72ECF17934B376EC455 /* GitHubActionsErrorReportTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 153392136119AFC60AF57F59 /* GitHubActionsErrorReportTests.swift */; };
 		450EFA96CFE5980E44FF2573 /* OnboardingWindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 45A61D5F592F433857246E1C /* OnboardingWindowController.swift */; };
+		45F77CAAE1CAC10279B182E1 /* ScopePollBudgetTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7DDE61130EA782886864F83A /* ScopePollBudgetTests.swift */; };
 		4843FB0A460BEC29D54BFF46 /* CopyBuildErrorButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = 82E0F02584E0A22C73BB9BD6 /* CopyBuildErrorButton.swift */; };
 		49C2EE31CFAB1309715A1B50 /* NotificationGatingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2CE629B98A536D72C8515A98 /* NotificationGatingTests.swift */; };
 		4BF059240F92969CD0D72385 /* VercelClientTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 975C49CE978B69146270A2D6 /* VercelClientTests.swift */; };
@@ -155,6 +156,7 @@
 		F63772928FA0F045C3A78CD4 /* SourceIcon.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6986FE48CCD06BAF2A15F578 /* SourceIcon.swift */; };
 		F69977E3BF80594CDB054B00 /* Sparkle in Frameworks */ = {isa = PBXBuildFile; productRef = 3C3D5F1973EE8F7D409C6ABB /* Sparkle */; };
 		F9F6C1BF31C0CDFCB9CA044F /* BuildEvent.swift in Sources */ = {isa = PBXBuildFile; fileRef = D96FB60CD54BA04808EB1852 /* BuildEvent.swift */; };
+		FB757E402BC7FCE778632E7F /* ScopePollBudget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 39475EEDCFA21567E80D39AE /* ScopePollBudget.swift */; };
 		FD3457E8BC93EFCDF34C2362 /* SettingsTab.swift in Sources */ = {isa = PBXBuildFile; fileRef = 44D380D53D1059B6E606EF12 /* SettingsTab.swift */; };
 		FD464823438A63390BCFB000 /* default.json in Resources */ = {isa = PBXBuildFile; fileRef = C7EF9FB061427EC4E21C550E /* default.json */; };
 		FD482DB5015784339C85DEF8 /* TeamsClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0CD31943215A1B07BE618266 /* TeamsClient.swift */; };
@@ -205,6 +207,7 @@
 		307903F55A6A5ACF9468169A /* OnboardingArtwork.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingArtwork.swift; sourceTree = "<group>"; };
 		36AA5583B032CB5277D863A6 /* GitHubDTO.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GitHubDTO.swift; sourceTree = "<group>"; };
 		384A2C1C53973E006D759DD0 /* NotificationActionsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationActionsTests.swift; sourceTree = "<group>"; };
+		39475EEDCFA21567E80D39AE /* ScopePollBudget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScopePollBudget.swift; sourceTree = "<group>"; };
 		3A158DF8F08F11C26FC7FF5E /* deployments.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = deployments.json; sourceTree = "<group>"; };
 		3D14A9CF3E0DC37311897779 /* PointingHandCursor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PointingHandCursor.swift; sourceTree = "<group>"; };
 		3FC7F8BFC1B963C7CBD0CC12 /* TokenProviderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TokenProviderTests.swift; sourceTree = "<group>"; };
@@ -257,6 +260,7 @@
 		7D8EDE50B7520323CB8D8767 /* PopoverChromeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PopoverChromeTests.swift; sourceTree = "<group>"; };
 		7DD2B32A82C6D1DF17114707 /* ChangelogFeedTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChangelogFeedTests.swift; sourceTree = "<group>"; };
 		7DD458B00EA53255D53F877F /* GitHubActionsErrorReport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GitHubActionsErrorReport.swift; sourceTree = "<group>"; };
+		7DDE61130EA782886864F83A /* ScopePollBudgetTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScopePollBudgetTests.swift; sourceTree = "<group>"; };
 		7F84C9A259AE88BB6112EA03 /* DeploymentRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeploymentRow.swift; sourceTree = "<group>"; };
 		82E0F02584E0A22C73BB9BD6 /* CopyBuildErrorButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CopyBuildErrorButton.swift; sourceTree = "<group>"; };
 		8744201D53B972B1BBA7A89E /* AccountStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountStoreTests.swift; sourceTree = "<group>"; };
@@ -442,6 +446,7 @@
 				DCF0236F9C974998867E7582 /* ScaffoldTests.swift */,
 				1049A05673BFAD96CAD2455D /* ScopeColorTests.swift */,
 				4F8E90B51FABB6200BE85EF5 /* ScopeHealthTests.swift */,
+				7DDE61130EA782886864F83A /* ScopePollBudgetTests.swift */,
 				131BF5CDDE6315FDAC94ECC2 /* ScopeResolverTests.swift */,
 				DA457F0018F99555F5527030 /* ScopeSwitchTests.swift */,
 				689898515F337BEFDB922498 /* SettingsStoreTests.swift */,
@@ -491,6 +496,7 @@
 				F2395B1126B0EDB81E5EC45D /* DeploymentStore.swift */,
 				2058899709139CEEFFF03C13 /* OnboardingState.swift */,
 				2977426DBA5270B1F7B70BF6 /* RowCache.swift */,
+				39475EEDCFA21567E80D39AE /* ScopePollBudget.swift */,
 				EF7365E6FD34AFF0BCAF17FD /* SettingsStore.swift */,
 			);
 			path = Stores;
@@ -776,6 +782,7 @@
 				53117583F08D6E77D5DEB2C7 /* ScopeColorIndex.swift in Sources */,
 				A399990B3B1754C930EDD0E8 /* ScopeColorPicker.swift in Sources */,
 				67A8C0C73EC26494B1008B1C /* ScopeDot.swift in Sources */,
+				FB757E402BC7FCE778632E7F /* ScopePollBudget.swift in Sources */,
 				D1A9FF9FFF609666896FF5D9 /* ScopeResolver.swift in Sources */,
 				310D5457D5EEFA8535B92577 /* SettingsListBox.swift in Sources */,
 				966900807BC98D14698FC12F /* SettingsStore.swift in Sources */,
@@ -850,6 +857,7 @@
 				2EBCA0BBD186032E5F886BAA /* ScaffoldTests.swift in Sources */,
 				D1EC28F9F946031F12E50E3A /* ScopeColorTests.swift in Sources */,
 				B0B1664516A0E3258A9A672B /* ScopeHealthTests.swift in Sources */,
+				45F77CAAE1CAC10279B182E1 /* ScopePollBudgetTests.swift in Sources */,
 				64FFD6ACC18A0D718DB52363 /* ScopeResolverTests.swift in Sources */,
 				BE88C871EB226F45DD933E1F /* ScopeSwitchTests.swift in Sources */,
 				5843D7D1B8267565C73B5872 /* SettingsStoreTests.swift in Sources */,
