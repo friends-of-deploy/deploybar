@@ -35,20 +35,29 @@ extension View {
         modifier(PointingHandCursor())
     }
 
-    /// Standardizes an action icon's footprint: every glyph is centered in the
-    /// same fixed square, then padded into a rectangular hit target.
-    ///
-    /// SF Symbols have differing intrinsic widths and baselines, so a bare
-    /// `Image` self-sizes to its glyph — letting `clipboard`, `globe`,
-    /// `chevron…` etc. land at different positions and the icon jump when a
-    /// symbol swaps. A uniform frame centers them all by one rule so a row of
-    /// icons aligns. Padding plus a rectangular `contentShape` then makes the
-    /// surrounding box (not just the glyph pixels) the cursor/tooltip/tap target.
+    /// Pads the geometrically centered artwork from `ActionIcon` into a
+    /// rectangular cursor/tooltip/tap target shared by every action button.
     func actionIconHitArea() -> some View {
-        font(.system(size: 14))   // fixed symbol size: equal cap height across glyphs
-            .frame(width: 18, height: 18)
+        frame(width: 18, height: 18, alignment: .center)
             .padding(.vertical, 6)
             .padding(.horizontal, 3)
             .contentShape(Rectangle())
+    }
+}
+
+/// An SF Symbol centered by its rendered geometry rather than its font
+/// baseline. Symbols such as `doc.text.magnifyingglass` and
+/// `chevron.left.forwardslash.chevron.right` have very different typographic
+/// metrics; rendering them as resizable artwork keeps their visual centers on
+/// one horizontal axis.
+struct ActionIcon: View {
+    let systemName: String
+
+    var body: some View {
+        Image(systemName: systemName)
+            .resizable()
+            .scaledToFit()
+            .frame(width: 16, height: 16, alignment: .center)
+            .actionIconHitArea()
     }
 }

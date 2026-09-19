@@ -18,8 +18,7 @@ struct CopyBuildErrorButton: View {
             // `actionIconHitArea` centers the glyph in a uniform square, so the
             // symbol swapping (clipboard → checkmark → triangle) never nudges
             // the row and the icon lines up with the neighboring link icons.
-            Image(systemName: symbol)
-                .actionIconHitArea()
+            ActionIcon(systemName: symbol)
         }
         .buttonStyle(.plain)
         .disabled(state == .copying)

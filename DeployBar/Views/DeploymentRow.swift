@@ -191,42 +191,39 @@ struct DeploymentRow: View {
     }
 
     @ViewBuilder private var secondaryActions: some View {
-        // Shown on hover only. The "open" icon moves here for failed builds,
-        // where the clipboard action takes the anchored slot instead.
-        if deployment.state == .error, let open = openURL {
+        ForEach(Self.secondaryActions(for: deployment)) { action in
             IconActionButton(
-                systemImage: "arrow.up.forward.app",
-                url: open,
-                help: String(localized: "Open deployment", comment: "Action tooltip")
+                systemImage: action.kind.systemImage,
+                url: action.url,
+                help: action.kind.help
             )
+        }
+    }
+
+    /// Links revealed on hover, in display order. GitHub's repository-level
+    /// Actions overview is intentionally absent: the primary action already
+    /// opens the concrete workflow run, so that shortcut was redundant.
+    static func secondaryActions(for deployment: Deployment) -> [DeploymentRowAction] {
+        var actions: [DeploymentRowAction] = []
+
+        // The "open" icon moves here for failed builds, where the clipboard
+        // action takes the anchored slot instead.
+        if deployment.state == .error,
+           let open = deployment.webURL ?? LinkBuilder.liveURL(host: deployment.url) {
+            actions.append(DeploymentRowAction(kind: .open, url: open))
         }
         if let logs = deployment.inspectorUrl.flatMap(URL.init(string:)) {
-            IconActionButton(
-                systemImage: "doc.text.magnifyingglass",
-                url: logs,
-                help: String(localized: "Open build logs", comment: "Action tooltip")
-            )
-        }
-        // GitHub runs (webURL set): a shortcut to the repo's Actions overview.
-        if deployment.webURL != nil,
-           let actions = LinkBuilder.githubActions(org: deployment.commitOrg, repo: deployment.commitRepo) {
-            IconActionButton(
-                systemImage: "bolt.fill",
-                url: actions,
-                help: String(localized: "Open Actions", comment: "Action tooltip")
-            )
+            actions.append(DeploymentRowAction(kind: .logs, url: logs))
         }
         if let commit = LinkBuilder.githubCommit(
             org: deployment.commitOrg,
             repo: deployment.commitRepo,
             sha: deployment.commitSha
         ) {
-            IconActionButton(
-                systemImage: "chevron.left.forwardslash.chevron.right",
-                url: commit,
-                help: String(localized: "Open commit on the repository", comment: "Action tooltip")
-            )
+            actions.append(DeploymentRowAction(kind: .commit, url: commit))
         }
+
+        return actions
     }
 
     /// Canonical "open the thing" target: a provider page when there is one,
@@ -234,6 +231,38 @@ struct DeploymentRow: View {
     private var openURL: URL? {
         deployment.webURL ?? LinkBuilder.liveURL(host: deployment.url)
     }
+}
+
+enum DeploymentRowActionKind: Hashable {
+    case open
+    case logs
+    case commit
+
+    var systemImage: String {
+        switch self {
+        case .open:   return "arrow.up.forward.app"
+        case .logs:   return "doc.text.magnifyingglass"
+        case .commit: return "chevron.left.forwardslash.chevron.right"
+        }
+    }
+
+    var help: String {
+        switch self {
+        case .open:
+            return String(localized: "Open deployment", comment: "Action tooltip")
+        case .logs:
+            return String(localized: "Open build logs", comment: "Action tooltip")
+        case .commit:
+            return String(localized: "Open commit on the repository", comment: "Action tooltip")
+        }
+    }
+}
+
+struct DeploymentRowAction: Identifiable, Equatable {
+    let kind: DeploymentRowActionKind
+    let url: URL
+
+    var id: DeploymentRowActionKind { kind }
 }
 
 /// Formats deployment timestamps (epoch milliseconds) for the row's timing line.

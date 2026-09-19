@@ -17,8 +17,7 @@ struct IconActionButton: View {
 
     var body: some View {
         Button { NSWorkspace.shared.open(url) } label: {
-            Image(systemName: systemImage)
-                .actionIconHitArea()
+            ActionIcon(systemName: systemImage)
         }
         .buttonStyle(PressableIconButtonStyle())
         // The cluster is `.secondary`; lifting the hovered icon to full contrast
