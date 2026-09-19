@@ -112,3 +112,10 @@ struct GHRun: Decodable, Sendable {
         case headCommit = "head_commit"
     }
 }
+
+/// One organization from `/user/orgs`. Only the login is needed — it is both
+/// the display name and the path component for `/orgs/{org}/repos`.
+struct GHOrg: Decodable, Sendable {
+    let login: String
+    let description: String?
+}
