@@ -32,6 +32,9 @@ final class SettingsStore {
         static let cachedRows       = "cachedRows"
         static let scopeColors      = "scopeColorOverrides"
         static let updateChannel    = SettingsStore.updateChannelDefaultsKey
+        static let disabledScopes   = "disabledScopeIds"
+        static let cachedOrgs       = "cachedOrgsByAccount"
+        static let didMigrateOrgs   = "didMigrateCachedTeams"
     }
 
     init(defaults: UserDefaults = .standard) {
@@ -134,6 +137,65 @@ final class SettingsStore {
         var overrides = scopeColorOverrides
         if let index { overrides[scopeId] = index } else { overrides.removeValue(forKey: scopeId) }
         scopeColorOverrides = overrides
+    }
+
+    // MARK: - Scope enablement
+
+    /// Scopes the user has switched off, keyed by `ScopeRef.id`.
+    ///
+    /// Stores the *disabled* ones rather than the enabled ones so a newly
+    /// discovered organization defaults to on: an account that joins a team
+    /// should start showing it, not hide it until someone goes looking.
+    var disabledScopeIds: Set<String> {
+        get { Set(defaults.stringArray(forKey: Keys.disabledScopes) ?? []) }
+        set { defaults.set(Array(newValue), forKey: Keys.disabledScopes) }
+    }
+
+    func isScopeEnabled(_ scopeId: String) -> Bool {
+        !disabledScopeIds.contains(scopeId)
+    }
+
+    func setScopeEnabled(_ enabled: Bool, for scopeId: String) {
+        var ids = disabledScopeIds
+        if enabled { ids.remove(scopeId) } else { ids.insert(scopeId) }
+        disabledScopeIds = ids
+    }
+
+    // MARK: - Cached organizations
+
+    /// Last known organization list per account, so a relaunch can label and
+    /// poll every scope immediately instead of waiting on the network. Same
+    /// contract as `cachedTeams`, which it supersedes: the response always wins.
+    var cachedOrgs: [UUID: [Team]] {
+        get {
+            guard let data = defaults.data(forKey: Keys.cachedOrgs),
+                  let decoded = try? JSONDecoder().decode([String: [Team]].self, from: data)
+            else { return [:] }
+            return decoded.reduce(into: [UUID: [Team]]()) { result, pair in
+                if let id = UUID(uuidString: pair.key) { result[id] = pair.value }
+            }
+        }
+        set {
+            let keyed = newValue.reduce(into: [String: [Team]]()) { result, pair in
+                result[pair.key.uuidString] = pair.value
+            }
+            guard let data = try? JSONEncoder().encode(keyed) else { return }
+            defaults.set(data, forKey: Keys.cachedOrgs)
+        }
+    }
+
+    /// One-time move of the old single-account `cachedTeams` list into the
+    /// per-account `cachedOrgs` map. Guarded so a later real fetch is never
+    /// overwritten by the legacy value.
+    func migrateCachedTeams(cliAccountId: UUID) {
+        guard !defaults.bool(forKey: Keys.didMigrateOrgs) else { return }
+        let legacy = cachedTeams
+        if !legacy.isEmpty {
+            var orgs = cachedOrgs
+            orgs[cliAccountId] = legacy
+            cachedOrgs = orgs
+        }
+        defaults.set(true, forKey: Keys.didMigrateOrgs)
     }
 
     // MARK: - Follow API
