@@ -2,6 +2,31 @@
 <rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle">
   <channel>
     <item>
+      <title>1.0.5</title>
+      <pubDate>Sat, 19 Sep 2026 13:16:46 +0000</pubDate>
+      <sparkle:version>10</sparkle:version>
+      <sparkle:shortVersionString>1.0.5</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <description><![CDATA[
+DeployBar 1.0.5 fixes background refresh stopping even though you are still signed in to Vercel CLI.
+
+### Fixed
+
+- Automatically renew expiring Vercel CLI access tokens, so deployments and projects keep updating without running a terminal command or signing in again.
+- Use the renewed session when loading teams, your profile, and deployment build logs.
+- Share token renewal across concurrent requests and save updated credentials atomically for reuse by Vercel CLI.
+- Preserve saved credentials during temporary network or server failures and distinguish those failures from a session that requires a new login.
+
+### Updating
+
+No configuration changes are needed. Use **Check for Updates** in DeployBar, update through Homebrew, or download the signed and notarized DMG below. If Vercel has revoked or expired the refresh token itself, run `vercel login` once to reconnect.
+]]></description>
+      <enclosure url="https://github.com/friends-of-deploy/deploybar/releases/download/v1.0.5/DeployBar-1.0.5.zip"
+                 length="3034623"
+                 type="application/octet-stream"
+                 sparkle:edSignature="NSNcxYvF/Pyoxm87QPjeJ/1esW3QBlZdDHnht2hRZikXAQR13dWy2VKEOOx4CL+57OvhNaEhBd97Mblpmg6EAg==" />
+    </item>
+    <item>
       <title>1.0.4</title>
       <pubDate>Fri, 18 Sep 2026 16:00:24 +0000</pubDate>
       <sparkle:version>9</sparkle:version>
