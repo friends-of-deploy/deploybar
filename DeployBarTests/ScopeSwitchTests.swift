@@ -74,4 +74,64 @@ final class ScopeSwitchTests: XCTestCase {
         XCTAssertEqual(settings.selectedTeamId, "__personal__")
         XCTAssertNil(store.currentTeamId)
     }
+
+    // MARK: - Menu contents
+
+    private struct StubClient: DeploymentProviderClient {
+        func deployments(limit: Int) async throws -> [Deployment] { [] }
+        func projects() async throws -> [Project] { [] }
+    }
+
+    private static func team(id: String, slug: String) -> Team {
+        try! JSONDecoder().decode(Team.self,
+                                  from: Data(#"{"id":"\#(id)","slug":"\#(slug)","name":"\#(slug)"}"#.utf8))
+    }
+
+    /// Builds a store around a GitHub CLI account, plus the `SettingsStore`
+    /// behind it — `DeploymentStore.settings` is private, so a test that
+    /// needs `setScopeEnabled` has to hold onto the same instance the store
+    /// was built with. Mirrors `AllScopeTests.makeGitHubStore()`.
+    private func makeGitHubStore() -> (DeploymentStore, Account, SettingsStore) {
+        let accountStore = AccountStore(defaults: UserDefaults(suiteName: UUID().uuidString)!,
+                                        credentials: InMemoryCredentialStore(),
+                                        detectCLI: { false }, reloadCLIToken: { nil },
+                                        detectGitHubCLI: { true }, reloadGitHubToken: { "tok" })
+        let github = accountStore.githubCLIAccount!
+        let settings = SettingsStore(defaults: UserDefaults(suiteName: UUID().uuidString)!)
+        let store = DeploymentStore(
+            accountStore: accountStore, settings: settings,
+            makeClient: { _, _ in StubClient() },
+            reloadToken: { nil }, authRetryBackoff: .zero)
+        return (store, github, settings)
+    }
+
+    func test_menuHidesDisabledOrganizations() {
+        let (store, github, settings) = makeGitHubStore()
+        store.setOrganizations([Self.team(id: "Vorciu", slug: "Vorciu"),
+                                Self.team(id: "8lines", slug: "8lines")],
+                               for: github.id)
+        settings.setScopeEnabled(
+            false, for: ScopeRef(accountId: github.id, teamId: "8lines").id)
+
+        let shown = PopoverView.menuScopes(for: github, store: store).map(\.teamId)
+
+        XCTAssertEqual(shown, [nil, "Vorciu"])
+    }
+
+    func test_menuListsEveryConnectedAccountRegardlessOfProvider() {
+        let accountStore = AccountStore(defaults: UserDefaults(suiteName: UUID().uuidString)!,
+                                        credentials: InMemoryCredentialStore(),
+                                        detectCLI: { true }, reloadCLIToken: { "tok" },
+                                        detectGitHubCLI: { true }, reloadGitHubToken: { "tok" })
+        let vercel = accountStore.cliAccount!
+        let github = accountStore.githubCLIAccount!
+        let settings = SettingsStore(defaults: UserDefaults(suiteName: UUID().uuidString)!)
+        let store = DeploymentStore(
+            accountStore: accountStore, settings: settings,
+            makeClient: { _, _ in StubClient() },
+            reloadToken: { "tok" }, authRetryBackoff: .zero)
+
+        XCTAssertEqual(Set(PopoverView.menuAccounts(store: store).map(\.id)),
+                       Set([vercel.id, github.id]))
+    }
 }

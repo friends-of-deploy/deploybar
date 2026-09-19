@@ -3,6 +3,7 @@ import SwiftUI
 struct PopoverView: View {
     @Bindable var store: DeploymentStore
     var openSettings: () -> Void
+    var openOnboarding: (() -> Void)? = nil
     @State private var tab: PopoverTab = .deployments
     /// Which way the last tab change moved, so content slides toward the side
     /// the user came from rather than always the same direction.
@@ -13,28 +14,32 @@ struct PopoverView: View {
         VStack(spacing: 0) {
             TopBar(store: store, openSettings: openSettings)
 
-            TabSelector(tabs: PopoverTab.allCases, selection: $tab) { newTab in
-                // Set direction before the selection changes, so the transition
-                // built during this update already knows which way to slide.
-                movingForward = newTab.order > tab.order
-            }
+            if store.connectedAccounts.isEmpty {
+                OnboardingEmptyState(openOnboarding: openOnboarding ?? openSettings)
+            } else {
+                TabSelector(tabs: PopoverTab.allCases, selection: $tab) { newTab in
+                    // Set direction before the selection changes, so the transition
+                    // built during this update already knows which way to slide.
+                    movingForward = newTab.order > tab.order
+                }
 
-            ScrollView {
-                LazyVStack(alignment: .leading, spacing: 0) {
-                    switch tab {
-                    case .deployments:
-                        deploymentsList(store.sourcedDeployments, empty: "No deployments")
-                            .transition(slide)
-                    case .projects:
-                        projectsList
-                            .transition(slide)
+                ScrollView {
+                    LazyVStack(alignment: .leading, spacing: 0) {
+                        switch tab {
+                        case .deployments:
+                            deploymentsList(store.sourcedDeployments, empty: "No deployments")
+                                .transition(slide)
+                        case .projects:
+                            projectsList
+                                .transition(slide)
+                        }
                     }
                 }
+                .frame(height: 320)
+                // The outgoing list slides out as the incoming one slides in; without
+                // clipping they would both draw over the tab bar.
+                .clipped()
             }
-            .frame(height: 320)
-            // The outgoing list slides out as the incoming one slides in; without
-            // clipping they would both draw over the tab bar.
-            .clipped()
         }
         .frame(width: 380)
         // Draws every tooltip in the popover. Installed here so a bubble can
@@ -69,7 +74,7 @@ struct PopoverView: View {
         if items.isEmpty {
             // "Loading…" until the first poll lands, so a slow network doesn't
             // read as an empty account.
-            EmptyListPlaceholder(label: store.isLoadingInitial ? "Loading…" : empty)
+            EmptyListPlaceholder(label: empty, isLoading: store.isLoadingInitial, isProjects: false, openSettings: openSettings)
         } else {
             let allProjects = store.sourcedProjects.map(\.project)
             ForEach(items) { sourced in
@@ -91,7 +96,7 @@ struct PopoverView: View {
     @ViewBuilder
     private var projectsList: some View {
         if store.sourcedProjects.isEmpty {
-            EmptyListPlaceholder(label: store.isLoadingInitial ? "Loading…" : "No projects")
+            EmptyListPlaceholder(label: "No projects", isLoading: store.isLoadingInitial, isProjects: true, openSettings: openSettings)
         } else {
             ForEach(store.sourcedProjects) { sourced in
                 // Use the project's OWN scope, not the global one: in "All"
@@ -115,6 +120,20 @@ struct PopoverView: View {
             // projects (the normal case) animates nothing, because the sorted
             // list is identical and `ForEach` identity is stable.
             .animation(PopoverMotion.listUpdate(reduceMotion: reduceMotion), value: store.sourcedProjects.map(\.id))
+        }
+    }
+
+    /// Accounts shown in the source menu, in connection order.
+    static func menuAccounts(store: DeploymentStore) -> [Account] {
+        store.connectedAccounts
+    }
+
+    /// One account's selectable scopes: the account itself, then its enabled
+    /// organizations. Disabled ones are omitted — they are switched off in
+    /// Settings, which is also where they are switched back on.
+    static func menuScopes(for account: Account, store: DeploymentStore) -> [Scope] {
+        store.scopes(for: account).filter { scope in
+            store.isScopeEnabled(ScopeRef(accountId: account.id, teamId: scope.teamId))
         }
     }
 }
@@ -223,37 +242,42 @@ private struct TopBar: View {
                 }
             }
 
-            // Per-provider sections: pick the account scope (personal / team) to view.
-            ForEach(Provider.allCases, id: \.self) { provider in
-                Section(provider.displayName) {
-                    if provider.isImplemented {
-                        let accounts = store.connectedAccounts.filter { $0.provider == provider }
-                        ForEach(accounts) { account in
-                            let scopes = store.scopes(for: account)
-                            ForEach(scopes) { scope in
-                                let isActive = store.filter == .scope(accountId: account.id, teamId: scope.teamId)
-                                Button {
-                                    Task { await store.select(accountId: account.id, teamId: scope.teamId) }
-                                } label: {
-                                    // Prefer the team's own display name; never fall
-                                    // back to a raw "team_…" id in the menu.
-                                    let name = scope.teamName
-                                        ?? store.rowScopeLabelIgnoringFilter(accountId: account.id, teamId: scope.teamId)
-                                        ?? account.label
-                                    let indented = ScopeMenuLabel.text(name, isTeam: scope.teamId != nil)
-                                    if isActive {
-                                        Label(indented, systemImage: "checkmark")
-                                    } else {
-                                        Text(indented)
-                                    }
-                                }
-                            }
+            // Flat: every account, its organizations indented beneath. The
+            // provider is already legible from the glyph on each account row,
+            // so a per-provider section header only added depth.
+            Divider()
+
+            ForEach(PopoverView.menuAccounts(store: store)) { account in
+                ForEach(PopoverView.menuScopes(for: account, store: store)) { scope in
+                    let isActive = store.filter == .scope(accountId: account.id,
+                                                          teamId: scope.teamId)
+                    Button {
+                        Task { await store.select(accountId: account.id, teamId: scope.teamId) }
+                    } label: {
+                        // Prefer the team's own display name; never fall
+                        // back to a raw "team_…" id in the menu.
+                        let name = scope.teamName
+                            ?? store.rowScopeLabelIgnoringFilter(accountId: account.id,
+                                                                 teamId: scope.teamId)
+                            ?? account.label
+                        let indented = ScopeMenuLabel.text(name, isTeam: scope.teamId != nil)
+                        if isActive {
+                            Label(indented, systemImage: "checkmark")
+                        } else if scope.teamId == nil {
+                            Label(indented, systemImage: account.provider.iconName)
+                        } else {
+                            Text(indented)
                         }
-                    } else {
-                        Text(String(localized: "\(provider.displayName) — coming soon", comment: "Placeholder for unimplemented provider"))
-                            .foregroundStyle(.secondary)
                     }
                 }
+            }
+
+            // Providers with no client yet, named once at the end rather than
+            // as an empty section between real accounts.
+            ForEach(Provider.allCases.filter { !$0.isImplemented }, id: \.self) { provider in
+                Text(String(localized: "\(provider.displayName) — coming soon",
+                            comment: "Placeholder for unimplemented provider"))
+                    .foregroundStyle(.secondary)
             }
 
             Divider()
@@ -367,13 +391,34 @@ private struct TabButton: View {
 
 private struct EmptyListPlaceholder: View {
     let label: LocalizedStringKey
+    let isLoading: Bool
+    let isProjects: Bool
+    let openSettings: () -> Void
 
     var body: some View {
-        Text(label)
-            .font(.caption)
-            .foregroundStyle(.tertiary)
-            .frame(maxWidth: .infinity, alignment: .center)
-            .padding(.vertical, 20)
+        VStack(spacing: 12) {
+            if isLoading {
+                ProgressView().controlSize(.small)
+                Text("Loading…").font(.callout).foregroundStyle(.secondary)
+            } else {
+                Image(systemName: isProjects ? "square.stack.3d.up" : "shippingbox")
+                    .font(.system(size: 28, weight: .light)).foregroundStyle(.secondary)
+                    .accessibilityHidden(true)
+                Text(label).font(.system(size: 16, weight: .semibold))
+                Text(isProjects
+                     ? "Your followed projects will appear here. Manage your accounts to choose what to follow."
+                     : "New activity from your followed projects will appear here.")
+                    .font(.system(size: 12)).foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .frame(maxWidth: 270)
+                Button("Manage accounts…", action: openSettings)
+                    .padding(.top, 2)
+            }
+        }
+        .padding(.horizontal, 28)
+        .frame(maxWidth: .infinity)
+        .frame(height: 320)
     }
 }
 

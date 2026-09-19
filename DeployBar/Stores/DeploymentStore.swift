@@ -333,6 +333,12 @@ final class DeploymentStore {
         allScopes(for: account)
     }
 
+    /// Whether a scope is switched on. Passthrough so views can filter the
+    /// menu without reaching through the store into `SettingsStore`.
+    func isScopeEnabled(_ ref: ScopeRef) -> Bool {
+        settings.isScopeEnabled(ref.id)
+    }
+
     /// Every scope of an account: the account itself, plus one per organization
     /// (Vercel team or GitHub org alike). Includes disabled scopes; callers that
     /// only want polled scopes filter through `settings.isScopeEnabled`.
