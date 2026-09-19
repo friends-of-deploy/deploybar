@@ -4,6 +4,7 @@ import SwiftUI
 /// which stream it looks in.
 struct UpdatesSettingsTab: View {
     @Bindable var updater: UpdaterController
+    @State private var isShowingChangelog = false
 
     var body: some View {
         Form {
@@ -16,11 +17,17 @@ struct UpdatesSettingsTab: View {
                     Text(lastCheckedDescription)
                         .foregroundStyle(.secondary)
                 }
-                Button(String(localized: "Check for Updates Now", comment: "Update check button")) {
-                    updater.checkForUpdates()
+                HStack {
+                    Button(String(localized: "Check for Updates Now", comment: "Update check button")) {
+                        updater.checkForUpdates()
+                    }
+                    .disabled(!updater.canCheckForUpdates)
+
+                    Button(String(localized: "Changelog", comment: "Open changelog button")) {
+                        isShowingChangelog = true
+                    }
                 }
                 .buttonStyle(.bordered)
-                .disabled(!updater.canCheckForUpdates)
             }
 
             Section {
@@ -48,6 +55,9 @@ struct UpdatesSettingsTab: View {
             }
         }
         .formStyle(.grouped)
+        .sheet(isPresented: $isShowingChangelog) {
+            ChangelogSheet(channel: updater.channel)
+        }
     }
 
     private var lastCheckedDescription: String {

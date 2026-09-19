@@ -29,6 +29,12 @@ printf 'Fixed a thing.\n' > "$WORK/notes.md"
 xmllint --noout "$WORK/appcast.xml" || fail "stable feed is not well-formed XML"
 xmllint --noout "$WORK/appcast-beta.xml" || fail "beta feed is not well-formed XML"
 
+notes_format="$(xmllint --xpath \
+  'string(/rss/channel/item[1]/description/@*[local-name()="format"])' \
+  "$WORK/appcast.xml")"
+[ "$notes_format" = "markdown" ] || \
+  fail "expected embedded release notes to declare markdown format, got '$notes_format'"
+
 grep -q '1.2.0' "$WORK/appcast.xml" || fail "stable feed is missing the stable release"
 grep -q 'sigSTABLE==' "$WORK/appcast.xml" || fail "stable feed is missing the signature"
 

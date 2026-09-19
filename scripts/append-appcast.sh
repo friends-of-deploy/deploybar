@@ -44,7 +44,7 @@ cat > "$ITEM_FILE" <<ITEM
       <sparkle:version>${BUILD}</sparkle:version>
       <sparkle:shortVersionString>${VERSION}</sparkle:shortVersionString>
       <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
-      <description><![CDATA[
+      <description sparkle:format="markdown"><![CDATA[
 ${NOTES}
 ]]></description>
       <enclosure url="${ZIP_URL}"

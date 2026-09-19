@@ -16,11 +16,13 @@
 		0FDB30858612F3BAF4C53328 /* projects.json in Resources */ = {isa = PBXBuildFile; fileRef = FAA8630778C2284CAF43DC0A /* projects.json */; };
 		11CB853BF9C2623B0453DA2E /* ProjectOwnerLabelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 21F7062B723C7BF18ED029D3 /* ProjectOwnerLabelTests.swift */; };
 		134270AC4A293342B8D12F11 /* FollowSettingsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2889E76BF8CB729413458744 /* FollowSettingsTests.swift */; };
+		162C4AF5FE588BD77FBC3768 /* MarkdownDocumentTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = CF432C264A2359581E7F71BF /* MarkdownDocumentTests.swift */; };
 		163121D8D43345AC9382E75C /* AccountModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C3572794A64768D07CE7BA51 /* AccountModelTests.swift */; };
 		19ACC372C7B38089879F7208 /* AccountDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA16B92773C8D917F0338CF4 /* AccountDetailView.swift */; };
 		2270AB2D0E85F3BE2137022F /* ProjectListStabilityTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1B8BEBE2545535F8401D31AC /* ProjectListStabilityTests.swift */; };
 		231C256FA93A2C46D73F43D1 /* FaviconURL.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE793AAA24E87F302F47F6BA /* FaviconURL.swift */; };
 		2383AFC83B87C1001D74CC9A /* NotificationActionsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 384A2C1C53973E006D759DD0 /* NotificationActionsTests.swift */; };
+		24F1347B4D18F3AA220E63F2 /* ChangelogFeedTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7DD2B32A82C6D1DF17114707 /* ChangelogFeedTests.swift */; };
 		27B2977BC195025852589715 /* UpdateChannel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C29717717C676DD2D14C378 /* UpdateChannel.swift */; };
 		2A5C23D403D459A09E7F0314 /* DemoProviderClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2BB7896309D0050B7618FF20 /* DemoProviderClient.swift */; };
 		2ABA840B17F54B6B2A517989 /* SourcedItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4DB4B342E203F63C747D601A /* SourcedItem.swift */; };
@@ -67,6 +69,7 @@
 		76BC172134B2B4823146AE59 /* UpdateChannelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 15079017D2BD08DD3DA2B78B /* UpdateChannelTests.swift */; };
 		7969FE45B3099D562F6D289B /* StatusDot.swift in Sources */ = {isa = PBXBuildFile; fileRef = ECB5A270A7B7428A8E5C8A40 /* StatusDot.swift */; };
 		798528DF547AA5A90B58FE94 /* VercelUser.swift in Sources */ = {isa = PBXBuildFile; fileRef = BCA4BA9D9376E97271A39A18 /* VercelUser.swift */; };
+		7AFA52ADBEBC2716036D8035 /* MarkdownDocument.swift in Sources */ = {isa = PBXBuildFile; fileRef = 43759C88385E4245973D1667 /* MarkdownDocument.swift */; };
 		7B5B214C13C36A5A4B8307D6 /* AppInfo.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A9A41B399199C4BEA314887 /* AppInfo.swift */; };
 		7BC287BA7E69894DB50839A0 /* Team.swift in Sources */ = {isa = PBXBuildFile; fileRef = 99CE42C7D6C12B7325A60F1D /* Team.swift */; };
 		7D5875945050DAC70C139259 /* LinkBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = B015CC4FB573440F0554E492 /* LinkBuilder.swift */; };
@@ -80,6 +83,7 @@
 		8ADE2698F4D4F3D56F40EDD1 /* GeneralSettingsTab.swift in Sources */ = {isa = PBXBuildFile; fileRef = 61C6C0E528AB81F8016D2AB2 /* GeneralSettingsTab.swift */; };
 		8C083282B50F0307EB2B6667 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5EA45595184BB5C619B00160 /* SettingsView.swift */; };
 		8C0B9DD03B52BF70005BC746 /* ProjectDecodingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B57F9E97129C129C7E64B1A6 /* ProjectDecodingTests.swift */; };
+		8E3ECA78DD90CF5E78232BE6 /* ChangelogSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF3A9396633C6D9F8CB04208 /* ChangelogSheet.swift */; };
 		92445811318C4A1EE90D50E6 /* PopoverPanelStylerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2C30E9EF17AC65757B97B307 /* PopoverPanelStylerTests.swift */; };
 		9536605F66CE469E3CBA3849 /* GitHubClientTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C78421F137D7C180CDB1C9B1 /* GitHubClientTests.swift */; };
 		953BB1DB6885D669FFCF7AA4 /* RateLimitTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2D98CD1DA787CB017E6E1380 /* RateLimitTests.swift */; };
@@ -129,6 +133,7 @@
 		E8C88C6284FB182EB9D3D48F /* UserLoadingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5E5C2ED9666F903534AFD74 /* UserLoadingTests.swift */; };
 		E90437B0B4EF08FAB479BD78 /* PointingHandCursor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3D14A9CF3E0DC37311897779 /* PointingHandCursor.swift */; };
 		EBA4F1EB81E14AFD31D10F50 /* AccountStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8744201D53B972B1BBA7A89E /* AccountStoreTests.swift */; };
+		EC127A05EBE1A2CE26789CB7 /* ChangelogFeed.swift in Sources */ = {isa = PBXBuildFile; fileRef = A72201DE564FCD37C0C94B57 /* ChangelogFeed.swift */; };
 		ED5171FF86D34BE6931C1441 /* RowCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2977426DBA5270B1F7B70BF6 /* RowCache.swift */; };
 		EE9F687B2B3D79B7900E87BD /* CommitAuthorAvatar.swift in Sources */ = {isa = PBXBuildFile; fileRef = C6D119F7BA99FC61CD3BB441 /* CommitAuthorAvatar.swift */; };
 		EF075E0C7E0E1E08B5BFF31B /* ProviderClientError.swift in Sources */ = {isa = PBXBuildFile; fileRef = 171831EB706F154D65EC9487 /* ProviderClientError.swift */; };
@@ -190,6 +195,7 @@
 		3D14A9CF3E0DC37311897779 /* PointingHandCursor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PointingHandCursor.swift; sourceTree = "<group>"; };
 		3FC7F8BFC1B963C7CBD0CC12 /* TokenProviderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TokenProviderTests.swift; sourceTree = "<group>"; };
 		42320F70CBF5D94E3917DBFD /* UserClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserClient.swift; sourceTree = "<group>"; };
+		43759C88385E4245973D1667 /* MarkdownDocument.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MarkdownDocument.swift; sourceTree = "<group>"; };
 		4431075D715348146A140C1A /* DeploymentDecodingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeploymentDecodingTests.swift; sourceTree = "<group>"; };
 		44D380D53D1059B6E606EF12 /* SettingsTab.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsTab.swift; sourceTree = "<group>"; };
 		495A27E8C5B6857938455B86 /* LaunchAtLogin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LaunchAtLogin.swift; sourceTree = "<group>"; };
@@ -230,6 +236,7 @@
 		7A565EC3685728189B46842D /* FaviconURLTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FaviconURLTests.swift; sourceTree = "<group>"; };
 		7B77B029D1BDDA0FCF4D342B /* Deployment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Deployment.swift; sourceTree = "<group>"; };
 		7D8EDE50B7520323CB8D8767 /* PopoverChromeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PopoverChromeTests.swift; sourceTree = "<group>"; };
+		7DD2B32A82C6D1DF17114707 /* ChangelogFeedTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChangelogFeedTests.swift; sourceTree = "<group>"; };
 		7DD458B00EA53255D53F877F /* GitHubActionsErrorReport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GitHubActionsErrorReport.swift; sourceTree = "<group>"; };
 		7F84C9A259AE88BB6112EA03 /* DeploymentRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeploymentRow.swift; sourceTree = "<group>"; };
 		82E0F02584E0A22C73BB9BD6 /* CopyBuildErrorButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CopyBuildErrorButton.swift; sourceTree = "<group>"; };
@@ -251,6 +258,7 @@
 		A09C0975B240FDFA2C5C2518 /* VercelCLISessionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VercelCLISessionTests.swift; sourceTree = "<group>"; };
 		A2030F2B617B10858ED0F891 /* VercelCLISession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VercelCLISession.swift; sourceTree = "<group>"; };
 		A5E5C2ED9666F903534AFD74 /* UserLoadingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserLoadingTests.swift; sourceTree = "<group>"; };
+		A72201DE564FCD37C0C94B57 /* ChangelogFeed.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChangelogFeed.swift; sourceTree = "<group>"; };
 		A81FC0F07E8FBD1545D310E0 /* user.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = user.json; sourceTree = "<group>"; };
 		A86A2B44C9D86BDEEF902853 /* BuildErrorReportTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BuildErrorReportTests.swift; sourceTree = "<group>"; };
 		AD8C9B80B12960AB8FDE3310 /* RowCacheTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RowCacheTests.swift; sourceTree = "<group>"; };
@@ -273,6 +281,7 @@
 		CB120BDAC0A9EA657E9556D2 /* Tooltip.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Tooltip.swift; sourceTree = "<group>"; };
 		CB443AD7E9305D7127C6B292 /* RowPrimaryActionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RowPrimaryActionTests.swift; sourceTree = "<group>"; };
 		CB9D4EBA17ACC04E8F2C9252 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		CF432C264A2359581E7F71BF /* MarkdownDocumentTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MarkdownDocumentTests.swift; sourceTree = "<group>"; };
 		D5E363F13659177F6BA23F3C /* DeploymentTimingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeploymentTimingTests.swift; sourceTree = "<group>"; };
 		D78795B350B4D163F3559D6B /* ProjectFollow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProjectFollow.swift; sourceTree = "<group>"; };
 		D96FB60CD54BA04808EB1852 /* BuildEvent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BuildEvent.swift; sourceTree = "<group>"; };
@@ -295,6 +304,7 @@
 		FE128B253CBD435ADF3DE364 /* AllScopeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AllScopeTests.swift; sourceTree = "<group>"; };
 		FE793AAA24E87F302F47F6BA /* FaviconURL.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FaviconURL.swift; sourceTree = "<group>"; };
 		FED0A4A6C4E0346174AF8482 /* DeployBarApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeployBarApp.swift; sourceTree = "<group>"; };
+		FF3A9396633C6D9F8CB04208 /* ChangelogSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChangelogSheet.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -317,6 +327,7 @@
 				7B77B029D1BDDA0FCF4D342B /* Deployment.swift */,
 				7DD458B00EA53255D53F877F /* GitHubActionsErrorReport.swift */,
 				36AA5583B032CB5277D863A6 /* GitHubDTO.swift */,
+				43759C88385E4245973D1667 /* MarkdownDocument.swift */,
 				205B78F8FB30163F85C0FE74 /* Project.swift */,
 				D78795B350B4D163F3559D6B /* ProjectFollow.swift */,
 				08CB8CC4D570FB5256D83340 /* Provider.swift */,
@@ -344,6 +355,7 @@
 			isa = PBXGroup;
 			children = (
 				4A9A41B399199C4BEA314887 /* AppInfo.swift */,
+				A72201DE564FCD37C0C94B57 /* ChangelogFeed.swift */,
 				8A84A02061ED58BCE31809D4 /* CredentialStore.swift */,
 				5D852B6204688B79CB733233 /* DeploymentFavicon.swift */,
 				10909CFA5E939D84F76594A7 /* FaviconCache.swift */,
@@ -366,6 +378,7 @@
 				897DD0C50DF99321A6B0FF21 /* AggregationTests.swift */,
 				FE128B253CBD435ADF3DE364 /* AllScopeTests.swift */,
 				A86A2B44C9D86BDEEF902853 /* BuildErrorReportTests.swift */,
+				7DD2B32A82C6D1DF17114707 /* ChangelogFeedTests.swift */,
 				6E209E87DAC8B3AAB1BA5534 /* CommitAuthorTests.swift */,
 				B8DE5F4F4C0E1B6710C5682C /* CredentialStoreTests.swift */,
 				21B1DB99E8DEB4901FB3580F /* DemoClockTests.swift */,
@@ -387,6 +400,7 @@
 				C57598226CA9E5B62C77E446 /* GitHubStateMappingTests.swift */,
 				763A1647FC4087F1B296F1CB /* LinkBuilderTests.swift */,
 				574C2BE2B1BB100DD7A95EEE /* LocalizationTests.swift */,
+				CF432C264A2359581E7F71BF /* MarkdownDocumentTests.swift */,
 				384A2C1C53973E006D759DD0 /* NotificationActionsTests.swift */,
 				2CE629B98A536D72C8515A98 /* NotificationGatingTests.swift */,
 				1976D9F9B157C4C976137E6E /* PollCoalescingTests.swift */,
@@ -477,6 +491,7 @@
 			children = (
 				BA16B92773C8D917F0338CF4 /* AccountDetailView.swift */,
 				B1206DC41804427440745479 /* AccountsSettingsTab.swift */,
+				FF3A9396633C6D9F8CB04208 /* ChangelogSheet.swift */,
 				61C6C0E528AB81F8016D2AB2 /* GeneralSettingsTab.swift */,
 				176FE250E8C527CAFCF05603 /* NotificationSettingsTab.swift */,
 				718BC1490051E62D3E4B4334 /* ScopeColorPicker.swift */,
@@ -663,6 +678,8 @@
 				32D8E850E70A35D53B7863D6 /* AppDelegate.swift in Sources */,
 				7B5B214C13C36A5A4B8307D6 /* AppInfo.swift in Sources */,
 				F9F6C1BF31C0CDFCB9CA044F /* BuildEvent.swift in Sources */,
+				EC127A05EBE1A2CE26789CB7 /* ChangelogFeed.swift in Sources */,
+				8E3ECA78DD90CF5E78232BE6 /* ChangelogSheet.swift in Sources */,
 				EE9F687B2B3D79B7900E87BD /* CommitAuthorAvatar.swift in Sources */,
 				4843FB0A460BEC29D54BFF46 /* CopyBuildErrorButton.swift in Sources */,
 				41749D7A00D20E348FEA4E56 /* CredentialStore.swift in Sources */,
@@ -690,6 +707,7 @@
 				88ACCA45695CE12422DFB8B2 /* IconActionButton.swift in Sources */,
 				097FE5A449308A30B1FB17B9 /* LaunchAtLogin.swift in Sources */,
 				7D5875945050DAC70C139259 /* LinkBuilder.swift in Sources */,
+				7AFA52ADBEBC2716036D8035 /* MarkdownDocument.swift in Sources */,
 				64575E9A8DCD043C94A7AACD /* MenuBarIcon.swift in Sources */,
 				74B7E5BDEA03B046BF7B2809 /* NotificationManager.swift in Sources */,
 				80B96109ACA736872E7B0742 /* NotificationSettingsTab.swift in Sources */,
@@ -741,6 +759,7 @@
 				C39599953CDFC4C643C5C113 /* AggregationTests.swift in Sources */,
 				525D263819296EE5F859B164 /* AllScopeTests.swift in Sources */,
 				5695AC61D01451B18BE31194 /* BuildErrorReportTests.swift in Sources */,
+				24F1347B4D18F3AA220E63F2 /* ChangelogFeedTests.swift in Sources */,
 				64A70D20133C1347CC797C83 /* CommitAuthorTests.swift in Sources */,
 				D8DDDA3ED14B61EF084C9C0D /* CredentialStoreTests.swift in Sources */,
 				3C8DE367391D3D73327FE1AB /* DemoClockTests.swift in Sources */,
@@ -762,6 +781,7 @@
 				4D67FDCED0C88D07A02796B2 /* GitHubStateMappingTests.swift in Sources */,
 				07B64DF81DBFA035F3A497E5 /* LinkBuilderTests.swift in Sources */,
 				50458C3F6FDFA791DA82FB4D /* LocalizationTests.swift in Sources */,
+				162C4AF5FE588BD77FBC3768 /* MarkdownDocumentTests.swift in Sources */,
 				2383AFC83B87C1001D74CC9A /* NotificationActionsTests.swift in Sources */,
 				49C2EE31CFAB1309715A1B50 /* NotificationGatingTests.swift in Sources */,
 				4EE42767F2527F6DD4216259 /* PollCoalescingTests.swift in Sources */,
@@ -912,7 +932,7 @@
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 12;
+				CURRENT_PROJECT_VERSION = 13;
 				DEVELOPMENT_TEAM = 7S3F9767BM;
 				ENABLE_DEBUG_DYLIB = NO;
 				GENERATE_INFOPLIST_FILE = NO;
@@ -921,7 +941,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 1.0.7;
+				MARKETING_VERSION = 1.0.8;
 				PRODUCT_BUNDLE_IDENTIFIER = io.eightlines.deploybar.DeployBar;
 				SDKROOT = macosx;
 			};
@@ -935,7 +955,7 @@
 				CODE_SIGN_ENTITLEMENTS = DeployBar/DeployBar.entitlements;
 				CODE_SIGN_STYLE = Manual;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 12;
+				CURRENT_PROJECT_VERSION = 13;
 				ENABLE_HARDENED_RUNTIME = YES;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = DeployBar/Info.plist;
@@ -943,7 +963,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 1.0.7;
+				MARKETING_VERSION = 1.0.8;
 				OTHER_CODE_SIGN_FLAGS = "--timestamp";
 				PRODUCT_BUNDLE_IDENTIFIER = io.eightlines.deploybar.DeployBar;
 				SDKROOT = macosx;
