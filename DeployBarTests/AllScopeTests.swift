@@ -174,4 +174,144 @@ final class AllScopeTests: XCTestCase {
 
         XCTAssertEqual(store.availableScopes.map(\.teamId), ["Vorciu"])
     }
+
+    // MARK: - Poll budget (integration)
+
+    /// Notes every teamId a client was actually built for, in call order — the
+    /// only place a scope proves it was FETCHED this tick rather than replayed
+    /// from `lastGood` (a replayed scope never reaches `makeClient`).
+    private final class FetchRecorder {
+        private(set) var fetchedTeamIds: [String?] = []
+        func record(_ teamId: String?) { fetchedTeamIds.append(teamId) }
+        func reset() { fetchedTeamIds = [] }
+    }
+
+    /// Builds a GitHub CLI store, like `makeGitHubStore()`, but the client
+    /// factory reports every scope it is asked to build a client for into
+    /// `recorder`, so a test can see exactly which scopes a given `poll()`
+    /// actually fetched versus which it left to replay from `lastGood`.
+    private func makeGitHubStore(recorder: FetchRecorder) -> (DeploymentStore, Account, SettingsStore) {
+        let accountStore = AccountStore(defaults: UserDefaults(suiteName: UUID().uuidString)!,
+                                        credentials: InMemoryCredentialStore(),
+                                        detectCLI: { false }, reloadCLIToken: { nil },
+                                        detectGitHubCLI: { true }, reloadGitHubToken: { "tok" })
+        let github = accountStore.githubCLIAccount!
+        let settings = SettingsStore(defaults: UserDefaults(suiteName: UUID().uuidString)!)
+        let store = DeploymentStore(
+            accountStore: accountStore, settings: settings,
+            makeClient: { _, teamId in
+                recorder.record(teamId)
+                let key = teamId ?? "account"
+                return StubClient(deps: [Self.deployment(uid: "d_\(key)", name: "repo")],
+                                  projs: [Self.project(id: "p_\(key)", name: "repo")])
+            },
+            reloadToken: { nil }, authRetryBackoff: .zero)
+        return (store, github, settings)
+    }
+
+    private static func project(id: String, name: String) -> Project {
+        let json = """
+        {"id":"\(id)","name":"\(name)"}
+        """
+        return try! JSONDecoder().decode(Project.self, from: Data(json.utf8))
+    }
+
+    /// 14 organizations + the account scope = 15 scopes. At the default 30s
+    /// poll interval, GitHub's budget (5000/hr, ~6 requests/scope) affords 6
+    /// scopes per tick, so a full rotation takes ceil(15/6) = 3 ticks — enough
+    /// to force real rotation through `poll()`, not just the pure budget math.
+    private func makeRotatingGitHubStore(recorder: FetchRecorder) -> (DeploymentStore, Account) {
+        let (store, github, _) = makeGitHubStore(recorder: recorder)
+        store.setOrganizations((0..<14).map { Self.team(id: "org\($0)", slug: "org\($0)") },
+                               for: github.id)
+        return (store, github)
+    }
+
+    /// All 15 scope ids for `makeRotatingGitHubStore`, mirroring how
+    /// `scopesToPollThisTick` keys a scope.
+    private func allRotatingScopeRefs(accountId: UUID) -> Set<ScopeRef> {
+        Set([ScopeRef(accountId: accountId, teamId: nil)] +
+            (0..<14).map { ScopeRef(accountId: accountId, teamId: "org\($0)") })
+    }
+
+    /// Rotation actually rotates: consecutive polls fetch different subsets,
+    /// and every scope is fetched at least once within a full rotation.
+    func test_rotationCoversEveryScopeAcrossTicks() async {
+        let recorder = FetchRecorder()
+        let (store, github) = makeRotatingGitHubStore(recorder: recorder)
+
+        var fetchedPerTick: [Set<ScopeRef>] = []
+        for _ in 0..<3 {
+            recorder.reset()
+            await store.poll()
+            fetchedPerTick.append(Set(recorder.fetchedTeamIds.map {
+                ScopeRef(accountId: github.id, teamId: $0)
+            }))
+        }
+
+        // Each tick fetches exactly the budget (6), not every scope.
+        for fetched in fetchedPerTick {
+            XCTAssertEqual(fetched.count, 6, "each tick should fetch exactly the budget, not all 15 scopes")
+        }
+        // Consecutive ticks must not fetch the identical subset — that would
+        // mean the rotation isn't advancing.
+        XCTAssertNotEqual(fetchedPerTick[0], fetchedPerTick[1],
+                          "the second tick must rotate onto a different subset")
+        XCTAssertNotEqual(fetchedPerTick[1], fetchedPerTick[2],
+                          "the third tick must rotate onto a different subset again")
+
+        // Over a full rotation (3 ticks), every scope came round at least once.
+        let everFetched = fetchedPerTick.reduce(into: Set<ScopeRef>()) { $0.formUnion($1) }
+        XCTAssertEqual(everFetched, allRotatingScopeRefs(accountId: github.id),
+                       "every scope must be fetched at least once within a full rotation")
+    }
+
+    /// A scope deferred to a later tick keeps showing its last-known rows
+    /// instead of blinking out of the menu while it waits its turn.
+    func test_deferredScopeKeepsItsRowsBetweenTicks() async {
+        let recorder = FetchRecorder()
+        let (store, github) = makeRotatingGitHubStore(recorder: recorder)
+
+        await store.poll()
+        let firstTickFetched = Set(recorder.fetchedTeamIds)
+        // Every org scope that answered on tick 1 now has rows in the merge.
+        for teamId in firstTickFetched {
+            let uid = "d_\(teamId ?? "account")"
+            XCTAssertTrue(store.sourcedDeployments.contains { $0.deployment.uid == uid },
+                         "\(teamId ?? "account") should have rows after being fetched")
+        }
+
+        recorder.reset()
+        await store.poll()
+        let secondTickFetched = Set(recorder.fetchedTeamIds)
+
+        // A scope fetched on tick 1 but NOT tick 2 was deferred this time —
+        // its row must still be present, replayed from lastGood.
+        let deferredThisTick = firstTickFetched.subtracting(secondTickFetched)
+        XCTAssertFalse(deferredThisTick.isEmpty,
+                       "the budget (6 of 15) guarantees some tick-1 scope is deferred on tick 2")
+        for teamId in deferredThisTick {
+            let uid = "d_\(teamId ?? "account")"
+            XCTAssertTrue(store.sourcedDeployments.contains { $0.deployment.uid == uid },
+                         "\(teamId ?? "account") was deferred this tick but must keep its replayed rows")
+        }
+    }
+
+    /// A poll that mixes freshly-fetched scopes with replayed ones must not
+    /// show any deployment or project twice — the failure mode the `polled`
+    /// guard in `runPoll()` exists to prevent.
+    func test_noDuplicateRowsWhenReplayingDeferredScopes() async {
+        let recorder = FetchRecorder()
+        let (store, _) = makeRotatingGitHubStore(recorder: recorder)
+
+        await store.poll()
+        await store.poll()   // mixes fresh (tick 2) with replayed (deferred from tick 1) scopes
+
+        let deploymentUids = store.sourcedDeployments.map(\.deployment.uid)
+        XCTAssertEqual(deploymentUids.count, Set(deploymentUids).count,
+                       "no deployment should appear twice across fresh + replayed scopes")
+        let projectIds = store.sourcedProjects.map(\.project.id)
+        XCTAssertEqual(projectIds.count, Set(projectIds).count,
+                       "no project should appear twice across fresh + replayed scopes")
+    }
 }
