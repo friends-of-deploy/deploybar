@@ -133,6 +133,23 @@ final class PollCoalescingTests: XCTestCase {
         XCTAssertEqual(store.effectiveRefreshInterval(for: Self.gitHubAccount), 30)
     }
 
+    /// Regression for a bug caught in review: an invented, unrealistic Vercel
+    /// hourly ceiling (2000, with every scope costing an estimated 6 requests
+    /// like GitHub's per-repo fan-out) throttled a perfectly ordinary 3-scope
+    /// Vercel account down to a 60s effective interval, even though Vercel
+    /// rate-limits per-endpoint per-minute and a scope only costs 2 requests
+    /// (deployments + projects). A small Vercel account must never be throttled.
+    func test_smallVercelAccountIsNotThrottled() {
+        let (store, _, settings) = Self.makeStore(accounts: [Self.vercelAccount])
+        settings.pollIntervalSeconds = 30
+        store.setOrganizations([Team(id: "t1", slug: "t1", name: "t1"),
+                                Team(id: "t2", slug: "t2", name: "t2")],
+                               for: Self.vercelAccount.id)
+
+        // account + 2 teams = 3 scopes.
+        XCTAssertEqual(store.effectiveRefreshInterval(for: Self.vercelAccount), 30)
+    }
+
     // MARK: - Budget fixtures
 
     /// A fixed-identity GitHub account, mirroring `ScopeColorTests`' fixture —
@@ -141,6 +158,11 @@ final class PollCoalescingTests: XCTestCase {
     private static let gitHubAccount = Account(
         id: UUID(uuidString: "8B1C2D3E-0000-0000-0000-0000000000B1")!,
         provider: .github, label: "GitHub", source: .keychain(account: "gh-budget-fixture"))
+
+    /// A fixed-identity Vercel account, for the same reason.
+    private static let vercelAccount = Account(
+        id: UUID(uuidString: "8B1C2D3E-0000-0000-0000-0000000000B2")!,
+        provider: .vercel, label: "Vercel", source: .keychain(account: "vc-budget-fixture"))
 
     /// Builds a `DeploymentStore` around a fresh `AccountStore` seeded with the
     /// given accounts. `DeploymentStore.settings` is private, so the

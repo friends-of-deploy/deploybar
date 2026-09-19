@@ -682,15 +682,25 @@ final class DeploymentStore {
     /// remainder matters.
     @ObservationIgnored private var pollTick = 0
 
-    /// Estimated requests one scope costs per poll: a repository listing plus
-    /// the bounded per-repo runs fan-out that `GitHubClient` already performs.
-    private static let estimatedRequestsPerScope = 6
+    /// Estimated requests one scope costs per poll. GitHub fans out a
+    /// workflow-runs request per repository on top of the repo listing, so its
+    /// scopes cost several times what a Vercel scope does (one deployments
+    /// call, one projects call).
+    private func estimatedRequestsPerScope(for account: Account) -> Int {
+        switch account.provider {
+        case .github:                return 6
+        case .vercel, .azureDevOps:  return 2
+        }
+    }
 
     /// Provider hourly request ceiling used to size the budget.
     private func hourlyLimit(for account: Account) -> Int {
         switch account.provider {
         case .github:      return 5000     // authenticated REST limit
-        case .vercel:      return 2000     // conservative; Vercel is per-minute
+        // Vercel rate-limits per-endpoint per-minute, far more generously than
+        // an hourly figure implies — this is a safety rail against pathological
+        // scope counts, not a mirror of a documented quota.
+        case .vercel:      return 20000
         case .azureDevOps: return 1000
         }
     }
@@ -704,7 +714,7 @@ final class DeploymentStore {
             scopeCount: count,
             pollIntervalSeconds: settings.pollIntervalSeconds,
             hourlyLimit: hourlyLimit(for: account),
-            requestsPerScope: Self.estimatedRequestsPerScope)
+            requestsPerScope: estimatedRequestsPerScope(for: account))
         return ScopePollBudget.effectiveIntervalSeconds(
             scopeCount: count, budget: budget,
             pollIntervalSeconds: settings.pollIntervalSeconds)
@@ -720,7 +730,7 @@ final class DeploymentStore {
                 scopeCount: scopes.count,
                 pollIntervalSeconds: settings.pollIntervalSeconds,
                 hourlyLimit: hourlyLimit(for: account),
-                requestsPerScope: Self.estimatedRequestsPerScope)
+                requestsPerScope: estimatedRequestsPerScope(for: account))
             let ids = scopes.map { ScopeRef(accountId: accountId, teamId: $0.teamId).id }
             let chosen = Set(ScopePollBudget.slice(scopeIds: ids, budget: budget, tick: pollTick))
             return scopes.filter {

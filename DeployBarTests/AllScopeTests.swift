@@ -53,10 +53,6 @@ final class AllScopeTests: XCTestCase {
                                            Self.team(id: "t2", slug: "beta")])
         XCTAssertEqual(store.filter, .all)
 
-        // The poll budget (Task 6) may spread 3 scopes over more than one tick
-        // at the default poll interval, so poll twice to let a full rotation
-        // land before asserting every team showed up.
-        await store.poll()
         await store.poll()
 
         // personal + both teams, not just the active scope.
