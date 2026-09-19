@@ -1,7 +1,7 @@
 <img src="docs/banner.png" alt="DeployBar — monitor your deploys across all providers from the macOS menu bar" width="100%" />
 
 <h1>
-  <img src="docs/brand/icon-64.png" alt="" width="28" align="top" />
+  <img src="docs/brand/png/appicon-64.png" alt="" width="28" align="top" />
   DeployBar
 </h1>
 
@@ -20,11 +20,10 @@
 
   | | State | Reads as |
   |---|---|---|
-  | <picture><source media="(prefers-color-scheme: dark)" srcset="docs/brand/menubar-idle-dark.png" /><img src="docs/brand/menubar-idle.png" alt="" width="18" /></picture> | Idle | Everything dimmed, hollow node — nothing to report |
-  | <picture><source media="(prefers-color-scheme: dark)" srcset="docs/brand/menubar-ready-dark.png" /><img src="docs/brand/menubar-ready.png" alt="" width="18" /></picture> | Ready | Solid strands, filled node |
-  | <picture><source media="(prefers-color-scheme: dark)" srcset="docs/brand/menubar-building-dark.png" /><img src="docs/brand/menubar-building.png" alt="" width="18" /></picture> | Building | Dashed strand travelling into a hollow node |
-  | <picture><source media="(prefers-color-scheme: dark)" srcset="docs/brand/menubar-failure-dark.png" /><img src="docs/brand/menubar-failure.png" alt="" width="18" /></picture> | Failure | Strands broken, solid node with a knocked-out X |
-  | <picture><source media="(prefers-color-scheme: dark)" srcset="docs/brand/menubar-loggedout-dark.png" /><img src="docs/brand/menubar-loggedout.png" alt="" width="18" /></picture> | Signed out | Dashed outline, node gone |
+  | <picture><source media="(prefers-color-scheme: dark)" srcset="docs/brand/png/menubar-idle-dark.png" /><img src="docs/brand/png/menubar-idle-3x.png" alt="" width="18" /></picture> | Idle | Rocket upright, engine cold — nothing to report |
+  | <picture><source media="(prefers-color-scheme: dark)" srcset="docs/brand/png/menubar-deploying-dark.png" /><img src="docs/brand/png/menubar-deploying-3x.png" alt="" width="18" /></picture> | Deploying | Rocket climbing, exhaust trailing behind it |
+  | <picture><source media="(prefers-color-scheme: dark)" srcset="docs/brand/png/menubar-failed-dark.png" /><img src="docs/brand/png/menubar-failed-3x.png" alt="" width="18" /></picture> | Failure | Rocket upright with an alert badge on the hull |
+  | <picture><source media="(prefers-color-scheme: dark)" srcset="docs/brand/png/menubar-idle-dark.png" /><img src="docs/brand/png/menubar-idle-3x.png" alt="" width="18" /></picture> | Signed out | The idle rocket, greyed back |
 
 - Lives in the menu bar only; no Dock icon
 - Right-click the icon for quick Settings / Quit
@@ -243,23 +242,26 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines on reporting issues and su
 
 ## Brand
 
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/brand/lockup-horizontal-dark.png" />
-  <img src="docs/brand/lockup-horizontal.png" alt="DeployBar logo lockup" width="260" />
-</picture>
+<img src="docs/brand/png/appicon-256.png" alt="DeployBar app icon" width="128" />
 
-The mark is two strands running in from the left, converging into a single filled
-node — two providers, one place to look. Source artwork lives in [`docs/brand/`](docs/brand):
-lockups (horizontal, stacked, mono), the app icon, the document icon, and the five
-menu bar states as SVG.
+The mark is a rocket — a deploy going up. It carries the state by *shape*, so the
+same drawing reads in a light bar, a dark bar, and knocked out to white while the
+menu is open. Source artwork lives in [`docs/brand/`](docs/brand): the five master
+SVGs in `svg/`, exported PNGs in `png/`, favicons and the og image in `web/`, and
+`DeployBar.iconset` + `make-icns.sh` for the `.icns`.
 
-Palette: ink shell `#334155` → `#020617`, cold light `#60A5FA` at 45%, glyph `#FFFFFF`.
+Menu bar glyphs are template images — pure black plus alpha, on an 18 pt canvas
+with the glyph capped at 60 × 60 units of a 72-unit grid. Never tint them in code;
+macOS inverts and dims them for you. Nothing thinner than ~1.1 pt, and the window is
+knocked out of the hull rather than drawn on top, so it survives at 1×.
+
+Palette (app icon and marketing only): ink top `#334155` → ink base `#020617`, cold
+light `#60A5FA` at 45%, rocket `#FFFFFF`. Tile corner radius is 114 / 512 (22.3%).
 Status colors: green `#3AAA35`, amber `#F59E0B`, red `#E7332A`, tab accent `#3B82F6`.
 Type: Open Sans (700 wordmark, 600 labels, 400 body), JetBrains Mono for code.
 
-Keep at least the node's radius of clear space around the lockups. Don't recolour the
-glyph, add a stroke to the shell, or place the colour icon on a red or blue field —
-the blue lift disappears.
+Leave one rocket-width of clear space around the lockup. Colour lives inside the
+popover, never in the bar.
 
 ---
 

@@ -2,17 +2,17 @@
   "images": [
     {
       "idiom": "universal",
-      "filename": "menubar-idle.png",
+      "filename": "menubar-deploying.png",
       "scale": "1x"
     },
     {
       "idiom": "universal",
-      "filename": "menubar-idle-2x.png",
+      "filename": "menubar-deploying-2x.png",
       "scale": "2x"
     },
     {
       "idiom": "universal",
-      "filename": "menubar-idle-3x.png",
+      "filename": "menubar-deploying-3x.png",
       "scale": "3x"
     }
   ],

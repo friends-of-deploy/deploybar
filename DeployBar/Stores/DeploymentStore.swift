@@ -2,7 +2,10 @@ import AppKit
 import Foundation
 import Observation
 
-enum IconState: Equatable { case ready, building, failure, loggedOut, idle }
+/// What the menu bar glyph shows. There is deliberately no "ready" case: a
+/// successful deploy and a quiet bar draw the same upright rocket, so the
+/// distinction was invisible in the one place this type is used.
+enum IconState: Equatable { case building, failure, loggedOut, idle }
 
 /// Factory that builds a per-scope provider client for an account+team, pulling
 /// the token via the AccountStore. Returns nil for unimplemented providers (skipped).
@@ -405,15 +408,14 @@ final class DeploymentStore {
         if isLoggedOut { return .loggedOut }
         let base = Self.baseState(for: sourcedDeployments.map(\.deployment.state))
         if base == .building { return .building }   // running → orange, always shown
-        if alertAcknowledged { return .idle }       // green/red cleared until a new event
-        return base                                 // .failure / .ready / .idle
+        if alertAcknowledged { return .idle }       // red cleared until a new event
+        return base                                 // .failure / .idle
     }
 
-    /// Pure derivation (no acknowledgment): running > failure > ready.
+    /// Pure derivation (no acknowledgment): running > failure > idle.
     static func baseState(for states: [DeploymentState]) -> IconState {
         if states.contains(where: { $0 == .building || $0 == .queued }) { return .building }
         if states.contains(.error) { return .failure }
-        if states.contains(.ready) { return .ready }
         return .idle
     }
 

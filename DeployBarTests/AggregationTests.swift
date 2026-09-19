@@ -205,11 +205,13 @@ extension AggregationTests {
         XCTAssertEqual(store.iconState, .idle)       // cleared on open
     }
 
-    func test_iconReadyAlertClearsOnAcknowledge() async {
+    /// A successful deploy has nothing to report, so it draws the same upright
+    /// rocket as a quiet bar — before and after the popover is opened.
+    func test_iconReadyShowsIdle() async {
         let (store, _) = singleDeploymentStore(
             Fixtures.deployment(uid: "r1", name: "alpha", state: "READY"))
         await store.poll()
-        XCTAssertEqual(store.iconState, .ready)
+        XCTAssertEqual(store.iconState, .idle)
         store.acknowledge()
         XCTAssertEqual(store.iconState, .idle)
     }

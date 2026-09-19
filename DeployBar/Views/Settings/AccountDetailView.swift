@@ -70,25 +70,11 @@ struct AccountDetailView: View {
                                value: account.provider.displayName)
                 LabeledContent(String(localized: "Credential", comment: "Account detail label"),
                                value: AccountsSettingsTab.sourceCaption(for: account))
-                // One row per scope: the account itself, plus every team it can
-                // reach. Each is a separate source in "All sources", so each
-                // carries its own marker. They sit with the identity rows
-                // because a marker is part of how a source is identified.
-                ForEach(store.scopes(for: account)) { scope in
-                    LabeledContent(markerLabel(for: scope)) {
-                        ScopeColorPicker(
-                            scopeId: ScopeRef(accountId: account.id, teamId: scope.teamId).id,
-                            allScopeIds: store.allScopeIds,
-                            settings: settings,
-                            overrides: $scopeColors
-                        )
-                    }
-                }
             } footer: {
                 Text(account.isReadOnly
-                     ? String(localized: "Detected from your CLI login. Sign out in Terminal to disconnect it. The marker is the dot shown next to this source's rows in All sources.",
+                     ? String(localized: "Detected from your CLI login. Sign out in Terminal to disconnect it.",
                               comment: "Read-only account footer")
-                     : String(localized: "Stored in your Keychain. To replace the token, remove this account and add it again. The marker is the dot shown next to this source's rows in All sources.",
+                     : String(localized: "Stored in your Keychain. To replace the token, remove this account and add it again.",
                               comment: "Keychain account footer"))
                     .foregroundStyle(.secondary)
             }
@@ -102,19 +88,30 @@ struct AccountDetailView: View {
                     .foregroundStyle(.secondary)
             }
 
+            Section {
+                // One row per scope: the account itself, plus every team it can
+                // reach. Each is a separate source in "All sources", so each
+                // carries its own marker.
+                ForEach(store.scopes(for: account)) { scope in
+                    LabeledContent(scope.teamName ?? account.label) {
+                        ScopeColorPicker(
+                            scopeId: ScopeRef(accountId: account.id, teamId: scope.teamId).id,
+                            allScopeIds: store.allScopeIds,
+                            settings: settings,
+                            overrides: $scopeColors
+                        )
+                    }
+                }
+            } header: {
+                Text(String(localized: "Marker color", comment: "Account detail section header"))
+            } footer: {
+                Text(String(localized: "The dot shown next to rows from this source in All sources. Automatic picks a color from the source's identity.",
+                            comment: "Marker color section footer"))
+                    .foregroundStyle(.secondary)
+            }
         }
         .formStyle(.grouped)
         .onAppear { scopeColors = settings.scopeColorOverrides }
-    }
-
-    /// A marker row's label. With one scope the account name would just repeat
-    /// the "Name" row above it, so the generic wording carries the meaning.
-    private func markerLabel(for scope: Scope) -> String {
-        if let teamName = scope.teamName {
-            return String(localized: "Marker \u{2014} \(teamName)",
-                          comment: "Marker color row label for a team scope")
-        }
-        return String(localized: "Marker color", comment: "Marker color row label")
     }
 
     private var projects: [SourcedProject] {
