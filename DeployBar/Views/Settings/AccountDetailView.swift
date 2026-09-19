@@ -45,12 +45,17 @@ struct AccountDetailView: View {
             .padding(.horizontal, 16)
             .padding(.top, 12)
 
-            switch tab {
-            case .information:
-                informationForm
-            case .projects:
-                AccountProjectsForm(settings: settings, store: store, account: account)
+            Group {
+                switch tab {
+                case .information:
+                    informationForm
+                case .projects:
+                    AccountProjectsForm(settings: settings, store: store, account: account)
+                }
             }
+            // Keep a fixed gap below the tabs even when the form scrolls.
+            .clipped()
+            .padding(.top, 12)
         }
     }
 
