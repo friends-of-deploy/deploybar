@@ -16,8 +16,12 @@ Rules these follow, and that you must keep when editing:
 - **Template images.** Pure black + alpha, `isTemplate = true`. Never tint them
   in code — macOS inverts them for dark mode, dims them when the app is
   inactive, and knocks them out to white while the menu is open.
-- **18 pt canvas** (72-unit grid at 4×), glyph capped at 60 × 60 units.
-  Idle 33 × 45, Failed 48 × 53, Deploying 58 × 58.
+- **18 pt canvas** (72-unit grid at 4×). The glyph fills ~15 pt of that box, so
+  it sits at the same weight as the system's own status items (wifi and the
+  speaker measure 15 pt; airplay 17 pt). Rendered: idle 11.3 × 15.3 pt,
+  deploying 14.3 × 14.3 pt, failed 14.0 × 15.7 pt.
+  The three states are deliberately within ~1.4 pt of each other in height, so
+  the bar does not appear to twitch when the state changes.
 - **Static.** No animation, no timers, no frame swapping. macOS has no animated
   status item; you would have to swap frames on a `Timer`, and a glyph that
   twitches in the corner of your eye is a nuisance.

@@ -251,7 +251,8 @@ SVGs in `svg/`, exported PNGs in `png/`, favicons and the og image in `web/`, an
 `DeployBar.iconset` + `make-icns.sh` for the `.icns`.
 
 Menu bar glyphs are template images — pure black plus alpha, on an 18 pt canvas
-with the glyph capped at 60 × 60 units of a 72-unit grid. Never tint them in code;
+with the drawing filling ~15 pt of it, matching the weight of the system's own
+status items. Never tint them in code;
 macOS inverts and dims them for you. Nothing thinner than ~1.1 pt, and the window is
 knocked out of the hull rather than drawn on top, so it survives at 1×.
 
