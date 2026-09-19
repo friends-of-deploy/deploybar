@@ -54,6 +54,13 @@ struct AccountOrganizationsForm: View {
                 }
 
                 Section {
+                    // Rendered eagerly, unlike `AccountProjectsForm`'s organization
+                    // picker: a non-lazy `Form` with ~350 project rows crawled badly,
+                    // which is why that form narrows to one owner before rendering
+                    // anything. An account's organizations are tens, not hundreds, so
+                    // that cost isn't paid here — the filter field above is the escape
+                    // hatch for scanning a longer list. If an account's organization
+                    // count grows into the hundreds, narrow this the same way.
                     ForEach(filtered) { org in
                         row(for: org)
                     }

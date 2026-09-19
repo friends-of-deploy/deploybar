@@ -23,6 +23,11 @@ struct ScopeColorPicker: View {
     /// Colour slot shown when no override is set. Organizations pass their
     /// account's slot here so "Automatic" previews what the row will really
     /// look like, rather than a colour derived from the org's own id.
+    ///
+    /// The caller is responsible for resolving inheritance (via
+    /// `DeploymentStore.scopeColorIndex`) before passing it in — this view's job
+    /// is to preview a colour it is handed, not to know the inheritance rule, so
+    /// it deliberately stays free of a `DeploymentStore` dependency.
     var automaticIndex: Int? = nil
 
     @State private var isPresentingPalette = false
