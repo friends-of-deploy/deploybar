@@ -187,4 +187,39 @@ final class GitHubClientTests: XCTestCase {
             XCTAssertEqual(error as? ProviderClientError, .unauthorized)
         }
     }
+
+    // MARK: - Organization scoping
+
+    func test_accountScopeListsOwnedRepositoriesOnly() async throws {
+        var paths: [String] = []
+        var queries: [String] = []
+        let client = GitHubClient(token: "t") { req in
+            paths.append(req.url?.path ?? "")
+            queries.append(req.url?.query ?? "")
+            return (Data("[]".utf8), Self.ok(req))
+        }
+
+        _ = try await client.projects()
+
+        XCTAssertEqual(paths.first, "/user/repos")
+        XCTAssertTrue(queries.first?.contains("affiliation=owner") ?? false,
+                      "the account scope must not re-list org repos: \(queries.first ?? "")")
+        XCTAssertFalse(queries.first?.contains("organization_member") ?? true)
+    }
+
+    func test_organizationScopeListsThatOrgsRepositories() async throws {
+        var paths: [String] = []
+        let client = GitHubClient(token: "t", org: "Vorciu") { req in
+            paths.append(req.url?.path ?? "")
+            return (Data("[]".utf8), Self.ok(req))
+        }
+
+        _ = try await client.projects()
+
+        XCTAssertEqual(paths.first, "/orgs/Vorciu/repos")
+    }
+
+    static func ok(_ req: URLRequest) -> HTTPURLResponse {
+        HTTPURLResponse(url: req.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!
+    }
 }

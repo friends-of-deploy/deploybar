@@ -15,6 +15,10 @@ struct GitHubClient: Sendable {
     private static let decoder = JSONDecoder()
 
     let token: String
+    /// Organization this client is scoped to, or nil for the account itself.
+    /// A scoped client lists only that org's repositories, so a disabled
+    /// organization costs no requests at all.
+    let org: String?
     /// Number of most-recently-pushed repos to fetch workflow runs for per poll.
     let runFanoutLimit: Int
     let fetch: Fetch
@@ -23,9 +27,11 @@ struct GitHubClient: Sendable {
     private let maxRepoPages = 10
 
     init(token: String,
+         org: String? = nil,
          runFanoutLimit: Int = 20,
          fetch: @escaping Fetch = { try await URLSession.shared.data(for: $0) }) {
         self.token = token
+        self.org = org
         self.runFanoutLimit = max(1, runFanoutLimit)
         self.fetch = fetch
     }
@@ -76,6 +82,13 @@ struct GitHubClient: Sendable {
         return Array(merged.0.sorted { $0.createdAt > $1.createdAt }.prefix(limit))
     }
 
+    /// Confirms the token belongs to a GitHub account without loading repositories.
+    func authenticatedLogin() async throws -> String {
+        struct Identity: Decodable { let login: String }
+        let data = try await get(path: "/user", query: [])
+        return try Self.decoder.decode(Identity.self, from: data).login
+    }
+
     // MARK: - Requests
 
     /// Lists the authenticated user's repositories, most recently pushed first.
@@ -83,12 +96,22 @@ struct GitHubClient: Sendable {
     private func repositories(maxPages: Int, perPage: Int) async throws -> [GHRepo] {
         var all: [GHRepo] = []
         for page in 1...max(1, maxPages) {
-            let data = try await get(path: "/user/repos", query: [
+            var query = [
                 URLQueryItem(name: "sort", value: "pushed"),
                 URLQueryItem(name: "per_page", value: String(perPage)),
                 URLQueryItem(name: "page", value: String(page)),
-                URLQueryItem(name: "affiliation", value: "owner,collaborator,organization_member"),
-            ])
+            ]
+            let path: String
+            if let org {
+                path = "/orgs/\(org)/repos"
+            } else {
+                path = "/user/repos"
+                // Owned repos only. Organization repositories arrive through
+                // their own scope; listing them here too would show every repo
+                // twice and give it the account's marker instead of the org's.
+                query.append(URLQueryItem(name: "affiliation", value: "owner"))
+            }
+            let data = try await get(path: path, query: query)
             let batch = try Self.decoder.decode([GHRepo].self, from: data)
             all.append(contentsOf: batch)
             if batch.count < perPage { break }
