@@ -20,6 +20,16 @@ enum ScopePollBudget {
     ///
     /// `requestsPerScope` is an estimate of what one scope costs: for GitHub
     /// that is a repo listing plus the bounded per-repo runs fan-out.
+    ///
+    /// The result is always floored at 1, even when a single scope's cost
+    /// already exceeds `hourlyLimit` for the tick cadence implied by
+    /// `pollIntervalSeconds`. In that starved case this function cannot keep
+    /// usage under `hourlyLimit` — the floor wins and actual hourly usage
+    /// will exceed the limit. That's deliberate: a budget of zero would stall
+    /// the app entirely, which is worse than a scope polling too often. This
+    /// case is not expected to be reached in practice, since `hourlyLimit` is
+    /// one of a few hardcoded values (5000/2000/1000) and
+    /// `pollIntervalSeconds` is floored at 10 by `SettingsStore`.
     static func requestsPerTick(scopeCount: Int,
                                 pollIntervalSeconds: Int,
                                 hourlyLimit: Int,
@@ -52,8 +62,12 @@ enum ScopePollBudget {
     static func effectiveIntervalSeconds(scopeCount: Int,
                                          budget: Int,
                                          pollIntervalSeconds: Int) -> Int {
-        guard scopeCount > 0, budget > 0 else { return pollIntervalSeconds }
+        let interval = max(1, pollIntervalSeconds)
+        // A non-positive budget isn't a meaningful rotation to compute over;
+        // fall back to the plain interval as a defensive default rather than
+        // dividing by a non-positive number.
+        guard scopeCount > 0, budget > 0 else { return interval }
         let ticksPerRotation = Int((Double(scopeCount) / Double(budget)).rounded(.up))
-        return pollIntervalSeconds * max(1, ticksPerRotation)
+        return interval * max(1, ticksPerRotation)
     }
 }

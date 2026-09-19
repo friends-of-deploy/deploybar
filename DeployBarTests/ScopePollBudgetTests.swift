@@ -29,6 +29,21 @@ final class ScopePollBudgetTests: XCTestCase {
         XCTAssertEqual(budget, 1)
     }
 
+    func test_floorWinsWhenEvenOneScopeExceedsTheLimit() {
+        // 360 ticks/hour * 50 requests/scope = 18000 req/hour for a single
+        // scope, already 300x over the 60/hour limit. The function still
+        // floors the budget at 1 rather than returning 0 — liveness over the
+        // limit, by design. This pins that the resulting hourly usage (1
+        // scope polled every tick * 360 ticks/hour * 50 requests = 18000)
+        // deliberately exceeds hourlyLimit rather than respecting it.
+        let budget = ScopePollBudget.requestsPerTick(
+            scopeCount: 500, pollIntervalSeconds: 10, hourlyLimit: 60, requestsPerScope: 50)
+        XCTAssertEqual(budget, 1)
+        let ticksPerHour = 3600 / 10
+        let resultingHourlyUsage = budget * ticksPerHour * 50
+        XCTAssertGreaterThan(resultingHourlyUsage, 60)
+    }
+
     // MARK: slice
 
     func test_sliceReturnsEveryScopeWhenBudgetCoversThem() {
@@ -70,5 +85,21 @@ final class ScopePollBudgetTests: XCTestCase {
         // 40 scopes, 6 per tick → 7 ticks per rotation → 210s.
         XCTAssertEqual(ScopePollBudget.effectiveIntervalSeconds(
             scopeCount: 40, budget: 6, pollIntervalSeconds: 30), 210)
+    }
+
+    func test_effectiveIntervalClampsNonPositivePollInterval() {
+        // A zero or negative interval is nonsensical; clamp to 1s like
+        // requestsPerTick does, rather than passing it straight through.
+        XCTAssertEqual(ScopePollBudget.effectiveIntervalSeconds(
+            scopeCount: 3, budget: 3, pollIntervalSeconds: 0), 1)
+        XCTAssertEqual(ScopePollBudget.effectiveIntervalSeconds(
+            scopeCount: 3, budget: 3, pollIntervalSeconds: -5), 1)
+    }
+
+    func test_effectiveIntervalFallsBackToClampedIntervalForNegativeBudget() {
+        // A negative budget isn't a meaningful rotation; the defensive
+        // fallback still clamps the interval it returns.
+        XCTAssertEqual(ScopePollBudget.effectiveIntervalSeconds(
+            scopeCount: 3, budget: -1, pollIntervalSeconds: 0), 1)
     }
 }
