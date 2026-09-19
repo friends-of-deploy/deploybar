@@ -20,6 +20,11 @@ struct GitHubOrgsClient: Sendable {
     }
 
     func organizations() async throws -> [Team] {
+        // One page of 100, unpaginated — no Link-header follow-up. The spec's
+        // motivating case is ~30 orgs, and this mirrors the sibling
+        // `TeamsClient`, which doesn't paginate either. A user in more than 100
+        // organizations will silently see only this first page; if that turns
+        // out to matter, this is where to add Link-header pagination.
         var req = URLRequest(url: URL(string: "https://api.github.com/user/orgs?per_page=100")!)
         req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         req.setValue("application/vnd.github+json", forHTTPHeaderField: "Accept")

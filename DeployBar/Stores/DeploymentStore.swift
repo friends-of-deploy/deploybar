@@ -577,7 +577,7 @@ final class DeploymentStore {
         filter = .scope(accountId: accountId, teamId: teamId)
         scopeName = scopeName(accountId: accountId, teamId: teamId) ?? "all"
         if account(accountId)?.source == .vercelCLI, teamId != currentTeamId {
-            await switchTeam(teamId)
+            switchTeam(teamId)
         } else {
             applyDisplayFilter()
         }
@@ -596,17 +596,25 @@ final class DeploymentStore {
 
     // MARK: - Legacy team switching (thin compatibility, CLI/first account)
 
-    /// Switch the active team for the CLI account at runtime. `availableScopes`
-    /// polls a single scope per account (the CLI account's `currentTeamId`), so
-    /// changing the team here changes what gets fetched on the next poll. Persists
-    /// the choice, silently re-seeds the notification baseline, and re-polls.
+    /// Switch the active team for the CLI account at runtime. Records the
+    /// choice, persists it, silently re-seeds the notification baseline, and
+    /// re-derives the displayed rows from the existing merge.
+    ///
+    /// No poll here: `availableScopes` fans out to every enabled scope of every
+    /// account (see `allScopes(for:)`), not just the CLI account's current team,
+    /// so every scope's rows are already being polled and already sit in
+    /// `unfilteredDeployments`/`unfilteredProjects`. `currentTeamId` only still
+    /// matters in two narrower places — the pre-load fallback in
+    /// `allScopes(for:)` for an account whose orgs haven't loaded yet, and
+    /// client construction — so changing it here is purely a display-filter
+    /// change, and `applyDisplayFilter()` below is sufficient.
     func switchScope(teamId: String?, scopeName: String) async {
         guard teamId != currentTeamId else { return }
         self.scopeName = scopeName
-        await switchTeam(teamId)
+        switchTeam(teamId)
     }
 
-    private func switchTeam(_ teamId: String?) async {
+    private func switchTeam(_ teamId: String?) {
         currentTeamId = teamId
         settings.selectedTeamId = teamId ?? "__personal__"
         previousSnapshots = nil               // silent re-seed for the new scope
@@ -615,7 +623,6 @@ final class DeploymentStore {
         // them from the unfiltered merge, so the popover shows the new scope's
         // known rows immediately instead of flashing empty until the poll lands.
         applyDisplayFilter()
-        await poll()
     }
 
     // MARK: - Lifecycle
@@ -931,7 +938,21 @@ final class DeploymentStore {
         // Prune per-account state for accounts that are no longer connected,
         // preventing unbounded growth when accounts are removed.
         let liveIds = Set(accountStore.accounts.map(\.id))
-        lastGood = lastGood.filter { liveIds.contains($0.key.accountId) }
+        // Also drop scopes that no longer exist at all — e.g. a GitHub org the
+        // user has left, which vanishes from orgsByAccount but (unlike a
+        // disabled scope, evicted by scopeEnablementChanged) was never told to
+        // clean up after itself. It can never resurface (the replay loop above
+        // guards on `availableScopes.contains`), so left unpruned it would sit
+        // in `lastGood` for the process lifetime.
+        //
+        // Filtering against `availableScopes` is safe for scopes merely
+        // deferred to a later tick by the poll budget: the replay loop above
+        // already established that a deferred scope is still present in
+        // `availableScopes` (only `polled`, the per-tick subset, excludes it),
+        // so this prune cannot evict a scope that still needs its `lastGood`
+        // replayed next tick.
+        let liveScopes = Set(availableScopes.map { ScopeRef(accountId: $0.account.id, teamId: $0.teamId) })
+        lastGood = lastGood.filter { liveIds.contains($0.key.accountId) && liveScopes.contains($0.key) }
         consecutiveAuthFailures = consecutiveAuthFailures.filter { liveIds.contains($0.key.accountId) }
     }
 
