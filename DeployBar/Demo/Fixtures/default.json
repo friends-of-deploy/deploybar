@@ -11,7 +11,17 @@
       ]
     },
     {"key": "side", "provider": "vercel", "label": "Side Projects", "sourceKind": "keychain"},
-    {"key": "gh", "provider": "github", "label": "GitHub Actions", "sourceKind": "githubCLI"}
+    {
+      "key": "gh",
+      "provider": "github",
+      "label": "GitHub Actions",
+      "sourceKind": "githubCLI",
+      "teams": [
+        {"id": "northwind-oss", "slug": "northwind-oss", "name": "northwind-oss"},
+        {"id": "harbour-studio", "slug": "harbour-studio", "name": "harbour-studio"},
+        {"id": "kestrel-labs", "slug": "kestrel-labs", "name": "kestrel-labs"}
+      ]
+    }
   ],
 
   "projects": [
