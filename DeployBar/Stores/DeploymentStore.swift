@@ -1,6 +1,7 @@
 import AppKit
 import Foundation
 import Observation
+import os
 
 /// What the menu bar glyph shows. There is deliberately no "ready" case: a
 /// successful deploy and a quiet bar draw the same upright rocket, so the
@@ -44,7 +45,39 @@ final class DeploymentStore {
     private(set) var isLoadingInitial = true
 
     // MARK: Legacy / shared surface (still consumed by the current app + tests)
-    var teams: [Team] = []
+
+    /// Organizations per account: Vercel teams and GitHub orgs alike. Replaces
+    /// the single global team list, which could only ever describe one account.
+    private(set) var orgsByAccount: [UUID: [Team]] = [:]
+
+    /// The CLI account's organizations, under the old name. Kept settable so the
+    /// existing tests that seed a team list keep working; both paths funnel
+    /// through `orgsByAccount`, so there is still one source of truth.
+    var teams: [Team] {
+        get {
+            guard let cli = accountStore.cliAccount else { return [] }
+            return orgsByAccount[cli.id] ?? []
+        }
+        set {
+            guard let cli = accountStore.cliAccount else { return }
+            setOrganizations(newValue, for: cli.id)
+        }
+    }
+
+    /// Organizations known for a given account, or empty until fetched/cached.
+    func organizations(for account: Account) -> [Team] {
+        orgsByAccount[account.id] ?? []
+    }
+
+    /// Records a freshly fetched organization list and caches it, so the next
+    /// launch can label and poll every scope before the network answers.
+    func setOrganizations(_ orgs: [Team], for accountId: UUID) {
+        orgsByAccount[accountId] = orgs
+        var cache = settings.cachedOrgs
+        cache[accountId] = orgs
+        settings.cachedOrgs = cache
+    }
+
     var user: VercelUser?
     var lastUpdated: Date?
     var scopeName: String
@@ -138,7 +171,7 @@ final class DeploymentStore {
                 return VercelClient(credentials: VercelCredentials(token: token, teamId: teamId),
                                     fetch: accountStore.vercelFetch(for: account))
             case .github:
-                return GitHubClient(token: token)
+                return GitHubClient(token: token, org: teamId)
             case .azureDevOps:
                 return nil        // unimplemented provider → skipped silently
             }
@@ -152,10 +185,12 @@ final class DeploymentStore {
                 self.userClient = UserClient(token: token, fetch: accountStore.vercelFetch(for: cli))
                 self.cliBaseToken = token
             }
-            // Start from the cached team list so the very first poll already covers
-            // every team and rows carry real names — `loadTeams` refreshes it.
-            self.teams = settings.cachedTeams
+            // Start from the cached org/team lists so the very first poll already
+            // covers every scope and rows carry real names — `loadTeams` and
+            // `loadGitHubOrganizations` refresh them.
+            settings.migrateCachedTeams(cliAccountId: cli.id)
         }
+        self.orgsByAccount = settings.cachedOrgs
 
         restoreCachedRows()
     }
@@ -238,21 +273,18 @@ final class DeploymentStore {
 
     // MARK: - Scopes
 
-    /// The scopes actually polled each tick.
+    /// The scopes actually polled each tick: every enabled scope of every
+    /// account — the account itself plus each of its organizations.
     ///
-    /// In `.all` we fan out over EVERY Vercel team (plus personal), so the
+    /// No longer conditional on the provider. A GitHub organization and a
+    /// Vercel team are the same kind of source, and both fan out here so the
     /// cross-provider overview is complete rather than showing only whichever
-    /// team happens to be active. Any other filter polls just the active scope,
-    /// keeping the request count at one per account.
+    /// one happens to be active.
     var availableScopes: [Scope] {
         accountStore.accounts.flatMap { account -> [Scope] in
-            guard filter == .all, account.source == .vercelCLI, !teams.isEmpty else {
-                let teamId = account.source == .vercelCLI ? currentTeamId : nil
-                return [Scope(account: account, teamId: teamId, teamName: nil)]
-            }
-            let personal = Scope(account: account, teamId: nil, teamName: nil)
-            return [personal] + teams.map { team in
-                Scope(account: account, teamId: team.id, teamName: team.slug ?? team.name)
+            allScopes(for: account).filter { scope in
+                settings.isScopeEnabled(
+                    ScopeRef(accountId: account.id, teamId: scope.teamId).id)
             }
         }
     }
@@ -294,19 +326,28 @@ final class DeploymentStore {
         return ordered + orphans
     }
 
-    /// Scopes the user can SELECT for an account in the dropdown. For a Vercel CLI
-    /// account this is personal + every team it belongs to (from the loaded `teams`
-    /// list); for other accounts, just their single scope. Distinct from
-    /// `availableScopes`, which is the one active scope actually polled.
+    /// Scopes the user can SELECT for an account, including disabled ones —
+    /// Settings has to list an organization in order to switch it back on.
+    /// Distinct from `availableScopes`, which excludes disabled scopes.
     func scopes(for account: Account) -> [Scope] {
-        guard account.source == .vercelCLI, !teams.isEmpty else {
-            return availableScopes.filter { $0.account.id == account.id }
+        allScopes(for: account)
+    }
+
+    /// Every scope of an account: the account itself, plus one per organization
+    /// (Vercel team or GitHub org alike). Includes disabled scopes; callers that
+    /// only want polled scopes filter through `settings.isScopeEnabled`.
+    private func allScopes(for account: Account) -> [Scope] {
+        let orgs = organizations(for: account)
+        // A Vercel CLI account with no fetched teams still polls whichever team
+        // the CLI itself is pointed at.
+        guard !orgs.isEmpty else {
+            let teamId = account.source == .vercelCLI ? currentTeamId : nil
+            return [Scope(account: account, teamId: teamId, teamName: nil)]
         }
-        let personal = Scope(account: account, teamId: nil, teamName: nil)
-        let teamScopes = teams.map { team in
-            Scope(account: account, teamId: team.id, teamName: team.slug ?? team.name)
+        let accountScope = Scope(account: account, teamId: nil, teamName: nil)
+        return [accountScope] + orgs.map { org in
+            Scope(account: account, teamId: org.id, teamName: org.slug ?? org.name)
         }
-        return [personal] + teamScopes
     }
 
     /// Look up an account by UUID.
@@ -350,8 +391,8 @@ final class DeploymentStore {
         guard let acct = account(accountId) else { return nil }
         guard let tid = teamId else { return acct.label }
         // No marker at all until the name is known — a raw "team_xasdf…" id is
-        // noise, and the team list may still be loading on a cold first launch.
-        return teamDisplayName(tid)
+        // noise, and the org/team list may still be loading on a cold first launch.
+        return teamDisplayName(tid, accountId: accountId)
     }
 
     /// Human-readable name for a scope, e.g. the team name or "personal".
@@ -360,7 +401,7 @@ final class DeploymentStore {
     func scopeName(accountId: UUID, teamId: String?) -> String? {
         guard let acct = account(accountId) else { return nil }
         guard let tid = teamId else { return acct.label }
-        return teamDisplayName(tid) ?? tid
+        return teamDisplayName(tid, accountId: accountId) ?? tid
     }
 
     /// The organization a project belongs to, for the `owner/project` title.
@@ -371,7 +412,7 @@ final class DeploymentStore {
     /// the user's own username, so use that — giving "konrad-8lines/social"
     /// rather than "Vercel CLI/social".
     func projectOwnerLabel(accountId: UUID, teamId: String?) -> String? {
-        if let teamId { return teamDisplayName(teamId) }
+        if let teamId { return teamDisplayName(teamId, accountId: accountId) }
         guard let acct = account(accountId) else { return nil }
         // GitHub repos already carry their owner in the project name, so only
         // Vercel's personal scope needs the username substituted in.
@@ -384,13 +425,14 @@ final class DeploymentStore {
     func rowScopeLabelIgnoringFilter(accountId: UUID, teamId: String?) -> String? {
         guard let acct = account(accountId) else { return nil }
         guard let tid = teamId else { return acct.label }
-        return teamDisplayName(tid)
+        return teamDisplayName(tid, accountId: accountId)
     }
 
-    /// The team's slug/name, or nil when the team isn't in the (possibly still
-    /// loading) list.
-    private func teamDisplayName(_ teamId: String) -> String? {
-        guard let team = teams.first(where: { $0.id == teamId }) else { return nil }
+    /// The organization's slug/name for the given account, or nil when the
+    /// org isn't in the (possibly still loading) list.
+    private func teamDisplayName(_ teamId: String, accountId: UUID) -> String? {
+        guard let team = (orgsByAccount[accountId] ?? []).first(where: { $0.id == teamId })
+        else { return nil }
         return team.slug ?? team.name
     }
 
@@ -473,16 +515,37 @@ final class DeploymentStore {
     // MARK: - Teams / user (account-level; CLI/first account)
 
     func loadTeams() async {
-        guard let teamsClient else { return }
+        guard let teamsClient, let cli = accountStore.cliAccount else { return }
         // A failed fetch keeps the cached list rather than blanking scope names.
         guard let fetched = try? await teamsClient.teams() else { return }
         let changed = fetched.map(\.id) != teams.map(\.id)
-        self.teams = fetched
-        settings.cachedTeams = fetched
+        setOrganizations(fetched, for: cli.id)
         // In "All" the team list defines what gets polled. Re-poll only when the
         // set actually changed — with a warm cache it usually hasn't.
         if filter == .all, changed {
             await poll()
+        }
+    }
+
+    /// Loads each GitHub account's organizations so they become scopes. A
+    /// failure is non-fatal: the account keeps its single account-level scope,
+    /// exactly as before this existed.
+    func loadGitHubOrganizations() async {
+        for account in accountStore.accounts where account.provider == .github {
+            guard let token = accountStore.token(for: account) else { continue }
+            do {
+                let orgs = try await GitHubOrgsClient(token: token).organizations()
+                let changed = orgs.map(\.id) != organizations(for: account).map(\.id)
+                setOrganizations(orgs, for: account.id)
+                // Mirrors `loadTeams`: a newly discovered organization must not
+                // wait for the next timer tick before it is polled.
+                if filter == .all, changed {
+                    await poll()
+                }
+            } catch {
+                os_log("github org fetch failed for %{public}@: %{public}@",
+                       account.label, error.localizedDescription)
+            }
         }
     }
 
@@ -545,13 +608,13 @@ final class DeploymentStore {
 
     /// Idempotent: the app starts the store at launch, and the popover's
     /// `.task` also calls it the first time it appears. Only the first call
-    /// requests notification authorization and schedules the poll timer.
+    /// registers notification actions and schedules the poll timer.
     @ObservationIgnored private var hasStarted = false
 
     func start() {
         guard !hasStarted else { return }
         hasStarted = true
-        notifier.requestAuthorization()
+        notifier.center.setNotificationCategories([NotificationManager.deploymentCategory])
         // Default view is "All": every connected provider, and every Vercel team,
         // in one list. `scopeName` stays "all" and the filter is left untouched.
         //
@@ -559,6 +622,7 @@ final class DeploymentStore {
         // team; `loadTeams` re-polls once the full list arrives (see loadTeams()).
         Task { await poll() }
         Task { await loadTeams() }
+        Task { await loadGitHubOrganizations() }
         Task { await loadUser() }
         scheduleTimer()
         observeWake()

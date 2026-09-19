@@ -116,4 +116,62 @@ final class AllScopeTests: XCTestCase {
         await store.select(accountId: cli.id, teamId: "t1")
         XCTAssertNil(store.rowScopeLabel(accountId: cli.id, teamId: "t1"))
     }
+
+    // MARK: - Organizations as scopes (GitHub)
+
+    /// Builds a store around a GitHub CLI account (rather than the Vercel CLI
+    /// account the rest of this file uses), plus the `SettingsStore` behind it
+    /// so a test can reach `setScopeEnabled` directly — `DeploymentStore.settings`
+    /// is private, so the store built in `makeStore(teams:)` can't expose it;
+    /// this helper hands back the same instance it wired in instead.
+    private func makeGitHubStore() -> (DeploymentStore, Account, SettingsStore) {
+        let accountStore = AccountStore(defaults: UserDefaults(suiteName: UUID().uuidString)!,
+                                        credentials: InMemoryCredentialStore(),
+                                        detectCLI: { false }, reloadCLIToken: { nil },
+                                        detectGitHubCLI: { true }, reloadGitHubToken: { "tok" })
+        let github = accountStore.githubCLIAccount!
+        let settings = SettingsStore(defaults: UserDefaults(suiteName: UUID().uuidString)!)
+        let store = DeploymentStore(
+            accountStore: accountStore, settings: settings,
+            makeClient: { _, teamId in
+                let key = teamId ?? "account"
+                return StubClient(deps: [Self.deployment(uid: "d_\(key)", name: "repo")], projs: [])
+            },
+            reloadToken: { nil }, authRetryBackoff: .zero)
+        return (store, github, settings)
+    }
+
+    func test_gitHubAccountFansOutIntoOneScopePerOrganization() async {
+        let (store, github, _) = makeGitHubStore()
+        store.setOrganizations([Self.team(id: "Vorciu", slug: "Vorciu"),
+                                Self.team(id: "8lines", slug: "8lines")],
+                               for: github.id)
+
+        let scopes = store.scopes(for: github)
+
+        // The account itself, then one scope per organization.
+        XCTAssertEqual(scopes.map(\.teamId), [nil, "Vorciu", "8lines"])
+    }
+
+    func test_disabledOrganizationIsNotPolled() async {
+        let (store, github, settings) = makeGitHubStore()
+        store.setOrganizations([Self.team(id: "Vorciu", slug: "Vorciu"),
+                                Self.team(id: "8lines", slug: "8lines")],
+                               for: github.id)
+        let disabled = ScopeRef(accountId: github.id, teamId: "8lines").id
+        settings.setScopeEnabled(false, for: disabled)
+
+        XCTAssertFalse(store.availableScopes.contains { $0.teamId == "8lines" },
+                       "a disabled organization must cost no request")
+        // Still selectable in Settings, so it can be switched back on.
+        XCTAssertTrue(store.scopes(for: github).contains { $0.teamId == "8lines" })
+    }
+
+    func test_disablingTheAccountScopeLeavesOrganizationsPolled() async {
+        let (store, github, settings) = makeGitHubStore()
+        store.setOrganizations([Self.team(id: "Vorciu", slug: "Vorciu")], for: github.id)
+        settings.setScopeEnabled(false, for: ScopeRef(accountId: github.id, teamId: nil).id)
+
+        XCTAssertEqual(store.availableScopes.map(\.teamId), ["Vorciu"])
+    }
 }
