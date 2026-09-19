@@ -2,6 +2,20 @@
 <rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle">
   <channel>
     <item>
+      <title>1.1.1</title>
+      <pubDate>Sat, 19 Sep 2026 19:28:01 +0000</pubDate>
+      <sparkle:version>16</sparkle:version>
+      <sparkle:shortVersionString>1.1.1</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <description sparkle:format="markdown"><![CDATA[
+**Full Changelog**: https://github.com/friends-of-deploy/deploybar/compare/v1.1.0...v1.1.1
+]]></description>
+      <enclosure url="https://github.com/friends-of-deploy/deploybar/releases/download/v1.1.1/DeployBar-1.1.1.zip"
+                 length="3045981"
+                 type="application/octet-stream"
+                 sparkle:edSignature="yMoFrfpUH3lhP/1M9hkGGsSXYUo9ThWPFhJM26/VQ8EgRcUq+hpFpiZotVJnhjTYsNQlbGXXnAhgDLRlaYhiBw==" />
+    </item>
+    <item>
       <title>1.1.0</title>
       <pubDate>Sat, 19 Sep 2026 19:17:35 +0000</pubDate>
       <sparkle:version>15</sparkle:version>
