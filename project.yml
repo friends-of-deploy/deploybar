@@ -70,8 +70,8 @@ targets:
         # Assets.xcassets is picked up automatically from the `DeployBar` source
         # directory; this names the app icon set inside it.
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
-        MARKETING_VERSION: "1.0.8"
-        CURRENT_PROJECT_VERSION: "13"
+        MARKETING_VERSION: "1.0.9"
+        CURRENT_PROJECT_VERSION: "14"
         # Sparkle's keys are set under `info:` below, not here: the
         # INFOPLIST_KEY_ prefix only carries Apple's known keys into a
         # generated plist, and silently drops anything else.
