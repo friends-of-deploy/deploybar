@@ -4,6 +4,7 @@ import SwiftUI
 /// the pane short instead of one long scroll.
 enum AccountDetailTab: String, CaseIterable, Identifiable, Sendable {
     case information
+    case organizations
     case projects
 
     var id: String { rawValue }
@@ -12,6 +13,8 @@ enum AccountDetailTab: String, CaseIterable, Identifiable, Sendable {
         switch self {
         case .information:
             return String(localized: "Information", comment: "Account detail segment title")
+        case .organizations:
+            return String(localized: "Organizations", comment: "Account detail segment title")
         case .projects:
             return String(localized: "Projects", comment: "Account detail segment title")
         }
@@ -49,6 +52,8 @@ struct AccountDetailView: View {
                 switch tab {
                 case .information:
                     informationForm
+                case .organizations:
+                    AccountOrganizationsForm(settings: settings, store: store, account: account)
                 case .projects:
                     AccountProjectsForm(settings: settings, store: store, account: account)
                 }
@@ -89,23 +94,17 @@ struct AccountDetailView: View {
             }
 
             Section {
-                // One row per scope: the account itself, plus every team it can
-                // reach. Each is a separate source in "All sources", so each
-                // carries its own marker.
-                ForEach(store.scopes(for: account)) { scope in
-                    LabeledContent(scope.teamName ?? account.label) {
-                        ScopeColorPicker(
-                            scopeId: ScopeRef(accountId: account.id, teamId: scope.teamId).id,
-                            allScopeIds: store.allScopeIds,
-                            settings: settings,
-                            overrides: $scopeColors
-                        )
-                    }
+                LabeledContent(String(localized: "Marker color",
+                                      comment: "Account detail label")) {
+                    ScopeColorPicker(
+                        scopeId: ScopeRef(accountId: account.id, teamId: nil).id,
+                        allScopeIds: store.allScopeIds,
+                        settings: settings,
+                        overrides: $scopeColors
+                    )
                 }
-            } header: {
-                Text(String(localized: "Marker color", comment: "Account detail section header"))
             } footer: {
-                Text(String(localized: "The dot shown next to rows from this source in All sources. Automatic picks a color from the source's identity.",
+                Text(String(localized: "The dot shown next to this account's rows in All sources. Organizations inherit it unless you give them their own in the Organizations tab.",
                             comment: "Marker color section footer"))
                     .foregroundStyle(.secondary)
             }

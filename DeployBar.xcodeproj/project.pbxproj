@@ -86,6 +86,7 @@
 		7E8B23A1D5AA65DF359D4CD9 /* user.json in Resources */ = {isa = PBXBuildFile; fileRef = A81FC0F07E8FBD1545D310E0 /* user.json */; };
 		80B96109ACA736872E7B0742 /* NotificationSettingsTab.swift in Sources */ = {isa = PBXBuildFile; fileRef = 176FE250E8C527CAFCF05603 /* NotificationSettingsTab.swift */; };
 		81FDCFFE93131D68C360C388 /* ProjectOrganizationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8BFEF6A835586543257A17DB /* ProjectOrganizationTests.swift */; };
+		8238C467492181FA51A58319 /* AccountOrganizationsForm.swift in Sources */ = {isa = PBXBuildFile; fileRef = 83A3B2C618AC1E0F26C73B7F /* AccountOrganizationsForm.swift */; };
 		875C4378FE25F1739A58AD42 /* Provider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 08CB8CC4D570FB5256D83340 /* Provider.swift */; };
 		88ACCA45695CE12422DFB8B2 /* IconActionButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = 521936E65E32DAABFE8B7FAC /* IconActionButton.swift */; };
 		8967FF23078E07E44D71CAF9 /* ProjectRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 92A9BB449648310287F6A1DF /* ProjectRow.swift */; };
@@ -263,6 +264,7 @@
 		7DDE61130EA782886864F83A /* ScopePollBudgetTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScopePollBudgetTests.swift; sourceTree = "<group>"; };
 		7F84C9A259AE88BB6112EA03 /* DeploymentRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeploymentRow.swift; sourceTree = "<group>"; };
 		82E0F02584E0A22C73BB9BD6 /* CopyBuildErrorButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CopyBuildErrorButton.swift; sourceTree = "<group>"; };
+		83A3B2C618AC1E0F26C73B7F /* AccountOrganizationsForm.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountOrganizationsForm.swift; sourceTree = "<group>"; };
 		8744201D53B972B1BBA7A89E /* AccountStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountStoreTests.swift; sourceTree = "<group>"; };
 		897DD0C50DF99321A6B0FF21 /* AggregationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AggregationTests.swift; sourceTree = "<group>"; };
 		8A5455E1C4EB61240DA56365 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
@@ -524,6 +526,7 @@
 			isa = PBXGroup;
 			children = (
 				BA16B92773C8D917F0338CF4 /* AccountDetailView.swift */,
+				83A3B2C618AC1E0F26C73B7F /* AccountOrganizationsForm.swift */,
 				B1206DC41804427440745479 /* AccountsSettingsTab.swift */,
 				FF3A9396633C6D9F8CB04208 /* ChangelogSheet.swift */,
 				61C6C0E528AB81F8016D2AB2 /* GeneralSettingsTab.swift */,
@@ -722,6 +725,7 @@
 				AB05CEE6D985A246AF311BFF /* Account.swift in Sources */,
 				17EA259A401CBA0B77156D0F /* AccountConnectionStore.swift in Sources */,
 				19ACC372C7B38089879F7208 /* AccountDetailView.swift in Sources */,
+				8238C467492181FA51A58319 /* AccountOrganizationsForm.swift in Sources */,
 				F5EA7077FC46F181603F8681 /* AccountStore.swift in Sources */,
 				E4958471E03527EFAB8FE397 /* AccountsSettingsTab.swift in Sources */,
 				32D8E850E70A35D53B7863D6 /* AppDelegate.swift in Sources */,

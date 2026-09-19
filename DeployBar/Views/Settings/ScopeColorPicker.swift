@@ -20,11 +20,17 @@ struct ScopeColorPicker: View {
     let settings: SettingsStore
     /// Re-read on every change so the swatch and the rows stay in step.
     @Binding var overrides: [String: Int]
+    /// Colour slot shown when no override is set. Organizations pass their
+    /// account's slot here so "Automatic" previews what the row will really
+    /// look like, rather than a colour derived from the org's own id.
+    var automaticIndex: Int? = nil
 
     @State private var isPresentingPalette = false
 
     private var selectedIndex: Int {
-        overrides[scopeId] ?? ScopeColorIndex.index(for: scopeId, among: allScopeIds)
+        if let override = overrides[scopeId] { return override }
+        if let automaticIndex { return automaticIndex }
+        return ScopeColorIndex.index(for: scopeId, among: allScopeIds)
     }
 
     private var isAutomatic: Bool { overrides[scopeId] == nil }

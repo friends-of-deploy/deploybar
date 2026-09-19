@@ -37,13 +37,20 @@ final class SettingsTabTests: XCTestCase {
 final class AccountDetailTabTests: XCTestCase {
     func test_segmentOrderIsStable() {
         XCTAssertEqual(AccountDetailTab.allCases.map(\.rawValue),
-                       ["information", "projects"])
+                       ["information", "organizations", "projects"])
     }
 
     func test_everySegmentHasADistinctNonEmptyTitle() {
         let titles = AccountDetailTab.allCases.map(\.title)
         XCTAssertEqual(Set(titles).count, titles.count, "segments must not share a title")
         XCTAssertFalse(titles.contains(where: \.isEmpty))
+    }
+
+    func test_organizationFilterMatchesCaseInsensitively() {
+        let orgs = [Team(id: "Vorciu", slug: "Vorciu", name: "Vorciu"),
+                    Team(id: "8lines", slug: "8lines", name: "8lines")]
+        XCTAssertEqual(AccountOrganizationsForm.filter(orgs, query: "vor").map(\.id), ["Vorciu"])
+        XCTAssertEqual(AccountOrganizationsForm.filter(orgs, query: "").count, 2)
     }
 }
 
