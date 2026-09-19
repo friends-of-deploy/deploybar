@@ -45,10 +45,65 @@ final class ScopeSwitchTests: XCTestCase {
         XCTAssertEqual(settings.selectedTeamId, "team_x")
     }
 
-    func test_switchScopeRepopulatesDeployments() async throws {
-        let store = try makeStore()
-        await store.switchScope(teamId: "team_b", scopeName: "acme")
-        XCTAssertFalse(store.deployments.isEmpty)  // re-polled the new scope
+    /// Notes every teamId a client was actually built for, in call order —
+    /// the only place a scope proves it was FETCHED rather than replayed from
+    /// `lastGood`/the display filter. Mirrors `AllScopeTests.FetchRecorder`.
+    private final class FetchRecorder {
+        private(set) var fetchedTeamIds: [String?] = []
+        func record(_ teamId: String?) { fetchedTeamIds.append(teamId) }
+        func reset() { fetchedTeamIds = [] }
+    }
+
+    /// Not main-actor isolated (unlike `ScopeSwitchTests` itself): the
+    /// `DeploymentProviderClient` protocol methods this feeds are called off
+    /// the main actor, so the JSON decode has to happen right where it's used
+    /// rather than through a main-actor-isolated test helper.
+    private struct RecordingStubClient: DeploymentProviderClient {
+        let teamId: String?
+        func deployments(limit: Int) async throws -> [Deployment] {
+            let uid = "d_\(teamId ?? "account")"
+            let json = """
+            {"uid":"\(uid)","name":"repo","state":"READY","url":"repo.vercel.app","createdAt":1}
+            """
+            return [try JSONDecoder().decode(Deployment.self, from: Data(json.utf8))]
+        }
+        func projects() async throws -> [Project] { [] }
+    }
+
+    /// `switchScope` only changes the *displayed* scope; `availableScopes`
+    /// already fans out to every enabled scope on every `poll()` (see
+    /// `allScopes(for:)`), so by the time a scope is selectable the store has
+    /// already fetched it. Switching must therefore re-derive rows from the
+    /// existing merge without firing a new fetch — the guarantee this test
+    /// pins, replacing the old `// re-polled the new scope` assumption that
+    /// no longer holds.
+    func test_switchScopeRederivesRowsWithoutRefetching() async {
+        let recorder = FetchRecorder()
+        let accountStore = AccountStore(defaults: UserDefaults(suiteName: UUID().uuidString)!,
+                                        credentials: InMemoryCredentialStore(),
+                                        detectCLI: { false }, reloadCLIToken: { nil },
+                                        detectGitHubCLI: { true }, reloadGitHubToken: { "tok" })
+        let github = accountStore.githubCLIAccount!
+        let settings = SettingsStore(defaults: UserDefaults(suiteName: UUID().uuidString)!)
+        let store = DeploymentStore(
+            accountStore: accountStore, settings: settings,
+            makeClient: { _, teamId in
+                recorder.record(teamId)
+                return RecordingStubClient(teamId: teamId)
+            },
+            reloadToken: { nil }, authRetryBackoff: .zero)
+        store.setOrganizations([Self.team(id: "org_a", slug: "org_a"),
+                                Self.team(id: "org_b", slug: "org_b")], for: github.id)
+
+        await store.poll()   // real-world precondition: the store is already populated
+        recorder.reset()
+
+        await store.switchScope(teamId: "org_b", scopeName: "org_b")
+
+        XCTAssertTrue(recorder.fetchedTeamIds.isEmpty,
+                      "switching scope must not trigger any new client fetch")
+        XCTAssertTrue(store.sourcedDeployments.contains { $0.deployment.uid == "d_org_b" },
+                     "the newly-selected scope's rows must be visible from the existing merge")
     }
 
     func test_switchToSameTeamIsNoop() async throws {
