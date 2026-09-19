@@ -8,15 +8,21 @@ struct FaviconView: View {
     @State private var image: NSImage?
 
     var body: some View {
-        Group {
-            if let image {
-                Image(nsImage: image).resizable().interpolation(.high)
-            } else {
-                Image(systemName: "globe")
-                    .foregroundStyle(.secondary)
-                    .padding(3)
-                    .background(.quaternary, in: RoundedRectangle(cornerRadius: 4))
-            }
+        // Keep both layers alive throughout the row's tab transition. Inserting
+        // a new Image after the first load gives it a different animation path
+        // from an image that was already loaded when the transition started.
+        ZStack {
+            Image(systemName: "globe")
+                .foregroundStyle(.secondary)
+                .padding(3)
+                .background(.quaternary, in: RoundedRectangle(cornerRadius: 4))
+                .opacity(image == nil ? 1 : 0)
+            // This expression always produces one Image, without a conditional
+            // view branch that would replace it while the row is moving.
+            (image.map { Image(nsImage: $0) } ?? Image(systemName: "globe"))
+                .resizable()
+                .interpolation(.high)
+                .opacity(image == nil ? 0 : 1)
         }
         .frame(width: 16, height: 16)
         .clipShape(RoundedRectangle(cornerRadius: 4))
