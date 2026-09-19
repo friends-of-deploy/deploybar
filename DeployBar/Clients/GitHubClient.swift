@@ -91,7 +91,14 @@ struct GitHubClient: Sendable {
 
     // MARK: - Requests
 
-    /// Lists the authenticated user's repositories, most recently pushed first.
+    /// Lists repositories, most recently pushed first, scoped to whichever
+    /// source this client represents: an organization's own repositories when
+    /// `org` is set, or the authenticated user's when it is nil. The account
+    /// path deliberately requests `affiliation=owner` only — narrow on purpose,
+    /// so organization repositories arrive through their own org-scoped client
+    /// instead of being listed twice (once under the account, once under the
+    /// org), which would also stick the duplicate with the account's marker
+    /// colour instead of the org's.
     /// Follows `page` until a short page is returned or the page cap is hit.
     private func repositories(maxPages: Int, perPage: Int) async throws -> [GHRepo] {
         var all: [GHRepo] = []
