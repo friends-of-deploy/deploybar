@@ -960,13 +960,22 @@ final class DeploymentStore {
     }
 
     /// Apply the follow filter + active ScopeFilter to the unfiltered merge.
+    ///
+    /// Also re-checks scope enablement here, not just at poll time: disabling a
+    /// scope evicts it from `lastGood` (see `scopeEnablementChanged`), but that
+    /// alone doesn't touch `unfilteredDeployments`/`unfilteredProjects` — those
+    /// are only rebuilt by the next `runPoll()`. Without this check, a just-
+    /// disabled scope's rows would keep showing in the merged view (and could
+    /// keep notifying) until the next poll happened to leave them out.
     private func applyDisplayFilter() {
         sourcedDeployments = unfilteredDeployments.filter { sd in
             filter.matches(account: sd.account, teamId: sd.teamId)
+                && isScopeEnabled(sd.scope)
                 && followed(account: sd.account, projectId: projectId(for: sd), projectName: sd.deployment.name)
         }
         sourcedProjects = unfilteredProjects.filter { sp in
             filter.matches(account: sp.account, teamId: sp.teamId)
+                && isScopeEnabled(sp.scope)
                 && isFollowed(sp)
         }
     }

@@ -79,6 +79,14 @@ final class NotificationGatingTests: XCTestCase {
         return try! JSONDecoder().decode(Project.self, from: Data(json.utf8))
     }
 
+    private static func deployment(uid: String, name: String) -> Deployment {
+        let json = """
+        {"uid":"\(uid)","name":"\(name)","state":"READY","url":"\(name).vercel.app",
+         "createdAt":1}
+        """
+        return try! JSONDecoder().decode(Deployment.self, from: Data(json.utf8))
+    }
+
     /// A fixed GitHub CLI account so `Self.gitHubAccount.id` is stable across the
     /// calls a single test makes (building the store, then keying `ScopeRef`s).
     private static let gitHubAccount = Account.githubCLI(id: UUID(), label: "GitHub CLI")
@@ -100,14 +108,28 @@ final class NotificationGatingTests: XCTestCase {
         let settings = SettingsStore(defaults: UserDefaults(suiteName: UUID().uuidString)!)
         let store = DeploymentStore(
             accountStore: accountStore, settings: settings,
+            // Every scope (account or org) that gets fetched returns one project
+            // and one deployment, named after the scope, so a test can tell
+            // exactly which scopes actually reached the network.
             makeClient: { _, teamId in
                 let key = teamId ?? "account"
-                return StubClient(deps: [], projs: [Project(id: "p_\(key)", name: "repo")])
+                return StubClient(deps: [Self.deployment(uid: "d_\(key)", name: "repo")],
+                                  projs: [Self.project(id: "p_\(key)", name: "repo")])
             },
             reloadToken: { nil }, authRetryBackoff: .zero)
         return (store, settings)
     }
 
+    /// Drives a real `poll()` with a stub that WOULD return a row for the
+    /// disabled org's scope if it were ever fetched, and asserts that row never
+    /// reaches the store. `DeploymentStore.notifier` is private, so this test
+    /// can't intercept `StateTransition`s or `NotificationGate.shouldNotify`
+    /// directly; it instead exercises the actual precondition for a
+    /// notification: `runPoll()` only diffs and hands transitions to the
+    /// notifier for scopes whose rows made it into `sourcedDeployments`. No row
+    /// for the disabled scope means no snapshot for it, means no transition for
+    /// it, means nothing to notify about — a disabled org is invisible to the
+    /// notifier by construction, not just absent from `availableScopes`.
     func test_disabledOrganizationNeverNotifies() async {
         let (store, settings) = Self.makeStore(accounts: [Self.gitHubAccount])
         store.setOrganizations([Team(id: "Vorciu", slug: "Vorciu", name: "Vorciu")],
@@ -115,9 +137,12 @@ final class NotificationGatingTests: XCTestCase {
         let scopeId = ScopeRef(accountId: Self.gitHubAccount.id, teamId: "Vorciu").id
         settings.setScopeEnabled(false, for: scopeId)
 
-        // A disabled scope is not polled, so no build of its can ever be seen,
-        // let alone announced.
-        XCTAssertFalse(store.availableScopes.contains { $0.teamId == "Vorciu" })
+        await store.poll()
+
+        XCTAssertFalse(store.sourcedProjects.contains { $0.teamId == "Vorciu" },
+                       "a disabled scope's project must never reach the store, let alone notify")
+        XCTAssertFalse(store.sourcedDeployments.contains { $0.teamId == "Vorciu" },
+                       "a disabled scope's deployment must never reach the store, let alone notify")
     }
 
     func test_reenablingAnOrganizationDropsItsStaleRows() async {
@@ -126,11 +151,27 @@ final class NotificationGatingTests: XCTestCase {
                                for: Self.gitHubAccount.id)
         let scopeId = ScopeRef(accountId: Self.gitHubAccount.id, teamId: "Vorciu").id
 
+        // Precondition: enabled and polled, so there is actually something to
+        // drop. Asserted, not assumed.
+        await store.poll()
+        XCTAssertTrue(store.sourcedProjects.contains { $0.teamId == "Vorciu" },
+                     "precondition failed: the org's row never made it into the store")
+
         settings.setScopeEnabled(false, for: scopeId)
         store.scopeEnablementChanged(accountId: Self.gitHubAccount.id, teamId: "Vorciu")
+
+        XCTAssertFalse(store.sourcedProjects.contains { $0.teamId == "Vorciu" },
+                       "disabling must remove the org's rows from the merged view")
+
+        // Re-enable WITHOUT polling again: if the cache eviction in
+        // `scopeEnablementChanged` didn't happen, a stale `lastGood` snapshot
+        // would still be sitting there ready to be replayed on the next
+        // `applyDisplayFilter()` — which `setScopeEnabled` alone doesn't trigger,
+        // so this only proves something if `scopeEnablementChanged` actually
+        // forgot the cached rows rather than merely filtering them out live.
         settings.setScopeEnabled(true, for: scopeId)
 
         XCTAssertFalse(store.sourcedProjects.contains { $0.teamId == "Vorciu" },
-                       "re-enabling must show fresh data, not a pre-disable snapshot")
+                       "re-enabling without a fresh poll must not resurrect a pre-disable snapshot")
     }
 }
