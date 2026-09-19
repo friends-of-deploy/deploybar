@@ -2,6 +2,20 @@
 <rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle">
   <channel>
     <item>
+      <title>1.0.6</title>
+      <pubDate>Sat, 19 Sep 2026 13:20:53 +0000</pubDate>
+      <sparkle:version>11</sparkle:version>
+      <sparkle:shortVersionString>1.0.6</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <description><![CDATA[
+Fixes spacing below the Information and Projects tabs in account settings. Scrolling content now stays within the form area, with a fixed gap below the tabs.
+]]></description>
+      <enclosure url="https://github.com/friends-of-deploy/deploybar/releases/download/v1.0.6/DeployBar-1.0.6.zip"
+                 length="3034916"
+                 type="application/octet-stream"
+                 sparkle:edSignature="CRMFdQ2eOG4O/fiOXGoLtuJmroxcuHN/BBLnrvEHDGSG/33gcWoIT6a98W2Zo3hXOJwmolIISc5Ae4i0LlPsCA==" />
+    </item>
+    <item>
       <title>1.0.5</title>
       <pubDate>Sat, 19 Sep 2026 13:16:46 +0000</pubDate>
       <sparkle:version>10</sparkle:version>
