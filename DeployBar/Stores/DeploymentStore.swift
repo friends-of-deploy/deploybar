@@ -132,7 +132,8 @@ final class DeploymentStore {
             guard let token = accountStore.token(for: account) else { return nil }
             switch account.provider {
             case .vercel:
-                return VercelClient(credentials: VercelCredentials(token: token, teamId: teamId))
+                return VercelClient(credentials: VercelCredentials(token: token, teamId: teamId),
+                                    fetch: accountStore.vercelFetch(for: account))
             case .github:
                 return GitHubClient(token: token)
             case .azureDevOps:
@@ -144,8 +145,8 @@ final class DeploymentStore {
         if let cli = accountStore.cliAccount {
             self.currentTeamId = settings.selectedTeamId == "__personal__" ? nil : settings.selectedTeamId
             if let token = accountStore.token(for: cli) {
-                self.teamsClient = TeamsClient(token: token)
-                self.userClient = UserClient(token: token)
+                self.teamsClient = TeamsClient(token: token, fetch: accountStore.vercelFetch(for: cli))
+                self.userClient = UserClient(token: token, fetch: accountStore.vercelFetch(for: cli))
                 self.cliBaseToken = token
             }
             // Start from the cached team list so the very first poll already covers
@@ -437,7 +438,8 @@ final class DeploymentStore {
                 // Use the team the deployment was FETCHED from — in "All" that is
                 // not necessarily the currently selected one, and a mismatched
                 // teamId makes the build-log request 404.
-                let client = VercelClient(credentials: VercelCredentials(token: token, teamId: sourced.teamId))
+                let client = VercelClient(credentials: VercelCredentials(token: token, teamId: sourced.teamId),
+                                          fetch: accountStore.vercelFetch(for: account))
                 guard let events = try? await client.buildEvents(deploymentId: deployment.uid) else { return false }
                 Pasteboard.copy(BuildErrorReport.make(for: deployment, events: events))
                 return true
@@ -867,8 +869,13 @@ final class DeploymentStore {
     private func refreshCLITokenIfChanged() -> Bool {
         guard let fresh = reloadToken(), !fresh.isEmpty, fresh != cliBaseToken else { return false }
         cliBaseToken = fresh
-        teamsClient = TeamsClient(token: fresh)
-        userClient = UserClient(token: fresh)
+        if legacyAccount == nil, let cli = accountStore.cliAccount {
+            teamsClient = TeamsClient(token: fresh, fetch: accountStore.vercelFetch(for: cli))
+            userClient = UserClient(token: fresh, fetch: accountStore.vercelFetch(for: cli))
+        } else {
+            teamsClient = TeamsClient(token: fresh)
+            userClient = UserClient(token: fresh)
+        }
         return true
     }
 

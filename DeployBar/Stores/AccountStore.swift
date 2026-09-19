@@ -10,6 +10,7 @@ final class AccountStore {
     @ObservationIgnored private let credentials: CredentialStore
     @ObservationIgnored private let reloadCLIToken: () -> String?
     @ObservationIgnored private let reloadGitHubToken: () -> String?
+    @ObservationIgnored private let vercelCLISession: VercelCLISession
 
     private enum Keys { static let accounts = "connectedAccounts" }
 
@@ -18,11 +19,13 @@ final class AccountStore {
          detectCLI: () -> Bool = { (try? TokenProvider().credentials()) != nil },
          reloadCLIToken: @escaping () -> String? = { try? TokenProvider().credentials().token },
          detectGitHubCLI: () -> Bool = { GitHubTokenProvider().token() != nil },
-         reloadGitHubToken: @escaping () -> String? = { GitHubTokenProvider().token() }) {
+         reloadGitHubToken: @escaping () -> String? = { GitHubTokenProvider().token() },
+         vercelCLISession: VercelCLISession = .shared) {
         self.defaults = defaults
         self.credentials = credentials
         self.reloadCLIToken = reloadCLIToken
         self.reloadGitHubToken = reloadGitHubToken
+        self.vercelCLISession = vercelCLISession
         self.accounts = Self.load(defaults)
 
         if detectCLI(), cliAccount == nil {
@@ -48,6 +51,16 @@ final class AccountStore {
         case .githubCLI:            return reloadGitHubToken()
         case .keychain(let name):   return credentials.token(for: name)
         }
+    }
+
+    /// Only CLI accounts share the renewable CLI session. Explicit API tokens
+    /// must keep using the credentials selected for that account.
+    func vercelFetch(for account: Account) -> VercelClient.Fetch {
+        guard account.source == .vercelCLI else {
+            return { try await URLSession.shared.data(for: $0) }
+        }
+        let session = vercelCLISession
+        return { try await session.data(for: $0) }
     }
 
     @discardableResult

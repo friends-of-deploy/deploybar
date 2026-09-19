@@ -69,16 +69,18 @@ DeployBar reuses the CLI sessions you already have. On launch it reads:
 
 | File | Purpose |
 |------|---------|
-| `~/Library/Application Support/com.vercel.cli/auth.json` | Your Vercel access token |
+| `~/Library/Application Support/com.vercel.cli/auth.json` | Your Vercel access token, expiry, and refresh token |
 | `~/Library/Application Support/com.vercel.cli/config.json` | Your active Vercel team |
 | `gh auth token` (GitHub CLI) | Your GitHub session, when `gh` is installed and logged in |
 
 No separate API key setup is required — if you have run `vercel login` (and optionally `gh auth login`), DeployBar is ready to go. You can also add accounts manually with a personal access token in **Settings → Accounts**; those tokens are stored in the macOS Keychain. The scope dropdown selection is stored locally and never modifies the CLIs' own config.
 
+DeployBar automatically renews expiring Vercel CLI access tokens using the saved refresh token and atomically saves the updated credentials to `auth.json`. This keeps background polling working without running a CLI command or signing in again. Temporary network failures preserve the saved login; an expired or revoked refresh token still requires `vercel login`.
+
 **DeployBar is strictly read-only.** It never creates, modifies, or deletes any resource on Vercel or GitHub.
 
-**Privacy**: your tokens never leave your machine. Network requests go to:
-- `api.vercel.com` — deployments, projects, teams
+**Privacy**: authentication tokens are sent only to their provider's API. Network requests go to:
+- `api.vercel.com` — deployments, projects, teams, profile, and CLI token renewal
 - `api.github.com` — repositories and workflow runs (only when a GitHub account is connected)
 - your project domains and `avatars.githubusercontent.com` — favicons / repo avatars
 - `www.google.com/s2/favicons` — favicon fallback for sites that don't serve `/favicon.ico`
