@@ -1,0 +1,13 @@
+# Account scopes and polling
+
+GitHub organization discovery uses owners returned by authenticated `GET /user/repos`. GitHub's `GET /user/orgs` returns an empty list for fine-grained personal access tokens. Discovery and organization repository filtering scan up to ten pages of 100 accessible repositories, sorted by push time. Organizations whose accessible repositories fall beyond that limit are not discovered. Organizations with no accessible repositories are absent.
+
+Organization scopes filter that authenticated list by owner login. They do not query `/orgs/{org}/repos`, which can include public repositories unrelated to the token's selected repositories. Personal scopes retain the existing `affiliation=owner` boundary; repositories owned by another individual are not added as a new scope. Organization and personal results retain account-level deployment/project deduplication.
+
+Each GitHub scope schedules against a conservative maximum of 40 REST requests: ten project-list pages, ten deployment repository-list pages, and twenty workflow-run requests. A personal scope usually needs fewer (up to 31). With the 5,000/hour account allowance, a 30-second tick affords one GitHub scope. At a 10-second configured interval, the account can fetch only every third tick; two enabled scopes therefore report a 60-second effective refresh interval. Scope rotation advances only when that account is eligible. Vercel retains its existing two-request estimate and 20,000/hour scheduling allowance.
+
+This is conservative scheduling, not an absolute GitHub quota guarantee. Discovery costs up to ten additional requests, auth retries and manual refreshes can add traffic, and multiple accounts or other applications may share a credential's quota. GitHub's returned rate-limit response remains authoritative. Default worst-case 30-second GitHub polling costs 4,800 requests/hour, leaving 200 requests of headroom before those extra activities.
+
+Cached rows seed both the per-scope replay store and notification baseline. A scope waiting for its rotation turn retains its cached rows. Each previously unseen scope's first successful response establishes a silent baseline, while a state change from a restored cached baseline can notify. A scope disabled or removed during an in-flight request is rejected before merge and notification diff, including results that completed before another slower scope.
+
+Startup and newly connected accounts use the same account-specific organization discovery: GitHub token/CLI accounts discover repository owners, and Vercel token/CLI accounts discover teams. Injected legacy CLI transports remain supported. Discovered scopes join the normal budgeted rotation.

@@ -124,13 +124,15 @@ final class PollCoalescingTests: XCTestCase {
         XCTAssertGreaterThan(store.effectiveRefreshInterval(for: Self.gitHubAccount), 30)
     }
 
-    func test_effectiveIntervalIsThePollIntervalWithFewOrganizations() {
+    func test_twoGitHubScopesRotateAcrossTwoThirtySecondTicks() {
         let (store, _, settings) = Self.makeStore(accounts: [Self.gitHubAccount])
         settings.pollIntervalSeconds = 30
         store.setOrganizations([Team(id: "Vorciu", slug: "Vorciu", name: "Vorciu")],
                                for: Self.gitHubAccount.id)
 
-        XCTAssertEqual(store.effectiveRefreshInterval(for: Self.gitHubAccount), 30)
+        // Personal + one organization, at up to 40 requests per scope:
+        // one scope fits each 30-second tick, so each refreshes every 60s.
+        XCTAssertEqual(store.effectiveRefreshInterval(for: Self.gitHubAccount), 60)
     }
 
     /// Regression for a bug caught in review: an invented, unrealistic Vercel

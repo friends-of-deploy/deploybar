@@ -174,4 +174,51 @@ final class NotificationGatingTests: XCTestCase {
         XCTAssertFalse(store.sourcedProjects.contains { $0.teamId == "Vorciu" },
                        "re-enabling without a fresh poll must not resurrect a pre-disable snapshot")
     }
+    private actor ResponseGate {
+        var continuation: CheckedContinuation<Void, Never>?
+        func wait(started: XCTestExpectation) async {
+            await withCheckedContinuation { continuation in
+                self.continuation = continuation
+                started.fulfill()
+            }
+        }
+        func resume() { continuation?.resume(); continuation = nil }
+    }
+
+    private struct DelayedClient: DeploymentProviderClient {
+        let gate: ResponseGate
+        let started: XCTestExpectation
+        func deployments(limit: Int) async throws -> [Deployment] {
+            await gate.wait(started: started)
+            return [Deployment(uid: "late", name: "late", stateRaw: "ERROR", url: "", createdAt: 1)]
+        }
+        func projects() async throws -> [Project] { [] }
+    }
+
+    func test_scopeDisabledDuringFetchCannotRaiseAnAlert() async {
+        let accounts = AccountStore(defaults: UserDefaults(suiteName: UUID().uuidString)!,
+            credentials: InMemoryCredentialStore(), detectCLI: { true }, reloadCLIToken: { "t" }, detectGitHubCLI: { false })
+        let account = accounts.cliAccount!
+        let settings = settings()
+        let gate = ResponseGate()
+        let started = expectation(description: "organization request awaiting response")
+        var delay = false
+        let store = DeploymentStore(accountStore: accounts, settings: settings, makeClient: { _, teamId in
+            if teamId != nil && delay { return DelayedClient(gate: gate, started: started) }
+            return StubClient(deps: [Self.deployment(uid: teamId ?? "personal", name: "repo")], projs: [])
+        })
+        store.setOrganizations([Team(id: "org", slug: "org", name: "org")], for: account.id)
+        await store.poll()
+        store.acknowledge()
+        delay = true
+        let pending = Task { await store.poll() }
+        await fulfillment(of: [started], timeout: 2)
+        settings.setScopeEnabled(false, for: ScopeRef(accountId: account.id, teamId: "org").id)
+        store.scopeEnablementChanged(accountId: account.id, teamId: "org")
+        await gate.resume()
+        await pending.value
+        XCTAssertEqual(store.iconState, .idle, "discard stale results before notification diff")
+        XCTAssertFalse(store.allSourcedProjects.contains { $0.teamId == "org" })
+    }
+
 }

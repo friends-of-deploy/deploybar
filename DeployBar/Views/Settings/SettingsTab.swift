@@ -1,4 +1,5 @@
 import Foundation
+import Observation
 
 /// The settings window's tabs, in display order.
 ///
@@ -35,5 +36,20 @@ enum SettingsTab: String, CaseIterable, Identifiable, Sendable {
         case .accounts:
             return String(localized: "Accounts", comment: "Settings tab title")
         }
+    }
+}
+
+/// Shared by the welcome window and the Settings scene so deep links select
+/// the right pane even when Settings has not been opened yet.
+@MainActor
+@Observable
+final class SettingsNavigation {
+    static let shared = SettingsNavigation()
+    var selection: SettingsTab = .general
+    @ObservationIgnored var openSettings: (() -> Void)?
+
+    func showAccounts() {
+        selection = .accounts
+        openSettings?()
     }
 }

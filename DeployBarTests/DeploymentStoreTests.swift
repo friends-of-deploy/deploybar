@@ -23,7 +23,8 @@ final class DeploymentStoreTests: XCTestCase {
         XCTAssertEqual(DeploymentStore.baseState(for: [.ready, .building]), .building)
         XCTAssertEqual(DeploymentStore.baseState(for: [.ready, .error]), .failure)
         XCTAssertEqual(DeploymentStore.baseState(for: [.error, .building]), .building) // running wins
-        XCTAssertEqual(DeploymentStore.baseState(for: [.ready, .ready]), .idle) // success draws the idle rocket
+        XCTAssertEqual(DeploymentStore.baseState(for: [.ready, .ready]), .success)
+        XCTAssertEqual(DeploymentStore.baseState(for: [.canceled]), .idle)
         XCTAssertEqual(DeploymentStore.baseState(for: []), .idle)
         XCTAssertEqual(DeploymentStore.baseState(for: [.queued]), .building)
     }

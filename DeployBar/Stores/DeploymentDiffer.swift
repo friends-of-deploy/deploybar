@@ -14,7 +14,8 @@ enum DeploymentDiffer {
             if before == dep.state { continue }
             guard let event = event(for: dep.state) else { continue }
             result.append(StateTransition(uid: dep.uid, project: dep.name, key: dep.key,
-                                          event: event, destinationURL: dep.destinationURL))
+                                          event: event, destinationURL: dep.destinationURL,
+                                          siteURL: dep.siteURL))
         }
         return result
     }

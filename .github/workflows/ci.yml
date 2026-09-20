@@ -50,3 +50,6 @@ jobs:
 
       - name: Test appcast script
         run: ./scripts/test-append-appcast.sh
+
+      - name: Test release notes extraction
+        run: python3 scripts/test-release-notes.py

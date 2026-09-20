@@ -64,12 +64,34 @@ final class DiffTests: XCTestCase {
 
     func test_transitionCarriesBuildDestination() {
         let destination = URL(string: "https://vercel.com/acme/app/build-1")!
+        let site = URL(string: "https://app.vercel.app")!
         let current = DeploymentSnapshot(uid: "1", name: "proj", state: .error,
-                                         key: Self.key, destinationURL: destination)
+                                         key: Self.key, destinationURL: destination, siteURL: site)
 
         let transition = DeploymentDiffer.transitions(previous: [dep("1", "BUILDING")],
                                                        current: [current]).first
 
         XCTAssertEqual(transition?.destinationURL, destination)
+        XCTAssertEqual(transition?.siteURL, site)
+    }
+
+    func test_vercelSnapshotSeparatesDeploymentPageFromSiteForEveryState() {
+        for state in ["READY", "BUILDING", "ERROR", "CANCELED"] {
+            let deployment = Deployment(uid: "build", name: "app", stateRaw: state,
+                                        url: "app.vercel.app",
+                                        inspectorUrl: "https://vercel.com/acme/app/build", createdAt: 1)
+            let snapshot = DeploymentSnapshot(deployment, key: Self.key)
+            XCTAssertEqual(snapshot.destinationURL?.absoluteString, deployment.inspectorUrl)
+            XCTAssertEqual(snapshot.siteURL?.absoluteString, "https://app.vercel.app")
+        }
+    }
+
+    func test_githubSnapshotHasRunDestinationAndNoSite() {
+        let runURL = URL(string: "https://github.com/acme/app/actions/runs/1")!
+        let deployment = Deployment(uid: "run", name: "app", stateRaw: "READY", url: "",
+                                    createdAt: 1, webURL: runURL)
+        let snapshot = DeploymentSnapshot(deployment, key: Self.key)
+        XCTAssertEqual(snapshot.destinationURL, runURL)
+        XCTAssertNil(snapshot.siteURL)
     }
 }

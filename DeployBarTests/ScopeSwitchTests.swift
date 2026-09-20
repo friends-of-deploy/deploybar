@@ -70,13 +70,8 @@ final class ScopeSwitchTests: XCTestCase {
         func projects() async throws -> [Project] { [] }
     }
 
-    /// `switchScope` only changes the *displayed* scope; `availableScopes`
-    /// already fans out to every enabled scope on every `poll()` (see
-    /// `allScopes(for:)`), so by the time a scope is selectable the store has
-    /// already fetched it. Switching must therefore re-derive rows from the
-    /// existing merge without firing a new fetch — the guarantee this test
-    /// pins, replacing the old `// re-polled the new scope` assumption that
-    /// no longer holds.
+    /// Once the budgeted rotation has populated all scopes, switching display
+    /// scope must reuse those rows without issuing a new fetch.
     func test_switchScopeRederivesRowsWithoutRefetching() async {
         let recorder = FetchRecorder()
         let accountStore = AccountStore(defaults: UserDefaults(suiteName: UUID().uuidString)!,
@@ -95,7 +90,11 @@ final class ScopeSwitchTests: XCTestCase {
         store.setOrganizations([Self.team(id: "org_a", slug: "org_a"),
                                 Self.team(id: "org_b", slug: "org_b")], for: github.id)
 
-        await store.poll()   // real-world precondition: the store is already populated
+        // Three enabled scopes, one per default GitHub tick: allow one full
+        // rotation before asserting that a display switch can reuse its rows.
+        for _ in 0..<3 { await store.poll() }
+        XCTAssertEqual(Set(store.sourcedDeployments.map(\.deployment.uid)),
+                       ["d_account", "d_org_a", "d_org_b"])
         recorder.reset()
 
         await store.switchScope(teamId: "org_b", scopeName: "org_b")

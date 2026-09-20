@@ -1,6 +1,806 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "Share crash reports": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Udostępniaj raporty awarii"
+          }
+        }
+      }
+    },
+    "Help us fix problems by sending technical crash reports to Sentry.": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pomóż nam usuwać problemy, wysyłając techniczne raporty awarii do Sentry."
+          }
+        }
+      }
+    },
+    "What is shared?": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Jakie dane są udostępniane?"
+          }
+        }
+      }
+    },
+    "Crash report privacy": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Prywatność raportów awarii"
+          }
+        }
+      }
+    },
+    "Privacy": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Prywatność"
+          }
+        }
+      }
+    },
+    "Reports include crash stack traces, app and macOS versions, and basic hardware information.": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Raporty zawierają stos wywołań z chwili awarii, wersje aplikacji i macOS oraz podstawowe informacje o sprzęcie."
+          }
+        }
+      }
+    },
+    "We exclude account details, tokens, repository names, deployment URLs, build logs, and usage statistics.": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nie wysyłamy danych kont, tokenów, nazw repozytoriów, adresów wdrożeń, logów kompilacji ani statystyk użycia."
+          }
+        }
+      }
+    },
+    "Reporting is optional. Turning it off stops reporting and deletes pending reports from this Mac. Reports already sent remain in Sentry.": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Raportowanie jest opcjonalne. Wyłączenie zatrzymuje raportowanie i usuwa oczekujące raporty z tego Maca. Wysłane raporty pozostają w Sentry."
+          }
+        }
+      }
+    },
+    "On notification click": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Po kliknięciu powiadomienia"
+          }
+        }
+      }
+    },
+    "Open site (if available)": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Otwórz stronę (jeśli dostępna)"
+          }
+        }
+      }
+    },
+    "If the site URL is unavailable, opens the deployment instead.": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Jeśli adres strony jest niedostępny, otworzy szczegóły wdrożenia."
+          }
+        }
+      }
+    },
+    "Mute...": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wycisz..."
+          }
+        }
+      }
+    },
+    "Mute this kind": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wycisz ten rodzaj"
+          }
+        }
+      }
+    },
+    "Mute this project": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wycisz ten projekt"
+          }
+        }
+      }
+    },
+    "DeployBar looks for your Vercel and GitHub CLI logins when it starts." : {
+      "localizations" : {
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "DeployBar wykrywa konta zalogowane w CLI Vercela i GitHuba podczas uruchamiania."
+          }
+        }
+      }
+    },
+    "We found your accounts. You’re ready to follow their deployments." : {
+      "localizations" : {
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Znaleźliśmy Twoje konta. Możesz już obserwować ich wdrożenia."
+          }
+        }
+      }
+    },
+    "You can add or remove providers any time in the app settings:" : {
+      "localizations" : {
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Możesz dodawać i usuwać dostawców w dowolnej chwili w ustawieniach aplikacji:"
+          }
+        }
+      }
+    },
+    "Account Settings…" : {
+      "localizations" : {
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ustawienia kont…"
+          }
+        }
+      }
+    },
+    "Sign in with vercel login, then restart DeployBar." : {
+      "localizations" : {
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zaloguj się przez vercel login i uruchom DeployBar ponownie."
+          }
+        }
+      }
+    },
+    "Sign in with gh auth login, then restart DeployBar." : {
+      "localizations" : {
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zaloguj się przez gh auth login i uruchom DeployBar ponownie."
+          }
+        }
+      }
+    },
+    "%lld accounts available" : {
+      "localizations" : {
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dostępne konta: %lld"
+          }
+        }
+      }
+    },
+    "Not detected" : {
+      "localizations" : {
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nie wykryto"
+          }
+        }
+      }
+    },
+    "Close window" : {
+      "localizations" : {
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zamknij okno"
+          }
+        }
+      }
+    },
+    "Your followed projects will appear here. Manage your accounts to choose what to follow." : {
+      "localizations" : {
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tutaj pojawią się obserwowane projekty. Wybierz je w ustawieniach kont."
+          }
+        }
+      }
+    },
+    "New activity from your followed projects will appear here." : {
+      "localizations" : {
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tutaj pojawi się nowa aktywność w obserwowanych projektach."
+          }
+        }
+      }
+    },
+    "Welcome to DeployBar" : {
+      "localizations" : {
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Witaj w DeployBar"
+          }
+        }
+      }
+    },
+    "%lld of 3" : {
+      "localizations" : {
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld z 3"
+          }
+        }
+      }
+    },
+    "Step %lld of 3" : {
+      "localizations" : {
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Krok %lld z 3"
+          }
+        }
+      }
+    },
+    "Your deployments.\nA glance away." : {
+      "localizations" : {
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Twoje wdrożenia.\nZawsze pod ręką."
+          }
+        }
+      }
+    },
+    "A little less tab switching. A lot more peace of mind." : {
+      "localizations" : {
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mniej przełączania kart. Więcej spokoju."
+          }
+        }
+      }
+    },
+    "Everything in one place" : {
+      "localizations" : {
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wszystko w jednym miejscu"
+          }
+        }
+      }
+    },
+    "All your project deployments in your menu bar." : {
+      "localizations" : {
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wszystkie wdrożenia Twoich projektów na pasku menu."
+          }
+        }
+      }
+    },
+    "Stay in your flow" : {
+      "localizations" : {
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pracuj bez rozpraszania"
+          }
+        }
+      }
+    },
+    "Know when a build succeeds or needs your attention." : {
+      "localizations" : {
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dowiedz się, kiedy build się uda lub wymaga Twojej uwagi."
+          }
+        }
+      }
+    },
+    "Straight to what matters" : {
+      "localizations" : {
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Od razu do rzeczy"
+          }
+        }
+      }
+    },
+    "Open a deployment or copy an error without digging through tabs." : {
+      "localizations" : {
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Otwórz wdrożenie lub skopiuj błąd bez szukania w kartach."
+          }
+        }
+      }
+    },
+    "Connect your work." : {
+      "localizations" : {
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Połącz swoje projekty."
+          }
+        }
+      }
+    },
+    "Choose a service to bring your deployments into view." : {
+      "localizations" : {
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wybierz usługę, aby zobaczyć swoje wdrożenia."
+          }
+        }
+      }
+    },
+    "Your accounts are available. Continue, or connect another service." : {
+      "localizations" : {
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Twoje konta są dostępne. Przejdź dalej lub połącz kolejną usługę."
+          }
+        }
+      }
+    },
+    "Account available" : {
+      "localizations" : {
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Konto dostępne"
+          }
+        }
+      }
+    },
+    "Access token" : {
+      "localizations" : {
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Token dostępu"
+          }
+        }
+      }
+    },
+    "Create a token ↗" : {
+      "localizations" : {
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Utwórz token ↗"
+          }
+        }
+      }
+    },
+    "Paste your access token" : {
+      "localizations" : {
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wklej token dostępu"
+          }
+        }
+      }
+    },
+    "For GitHub, allow read access to your repositories and Actions." : {
+      "localizations" : {
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Na GitHubie zezwól na odczyt repozytoriów i Actions."
+          }
+        }
+      }
+    },
+    "Use a Vercel token with access to the projects you want to follow." : {
+      "localizations" : {
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Użyj tokenu Vercel z dostępem do projektów, które chcesz obserwować."
+          }
+        }
+      }
+    },
+    "Stored in macOS Keychain" : {
+      "localizations" : {
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zapis w pęku kluczy macOS"
+          }
+        }
+      }
+    },
+    "Connecting…" : {
+      "localizations" : {
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Łączenie…"
+          }
+        }
+      }
+    },
+    "Connect account" : {
+      "localizations" : {
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Połącz konto"
+          }
+        }
+      }
+    },
+    "Already use the Vercel or GitHub CLI? DeployBar detects your login when it starts." : {
+      "localizations" : {
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Używasz CLI Vercela lub GitHuba? DeployBar wykrywa zalogowane konta podczas uruchamiania."
+          }
+        }
+      }
+    },
+    "Make yourself at home." : {
+      "localizations" : {
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Poczuj się jak u siebie."
+          }
+        }
+      }
+    },
+    "DeployBar lives in your menu bar, ready when you need it." : {
+      "localizations" : {
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "DeployBar czeka na pasku menu — zawsze pod ręką."
+          }
+        }
+      }
+    },
+    "You can change these anytime in Settings." : {
+      "localizations" : {
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Możesz to zmienić w każdej chwili w ustawieniach."
+          }
+        }
+      }
+    },
+    "Set up later" : {
+      "localizations" : {
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Skonfiguruj później"
+          }
+        }
+      }
+    },
+    "Back" : {
+      "localizations" : {
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wstecz"
+          }
+        }
+      }
+    },
+    "Get started" : {
+      "localizations" : {
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zaczynamy"
+          }
+        }
+      }
+    },
+    "Continue" : {
+      "localizations" : {
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dalej"
+          }
+        }
+      }
+    },
+    "Start using DeployBar" : {
+      "localizations" : {
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Otwórz DeployBar"
+          }
+        }
+      }
+    },
+    "Less checking. More creating." : {
+      "localizations" : {
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mniej sprawdzania. Więcej tworzenia."
+          }
+        }
+      }
+    },
+    "Small icon. Big peace of mind." : {
+      "localizations" : {
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mała ikona. Wielki spokój."
+          }
+        }
+      }
+    },
+    "Your tools, together." : {
+      "localizations" : {
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Twoje narzędzia, razem."
+          }
+        }
+      }
+    },
+    "Right here when you need it." : {
+      "localizations" : {
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zawsze pod ręką."
+          }
+        }
+      }
+    },
+    "All up to date" : {
+      "localizations" : {
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wszystko aktualne"
+          }
+        }
+      }
+    },
+    "Production" : {
+      "localizations" : {
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Produkcja"
+          }
+        }
+      }
+    },
+    "Always in the loop" : {
+      "localizations" : {
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zawsze na bieżąco"
+          }
+        }
+      }
+    },
+    "Illustrative preview" : {
+      "localizations" : {
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Przykładowy podgląd"
+          }
+        }
+      }
+    },
+    "Deployment notifications" : {
+      "localizations" : {
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Powiadomienia o wdrożeniach"
+          }
+        }
+      }
+    },
+    "A heads-up when a build succeeds or fails." : {
+      "localizations" : {
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Informacja o sukcesie lub błędzie buildu."
+          }
+        }
+      }
+    },
+    "Notifications enabled" : {
+      "localizations" : {
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Powiadomienia włączone"
+          }
+        }
+      }
+    },
+    "Settings…" : {
+      "localizations" : {
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ustawienia…"
+          }
+        }
+      }
+    },
+    "Enable" : {
+      "localizations" : {
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Włącz"
+          }
+        }
+      }
+    },
+    "Couldn’t enable notifications. Please try again." : {
+      "localizations" : {
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nie udało się włączyć powiadomień. Spróbuj ponownie."
+          }
+        }
+      }
+    },
+    "Ready whenever you open your Mac." : {
+      "localizations" : {
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gotowy do pracy razem z Twoim Makiem."
+          }
+        }
+      }
+    },
+    "Check Login Items in System Settings to allow DeployBar." : {
+      "localizations" : {
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zezwól na uruchamianie DeployBar w sekcji Rzeczy otwierane podczas logowania w Ustawieniach systemowych."
+          }
+        }
+      }
+    },
+    "Your next deployment, right here." : {
+      "localizations" : {
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Twoje wdrożenia, właśnie tutaj."
+          }
+        }
+      }
+    },
+    "Connect Vercel or GitHub to keep your builds a glance away." : {
+      "localizations" : {
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Połącz Vercela lub GitHuba i miej swoje buildy zawsze pod ręką."
+          }
+        }
+      }
+    },
+    "Set up DeployBar" : {
+      "localizations" : {
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Skonfiguruj DeployBar"
+          }
+        }
+      }
+    },
+    "Already signed in with a CLI? Restart DeployBar to detect it." : {
+      "localizations" : {
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Masz konto zalogowane w CLI? Uruchom DeployBar ponownie, aby je wykryć."
+          }
+        }
+      }
+    },
+    "Show welcome guide" : {
+      "localizations" : {
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pokaż przewodnik powitalny"
+          }
+        }
+      }
+    },
+    "Your token couldn’t be saved in Keychain. Unlock your Mac and try again." : {
+      "localizations" : {
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nie udało się zapisać tokenu w pęku kluczy. Odblokuj Maca i spróbuj ponownie."
+          }
+        }
+      }
+    },
+    "Couldn’t connect. Check your token, its permissions, and your internet connection, then try again." : {
+      "localizations" : {
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nie udało się połączyć. Sprawdź token, jego uprawnienia i połączenie z internetem, a potem spróbuj ponownie."
+          }
+        }
+      }
+    },
     "%@ — coming soon" : {
       "comment" : "Placeholder for unimplemented provider",
       "localizations" : {

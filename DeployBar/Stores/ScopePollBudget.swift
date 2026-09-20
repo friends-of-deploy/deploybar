@@ -4,7 +4,7 @@ import Foundation
 ///
 /// Polling every organization separately multiplies request count by the number
 /// of enabled scopes. An account with 40 organizations at a 30s interval would
-/// issue ~29k requests/hour against GitHub's 5000 — so when the enabled scopes
+/// issue up to 192k requests/hour against GitHub's 5000 — so when the enabled scopes
 /// cost more than the limit affords, they are polled in rotation instead of all
 /// at once. Every scope still refreshes; it just takes several ticks to come
 /// round, and rows keep their last-known value in between.
@@ -21,15 +21,8 @@ enum ScopePollBudget {
     /// `requestsPerScope` is an estimate of what one scope costs: for GitHub
     /// that is a repo listing plus the bounded per-repo runs fan-out.
     ///
-    /// The result is always floored at 1, even when a single scope's cost
-    /// already exceeds `hourlyLimit` for the tick cadence implied by
-    /// `pollIntervalSeconds`. In that starved case this function cannot keep
-    /// usage under `hourlyLimit` — the floor wins and actual hourly usage
-    /// will exceed the limit. That's deliberate: a budget of zero would stall
-    /// the app entirely, which is worse than a scope polling too often. This
-    /// case is not expected to be reached in practice, since `hourlyLimit` is
-    /// one of a few hardcoded values (5000/2000/1000) and
-    /// `pollIntervalSeconds` is floored at 10 by `SettingsStore`.
+    /// Always pair the one-scope floor with `accountIntervalSeconds`: when a
+    /// tick cannot afford one scope, the account must wait several timer ticks.
     static func requestsPerTick(scopeCount: Int,
                                 pollIntervalSeconds: Int,
                                 hourlyLimit: Int,
@@ -37,10 +30,20 @@ enum ScopePollBudget {
         guard scopeCount > 0 else { return 0 }
         let interval = max(1, pollIntervalSeconds)
         let perScope = max(1, requestsPerScope)
-        let ticksPerHour = max(1, 3600 / interval)
-        let affordable = hourlyLimit / (ticksPerHour * perScope)
+        let affordable = Int((Double(max(0, hourlyLimit)) * Double(interval)
+                              / (3600 * Double(perScope))).rounded(.down))
         // Never zero: a budget of nothing would stall the app entirely.
         return max(1, min(scopeCount, affordable))
+    }
+
+    /// Smallest multiple of the configured timer interval that can afford a
+    /// single scope. Rounding to ticks also keeps the displayed cadence honest.
+    static func accountIntervalSeconds(pollIntervalSeconds: Int,
+                                       hourlyLimit: Int,
+                                       requestsPerScope: Int) -> Int {
+        let interval = max(1, pollIntervalSeconds)
+        let minimum = 3600 * Double(max(1, requestsPerScope)) / Double(max(1, hourlyLimit))
+        return max(1, Int((minimum / Double(interval)).rounded(.up))) * interval
     }
 
     /// The scopes to poll on `tick`, rotating so each comes round in turn.

@@ -217,8 +217,8 @@ final class AllScopeTests: XCTestCase {
     }
 
     /// 14 organizations + the account scope = 15 scopes. At the default 30s
-    /// poll interval, GitHub's budget (5000/hr, ~6 requests/scope) affords 6
-    /// scopes per tick, so a full rotation takes ceil(15/6) = 3 ticks — enough
+    /// poll interval, GitHub's budget (5000/hr, at most 40 requests/scope) affords 1
+    /// scopes per tick, so a full rotation takes 15 ticks — enough
     /// to force real rotation through `poll()`, not just the pure budget math.
     private func makeRotatingGitHubStore(recorder: FetchRecorder) -> (DeploymentStore, Account) {
         let (store, github, _) = makeGitHubStore(recorder: recorder)
@@ -241,7 +241,7 @@ final class AllScopeTests: XCTestCase {
         let (store, github) = makeRotatingGitHubStore(recorder: recorder)
 
         var fetchedPerTick: [Set<ScopeRef>] = []
-        for _ in 0..<3 {
+        for _ in 0..<15 {
             recorder.reset()
             await store.poll()
             fetchedPerTick.append(Set(recorder.fetchedTeamIds.map {
@@ -249,9 +249,9 @@ final class AllScopeTests: XCTestCase {
             }))
         }
 
-        // Each tick fetches exactly the budget (6), not every scope.
+        // Each tick fetches exactly the budget (1), not every scope.
         for fetched in fetchedPerTick {
-            XCTAssertEqual(fetched.count, 6, "each tick should fetch exactly the budget, not all 15 scopes")
+            XCTAssertEqual(fetched.count, 1, "each tick should fetch exactly the budget, not all 15 scopes")
         }
         // Consecutive ticks must not fetch the identical subset — that would
         // mean the rotation isn't advancing.
@@ -260,7 +260,7 @@ final class AllScopeTests: XCTestCase {
         XCTAssertNotEqual(fetchedPerTick[1], fetchedPerTick[2],
                           "the third tick must rotate onto a different subset again")
 
-        // Over a full rotation (3 ticks), every scope came round at least once.
+        // Over a full rotation (15 ticks), every scope came round at least once.
         let everFetched = fetchedPerTick.reduce(into: Set<ScopeRef>()) { $0.formUnion($1) }
         XCTAssertEqual(everFetched, allRotatingScopeRefs(accountId: github.id),
                        "every scope must be fetched at least once within a full rotation")
@@ -289,7 +289,7 @@ final class AllScopeTests: XCTestCase {
         // its row must still be present, replayed from lastGood.
         let deferredThisTick = firstTickFetched.subtracting(secondTickFetched)
         XCTAssertFalse(deferredThisTick.isEmpty,
-                       "the budget (6 of 15) guarantees some tick-1 scope is deferred on tick 2")
+                       "the budget (1 of 15) guarantees some tick-1 scope is deferred on tick 2")
         for teamId in deferredThisTick {
             let uid = "d_\(teamId ?? "account")"
             XCTAssertTrue(store.sourcedDeployments.contains { $0.deployment.uid == uid },
@@ -314,4 +314,77 @@ final class AllScopeTests: XCTestCase {
         XCTAssertEqual(projectIds.count, Set(projectIds).count,
                        "no project should appear twice across fresh + replayed scopes")
     }
+    func test_coldRotationDoesNotRaiseHistoricalAlertsOnLaterSlices() async {
+        let recorder = FetchRecorder()
+        let (store, _) = makeRotatingGitHubStore(recorder: recorder)
+        await store.poll()
+        store.acknowledge()
+        await store.poll()
+        XCTAssertEqual(store.iconState, .idle)
+    }
+
+    func test_shortGitHubIntervalIsThrottledAndReported() async {
+        let recorder = FetchRecorder()
+        let (store, _, settings) = makeGitHubStore(recorder: recorder)
+        settings.pollIntervalSeconds = 10
+        let account = store.connectedAccounts[0]
+        XCTAssertGreaterThanOrEqual(store.effectiveRefreshInterval(for: account), 30)
+        await store.poll()
+        recorder.reset()
+        await store.poll()
+        XCTAssertTrue(recorder.fetchedTeamIds.isEmpty, "an immediate tick cannot afford another scope")
+    }
+
+    func test_cacheKeepsScopesDeferredByFirstPoll() async {
+        let accounts = AccountStore(defaults: UserDefaults(suiteName: UUID().uuidString)!,
+            credentials: InMemoryCredentialStore(), detectCLI: { false }, detectGitHubCLI: { true },
+            reloadGitHubToken: { "tok" })
+        let account = accounts.githubCLIAccount!
+        let settings = SettingsStore(defaults: UserDefaults(suiteName: UUID().uuidString)!)
+        settings.cachedOrgs = [account.id: (0..<14).map { Self.team(id: "org\($0)", slug: "org\($0)") }]
+        let cached = (0..<14).map { index in
+            SourcedDeployment(deployment: Self.deployment(uid: "d_org\(index)", name: "repo"), account: account, teamId: "org\(index)")
+        }
+        settings.cachedRows = RowCache(deployments: cached, projects: [], savedAt: Date())
+        let store = DeploymentStore(accountStore: accounts, settings: settings, makeClient: { _, teamId in
+            StubClient(deps: [Self.deployment(uid: "d_\(teamId ?? "account")", name: "repo")], projs: [])
+        })
+        await store.poll()
+        for row in cached {
+            XCTAssertTrue(store.sourcedDeployments.contains { $0.deployment.uid == row.deployment.uid })
+        }
+    }
+
+    func test_shortIntervalEventuallyRotatesAndKeepsCachedBaselineChanges() async {
+        let accounts = AccountStore(defaults: UserDefaults(suiteName: UUID().uuidString)!,
+            credentials: InMemoryCredentialStore(), detectCLI: { false }, detectGitHubCLI: { true }, reloadGitHubToken: { "t" })
+        let account = accounts.githubCLIAccount!
+        let settings = SettingsStore(defaults: UserDefaults(suiteName: UUID().uuidString)!)
+        settings.pollIntervalSeconds = 10
+        settings.cachedOrgs = [account.id: [Self.team(id: "org", slug: "org")]]
+        settings.cachedRows = RowCache(deployments: [SourcedDeployment(
+            deployment: Deployment(uid: "d_org", name: "repo", stateRaw: "BUILDING", url: "", createdAt: 1),
+            account: account, teamId: "org")], projects: [], savedAt: Date())
+        var timestamp = Date()
+        let recorder = FetchRecorder()
+        let store = DeploymentStore(accountStore: accounts, settings: settings, makeClient: { _, teamId in
+            recorder.record(teamId)
+            return StubClient(deps: [Self.deployment(uid: "d_\(teamId ?? "personal")", name: "repo")], projs: [])
+        }, now: { timestamp })
+        XCTAssertEqual(store.effectiveRefreshInterval(for: account), 60)
+        store.acknowledge()
+        await store.poll()
+        XCTAssertEqual(store.iconState, .success, "a real completion since the cache must alert")
+        store.acknowledge()
+        recorder.reset()
+        timestamp.addTimeInterval(29)
+        await store.poll()
+        XCTAssertTrue(recorder.fetchedTeamIds.isEmpty)
+        timestamp.addTimeInterval(1)
+        await store.poll()
+        XCTAssertEqual(recorder.fetchedTeamIds.count, 1)
+        XCTAssertNil(recorder.fetchedTeamIds[0], "skipped timer ticks must not starve the next scope")
+        XCTAssertEqual(store.iconState, .idle, "first success of the personal scope is historical")
+    }
+
 }

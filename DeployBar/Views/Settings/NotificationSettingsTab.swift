@@ -6,6 +6,7 @@ struct NotificationSettingsTab: View {
 
     var body: some View {
         Form {
+            Section { NotificationPermissionRow() }
             Section {
                 Toggle(String(localized: "Failed deployments", comment: "Notification toggle"),
                        isOn: bind(\.notifyOnFailure))
@@ -22,6 +23,19 @@ struct NotificationSettingsTab: View {
                             comment: "Notifications tab footer"))
                     .foregroundStyle(.secondary)
             }
+
+            Section {
+                Picker("On notification click", selection: Binding(
+                    get: { settings.notificationClickAction },
+                    set: { settings.notificationClickAction = $0 })) {
+                    Text("Open deployment").tag(NotificationClickAction.deployment)
+                    Text("Open site (if available)").tag(NotificationClickAction.site)
+                }
+            } footer: {
+                Text("If the site URL is unavailable, opens the deployment instead.")
+                    .foregroundStyle(.secondary)
+            }
+
         }
         .formStyle(.grouped)
     }

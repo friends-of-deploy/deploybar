@@ -1,6 +1,6 @@
 # DeployBar — icon set
 
-Rocket mark, three menu bar states. Everything here is generated from the five
+Rocket mark, five menu bar drawings. Everything here is generated from the
 master SVGs in `svg/`; regenerate those first if the drawing changes.
 
 ## Menu bar (the primary asset)
@@ -9,7 +9,9 @@ master SVGs in `svg/`; regenerate those first if the drawing changes.
 |---|---|---|
 | Idle | `MenuBarIdle` | rocket upright, engine cold |
 | Deploying | `MenuBarDeploying` | rocket climbing at 45°, two detached exhaust marks |
-| Failed | `MenuBarFailed` | rocket upright, alert badge overlapping the hull |
+| Succeeded | `MenuBarSucceeded` | rocket upright, circular check badge overlapping the hull |
+| Failed | `MenuBarFailed` | rocket upright, triangular exclamation badge overlapping the hull |
+| Signed out | `MenuBarLoggedOut` | rocket upright, triangular question-mark badge overlapping the hull |
 
 Rules these follow, and that you must keep when editing:
 
@@ -19,8 +21,8 @@ Rules these follow, and that you must keep when editing:
 - **18 pt canvas** (72-unit grid at 4×). The glyph fills ~15 pt of that box, so
   it sits at the same weight as the system's own status items (wifi and the
   speaker measure 15 pt; airplay 17 pt). Rendered: idle 11.3 × 15.3 pt,
-  deploying 14.3 × 14.3 pt, failed 14.0 × 15.7 pt.
-  The three states are deliberately within ~1.4 pt of each other in height, so
+  deploying 14.3 × 14.3 pt, succeeded 14.0 × 15.7 pt, failed ~14.3 × 15.2 pt.
+  The five drawings are deliberately within ~1.4 pt of each other in height, so
   the bar does not appear to twitch when the state changes.
 - **Static.** No animation, no timers, no frame swapping. macOS has no animated
   status item; you would have to swap frames on a `Timer`, and a glyph that
@@ -28,6 +30,8 @@ Rules these follow, and that you must keep when editing:
 - **Square status item** (`NSStatusItem.squareLength`) so neighbours never reflow.
 - Nothing thinner than ~1.1 pt. The window is knocked out of the hull, not drawn
   on top, so it stays open at 1×.
+- Badge cutouts follow the badge silhouette: a circle for success and a triangle
+  for failure and signed out, each with a 3-unit gap from the rocket on the 72-unit grid.
 
 Colour lives inside the popover — green / amber / red per deployment — never in
 the bar.
@@ -37,7 +41,7 @@ the bar.
 ```
 svg/                    master drawings (edit these)
 png/                    menubar states @1x/@2x/@3x, app icon 16→1024, README banner
-DeployBar-assets/       drop-in Assets.xcassets (AppIcon + 3 template imagesets)
+../../DeployBar/Assets.xcassets/  AppIcon + 5 template imagesets
 DeployBar.iconset/      + make-icns.sh  →  DeployBar.icns
 MenuBarIcon.swift       DeployState enum and a status-item controller
 web/                    favicons, apple-touch-icon, og image

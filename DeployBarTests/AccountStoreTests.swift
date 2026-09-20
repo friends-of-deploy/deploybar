@@ -46,6 +46,37 @@ final class AccountStoreTests: XCTestCase {
         XCTAssertEqual(reloaded.token(for: reloaded.accounts[0]), "tok-9")
     }
 
+    func test_renameAccounts_persistsNamesWithoutChangingConnections() {
+        let d = UserDefaults(suiteName: UUID().uuidString)!
+        let creds = InMemoryCredentialStore()
+        let store = AccountStore(defaults: d, credentials: creds, detectCLI: { true },
+                                 reloadCLIToken: { "vercel-token" },
+                                 detectGitHubCLI: { true }, reloadGitHubToken: { "github-token" })
+        let manual = store.addKeychainAccount(provider: .vercel, label: "Manual", token: "manual-token")
+        let originals = [store.cliAccount!, store.githubCLIAccount!, manual]
+        let names = ["Praca", "Open source", "Prywatne"]
+        for (account, name) in zip(originals, names) {
+            store.renameAccount(account, label: "  \(name) \n")
+        }
+
+        let reloaded = AccountStore(defaults: d, credentials: creds, detectCLI: { true },
+                                    reloadCLIToken: { "vercel-token" },
+                                    detectGitHubCLI: { true }, reloadGitHubToken: { "github-token" })
+        XCTAssertEqual(reloaded.accounts.map(\.label), names)
+        XCTAssertEqual(reloaded.accounts.map(\.id), originals.map(\.id))
+        XCTAssertEqual(reloaded.accounts.map(\.source), originals.map(\.source))
+        XCTAssertEqual(reloaded.accounts.map(\.provider), originals.map(\.provider))
+        XCTAssertEqual(reloaded.accounts.map { reloaded.token(for: $0) },
+                       ["vercel-token", "github-token", "manual-token"])
+    }
+
+    func test_renameAccount_rejectsBlankName() {
+        let (store, _, _) = fresh(detectCLI: true)
+        let account = store.cliAccount!
+        store.renameAccount(account, label: " \n\t ")
+        XCTAssertEqual(store.cliAccount, account)
+    }
+
     func test_removeAccount_deletesSecret() {
         let (store, creds, _) = fresh()
         let acct = store.addKeychainAccount(provider: .vercel, label: "bob", token: "tok-9")

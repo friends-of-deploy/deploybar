@@ -5,6 +5,7 @@ import SwiftUI
 struct GeneralSettingsTab: View {
     let settings: SettingsStore
     let store: DeploymentStore
+    var openOnboarding: () -> Void = {}
     @State private var launchAtLogin = LaunchAtLogin.isEnabled
 
     var body: some View {
@@ -29,6 +30,16 @@ struct GeneralSettingsTab: View {
                         // Not a stored preference: the setter hands the change
                         // to the system, then the toggle shows what it took.
                         set: { launchAtLogin = $0; LaunchAtLogin.set($0) }))
+            }
+
+            Section {
+                Button("Show welcome guide", action: openOnboarding)
+            }
+
+            Section {
+                CrashReportingPreference(settings: settings)
+            } header: {
+                Text("Privacy")
             }
 
             Section {

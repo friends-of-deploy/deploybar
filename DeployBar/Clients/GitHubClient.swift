@@ -26,6 +26,9 @@ struct GitHubClient: Sendable {
     /// Runaway guard for repository listing pagination.
     private let maxRepoPages = 10
 
+    /// Two bounded repository listings plus the default workflow-run fan-out.
+    static let maxRequestsPerScope = 10 + 10 + 20
+
     init(token: String,
          org: String? = nil,
          runFanoutLimit: Int = 20,
@@ -43,8 +46,11 @@ struct GitHubClient: Sendable {
     }
 
     func deployments(limit: Int) async throws -> [Deployment] {
-        // A single page of most-recently-pushed repos bounds the fan-out.
-        let repos = try await repositories(maxPages: 1, perPage: runFanoutLimit)
+        // Personal scope needs one listing page. Organization scopes scan the
+        // bounded accessible list before selecting the 20 most recently pushed repositories.
+        let repos = Array(try await repositories(maxPages: org == nil ? 1 : maxRepoPages,
+                                                 perPage: org == nil ? runFanoutLimit : 100)
+            .prefix(runFanoutLimit))
         guard !repos.isEmpty else { return [] }
         let perRepo = min(100, max(1, limit / repos.count) + 5)
 
@@ -91,15 +97,10 @@ struct GitHubClient: Sendable {
 
     // MARK: - Requests
 
-    /// Lists repositories, most recently pushed first, scoped to whichever
-    /// source this client represents: an organization's own repositories when
-    /// `org` is set, or the authenticated user's when it is nil. The account
-    /// path deliberately requests `affiliation=owner` only — narrow on purpose,
-    /// so organization repositories arrive through their own org-scoped client
-    /// instead of being listed twice (once under the account, once under the
-    /// org), which would also stick the duplicate with the account's marker
-    /// colour instead of the org's.
-    /// Follows `page` until a short page is returned or the page cap is hit.
+    /// Both paths use authenticated repository access; `/orgs/{org}/repos`
+    /// would also include unrelated public repositories. Organization filtering
+    /// happens after pagination so other owners cannot crowd out the target.
+    /// Personal scope retains its existing owner-only affiliation boundary.
     private func repositories(maxPages: Int, perPage: Int) async throws -> [GHRepo] {
         var all: [GHRepo] = []
         for page in 1...max(1, maxPages) {
@@ -108,19 +109,16 @@ struct GitHubClient: Sendable {
                 URLQueryItem(name: "per_page", value: String(perPage)),
                 URLQueryItem(name: "page", value: String(page)),
             ]
-            let path: String
-            if let org {
-                path = "/orgs/\(org)/repos"
-            } else {
-                path = "/user/repos"
-                // Owned repos only. Organization repositories arrive through
-                // their own scope; listing them here too would show every repo
-                // twice and give it the account's marker instead of the org's.
+            let path = "/user/repos"
+            if org == nil {
                 query.append(URLQueryItem(name: "affiliation", value: "owner"))
             }
             let data = try await get(path: path, query: query)
             let batch = try Self.decoder.decode([GHRepo].self, from: data)
-            all.append(contentsOf: batch)
+            all.append(contentsOf: batch.filter { repo in
+                guard let org else { return true }
+                return repo.owner.login.caseInsensitiveCompare(org) == .orderedSame
+            })
             if batch.count < perPage { break }
         }
         return all

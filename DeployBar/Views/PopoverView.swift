@@ -264,7 +264,7 @@ private struct TopBar: View {
                         if isActive {
                             Label(indented, systemImage: "checkmark")
                         } else if scope.teamId == nil {
-                            Label(indented, systemImage: account.provider.iconName)
+                            Label(indented, image: account.provider.iconAssetName)
                         } else {
                             Text(indented)
                         }
@@ -275,9 +275,12 @@ private struct TopBar: View {
             // Providers with no client yet, named once at the end rather than
             // as an empty section between real accounts.
             ForEach(Provider.allCases.filter { !$0.isImplemented }, id: \.self) { provider in
-                Text(String(localized: "\(provider.displayName) — coming soon",
-                            comment: "Placeholder for unimplemented provider"))
-                    .foregroundStyle(.secondary)
+                Button {} label: {
+                    Label(String(localized: "\(provider.displayName) — coming soon",
+                                 comment: "Placeholder for unimplemented provider"),
+                          image: provider.iconAssetName)
+                }
+                .disabled(true)
             }
 
             Divider()

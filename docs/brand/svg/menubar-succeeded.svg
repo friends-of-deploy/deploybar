@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="72" height="72" viewBox="0 0 72 72">
+  <defs>
+    <mask id="rocket-cutout" maskUnits="userSpaceOnUse" x="0" y="0" width="72" height="72">
+      <rect width="72" height="72" fill="#fff"/>
+      <circle cx="36" cy="30" r="4.5" fill="#000" transform="translate(31 31) scale(0.86) translate(-36 -33)"/>
+      <circle cx="50" cy="50" r="17.5" fill="#000"/>
+    </mask>
+    <mask id="badge-cutout" maskUnits="userSpaceOnUse" x="0" y="0" width="72" height="72">
+      <rect width="72" height="72" fill="#fff"/>
+      <path d="M42.8 50 L48 55.2 L57.6 44.8" fill="none" stroke="#000" stroke-width="5.4" stroke-linecap="round" stroke-linejoin="round"/>
+    </mask>
+  </defs>
+  <g transform="translate(36 36) scale(1.16) translate(-36 -36)" fill="#000">
+    <g mask="url(#rocket-cutout)">
+      <g transform="translate(31 31) scale(0.86) translate(-36 -33)">
+        <path d="M36 10 C40.5 17 45 25 45 31 V50 H27 V31 C27 25 31.5 17 36 10 Z"/>
+        <path d="M45 38 C49 42 53 47 53 54 L45 50 Z"/>
+        <path d="M27 38 C23 42 19 47 19 54 L27 50 Z"/>
+        <path d="M31 50 H41 L39 56 H33 Z"/>
+      </g>
+    </g>
+    <g mask="url(#badge-cutout)"><circle cx="50" cy="50" r="14.5"/></g>
+  </g>
+</svg>

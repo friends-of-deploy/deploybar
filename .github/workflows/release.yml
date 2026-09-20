@@ -18,6 +18,9 @@ jobs:
     # The optional Homebrew step gates on `env.TAP_REPO_TOKEN` instead.
     env:
       TAP_REPO_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+      SENTRY_UPLOAD_ENABLED: ${{ secrets.SENTRY_AUTH_TOKEN != '' && vars.SENTRY_ORG != '' && vars.SENTRY_PROJECT != '' }}
+      SENTRY_ORG: ${{ vars.SENTRY_ORG }}
+      SENTRY_PROJECT: ${{ vars.SENTRY_PROJECT }}
 
     steps:
       - name: Checkout
@@ -36,6 +39,11 @@ jobs:
           else
             echo "is_beta=false" >> "$GITHUB_OUTPUT"
           fi
+
+      - name: Prepare release notes
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: python3 scripts/release-notes.py "$VERSION" > "$RUNNER_TEMP/release-notes.md"
 
       # The SDK the app is built against decides which AppKit behaviour it gets
       # at runtime, and that is not cosmetic here: built against the macOS 15
@@ -98,6 +106,22 @@ jobs:
             DEVELOPMENT_TEAM="$APPLE_TEAM_ID" \
             MARKETING_VERSION="${{ steps.version.outputs.version }}" \
             "CODE_SIGN_IDENTITY=Developer ID Application"
+
+      - name: Preserve debug symbols
+        uses: actions/upload-artifact@v4
+        with:
+          name: DeployBar-${{ steps.version.outputs.version }}-dSYMs
+          path: ${{ runner.temp }}/DeployBar.xcarchive/dSYMs
+          if-no-files-found: error
+
+      - name: Upload debug symbols to Sentry
+        if: ${{ env.SENTRY_UPLOAD_ENABLED == 'true' }}
+        env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+        run: |
+          set -euo pipefail
+          brew install getsentry/tools/sentry-cli
+          sentry-cli debug-files upload "$RUNNER_TEMP/DeployBar.xcarchive/dSYMs"
 
       - name: Export signed .app
         env:
@@ -185,7 +209,8 @@ jobs:
           files: |
             ${{ steps.dmg.outputs.path }}
             ${{ steps.zip.outputs.path }}
-          generate_release_notes: true
+          name: DeployBar v${{ steps.version.outputs.version }}
+          body_path: ${{ runner.temp }}/release-notes.md
           prerelease: ${{ steps.version.outputs.is_beta == 'true' }}
 
       - name: Sign update & append to appcast

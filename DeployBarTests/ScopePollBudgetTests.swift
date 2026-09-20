@@ -29,19 +29,16 @@ final class ScopePollBudgetTests: XCTestCase {
         XCTAssertEqual(budget, 1)
     }
 
-    func test_floorWinsWhenEvenOneScopeExceedsTheLimit() {
-        // 360 ticks/hour * 50 requests/scope = 18000 req/hour for a single
-        // scope, already 300x over the 60/hour limit. The function still
-        // floors the budget at 1 rather than returning 0 — liveness over the
-        // limit, by design. This pins that the resulting hourly usage (1
-        // scope polled every tick * 360 ticks/hour * 50 requests = 18000)
-        // deliberately exceeds hourlyLimit rather than respecting it.
+    func test_floorIsPairedWithSlowerCadenceWhenOneScopeExceedsTheTickBudget() {
+        let interval = ScopePollBudget.accountIntervalSeconds(
+            pollIntervalSeconds: 10, hourlyLimit: 5000, requestsPerScope: 40)
+        XCTAssertEqual(interval, 30)
         let budget = ScopePollBudget.requestsPerTick(
-            scopeCount: 500, pollIntervalSeconds: 10, hourlyLimit: 60, requestsPerScope: 50)
+            scopeCount: 3, pollIntervalSeconds: interval, hourlyLimit: 5000, requestsPerScope: 40)
         XCTAssertEqual(budget, 1)
-        let ticksPerHour = 3600 / 10
-        let resultingHourlyUsage = budget * ticksPerHour * 50
-        XCTAssertGreaterThan(resultingHourlyUsage, 60)
+        XCTAssertLessThanOrEqual(budget * (3600 / interval) * 40, 5000)
+        XCTAssertEqual(ScopePollBudget.effectiveIntervalSeconds(
+            scopeCount: 3, budget: budget, pollIntervalSeconds: interval), 90)
     }
 
     // MARK: slice

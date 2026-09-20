@@ -200,18 +200,16 @@ extension AggregationTests {
         let (store, _) = singleDeploymentStore(
             Fixtures.deployment(uid: "e1", name: "alpha", state: "ERROR"))
         await store.poll()
-        XCTAssertEqual(store.iconState, .failure)   // unacknowledged failure → red
+        XCTAssertEqual(store.iconState, .failure)
         store.acknowledge()
         XCTAssertEqual(store.iconState, .idle)       // cleared on open
     }
 
-    /// A successful deploy has nothing to report, so it draws the same upright
-    /// rocket as a quiet bar — before and after the popover is opened.
-    func test_iconReadyShowsIdle() async {
+    func test_iconSuccessAlertClearsOnAcknowledge() async {
         let (store, _) = singleDeploymentStore(
             Fixtures.deployment(uid: "r1", name: "alpha", state: "READY"))
         await store.poll()
-        XCTAssertEqual(store.iconState, .idle)
+        XCTAssertEqual(store.iconState, .success)
         store.acknowledge()
         XCTAssertEqual(store.iconState, .idle)
     }
@@ -222,7 +220,34 @@ extension AggregationTests {
         await store.poll()
         XCTAssertEqual(store.iconState, .building)
         store.acknowledge()
-        XCTAssertEqual(store.iconState, .building)   // running stays orange
+        XCTAssertEqual(store.iconState, .building)
+    }
+
+    func test_newSuccessfulDeployRaisesAcknowledgedBadgeAgain() async {
+        let (accounts, account, _) = makeAccountStore()
+        var deployment = Fixtures.deployment(uid: "r1", name: "alpha", state: "READY")
+        let store = DeploymentStore(
+            accountStore: accounts,
+            settings: SettingsStore(defaults: UserDefaults(suiteName: UUID().uuidString)!),
+            makeClient: { source, _ in
+                StubClient(deps: source.id == account.id ? [deployment] : [], projs: [], error: nil)
+            },
+            reloadToken: { nil }, authRetryBackoff: .zero)
+
+        await store.poll()
+        XCTAssertEqual(store.iconState, .success)
+        store.acknowledge()
+        await store.poll()
+        XCTAssertEqual(store.iconState, .idle, "the same result stays acknowledged")
+
+        deployment = Fixtures.deployment(uid: "r2", name: "alpha", state: "BUILDING")
+        await store.poll()
+        XCTAssertEqual(store.iconState, .building)
+        store.acknowledge()
+
+        deployment = Fixtures.deployment(uid: "r2", name: "alpha", state: "READY")
+        await store.poll()
+        XCTAssertEqual(store.iconState, .success, "completion raises a fresh check badge")
     }
 
     /// Selecting an account in the dropdown must show ONLY that account's rows —

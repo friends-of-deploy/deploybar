@@ -13,12 +13,12 @@ enum Provider: String, Codable, CaseIterable, Sendable {
         }
     }
 
-    /// SF Symbol used in the dropdown/badges. (No brand symbols ship with SF; use neutral glyphs.)
-    var iconName: String {
+    /// Monochrome SVG template asset shared by menus and account views.
+    var iconAssetName: String {
         switch self {
-        case .vercel:      return "triangle.fill"
-        case .github:      return "chevron.left.forwardslash.chevron.right"
-        case .azureDevOps: return "cloud.fill"
+        case .vercel:      return "ProviderVercel"
+        case .github:      return "ProviderGitHub"
+        case .azureDevOps: return "ProviderAzureDevOps"
         }
     }
 

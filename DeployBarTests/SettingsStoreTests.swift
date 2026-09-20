@@ -12,12 +12,28 @@ final class SettingsStoreTests: XCTestCase {
         XCTAssertFalse(s.notifyOnStarted)
         XCTAssertFalse(s.notifyOnCanceled)
         XCTAssertEqual(s.pollIntervalSeconds, 30)
+        XCTAssertEqual(s.notificationClickAction, .deployment)
     }
 
     func test_persistsAcrossInstances() {
         let d = freshDefaults()
         SettingsStore(defaults: d).notifyOnStarted = true
         XCTAssertTrue(SettingsStore(defaults: d).notifyOnStarted)
+    }
+
+    func test_notificationClickActionPersistsAndCanBeChangedBack() {
+        let defaults = freshDefaults()
+        let settings = SettingsStore(defaults: defaults)
+        settings.notificationClickAction = .site
+        XCTAssertEqual(SettingsStore(defaults: defaults).notificationClickAction, .site)
+        settings.notificationClickAction = .deployment
+        XCTAssertEqual(SettingsStore(defaults: defaults).notificationClickAction, .deployment)
+    }
+
+    func test_unknownNotificationClickActionFallsBackToDeployment() {
+        let defaults = freshDefaults()
+        defaults.set("unknown", forKey: "notificationClickAction")
+        XCTAssertEqual(SettingsStore(defaults: defaults).notificationClickAction, .deployment)
     }
 
     func test_pollIntervalClampsToMinimum() {

@@ -1,6 +1,11 @@
 import Foundation
 import Observation
 
+enum NotificationClickAction: String {
+    case deployment
+    case site
+}
+
 /// Main-actor bound, as the `updateChannelDefaultsKey` comment below already
 /// assumed: every caller (the stores, the views, Sparkle's `@MainActor`
 /// delegate) is on the main actor, and stating it makes an `@Observable`
@@ -9,6 +14,16 @@ import Observation
 @Observable
 final class SettingsStore {
     @ObservationIgnored private let defaults: UserDefaults
+    @ObservationIgnored var crashReportingChanged: ((Bool) -> Void)?
+
+    /// Stored so every SwiftUI surface observes the same consent change.
+    var shareCrashReports: Bool {
+        didSet {
+            guard shareCrashReports != oldValue else { return }
+            defaults.set(shareCrashReports, forKey: Keys.shareCrashReports)
+            crashReportingChanged?(shareCrashReports)
+        }
+    }
 
     /// The defaults key for the update channel, exposed because Sparkle's
     /// updater delegate is `nonisolated` and reads the preference directly
@@ -16,10 +31,12 @@ final class SettingsStore {
     nonisolated static let updateChannelDefaultsKey = "updateChannel"
 
     private enum Keys {
+        static let shareCrashReports = "shareCrashReports"
         static let notifyOnFailure  = "notifyOnFailure"
         static let notifyOnSuccess  = "notifyOnSuccess"
         static let notifyOnStarted  = "notifyOnStarted"
         static let notifyOnCanceled = "notifyOnCanceled"
+        static let notificationClickAction = "notificationClickAction"
         static let pollInterval     = "pollIntervalSeconds"
         static let disabledProjects = "disabledProjects"
         static let selectedTeamId   = "selectedTeamId"
@@ -39,6 +56,7 @@ final class SettingsStore {
 
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
+        self.shareCrashReports = defaults.bool(forKey: Keys.shareCrashReports)
         defaults.register(defaults: [
             Keys.notifyOnFailure:  true,
             Keys.notifyOnSuccess:  true,
@@ -64,6 +82,13 @@ final class SettingsStore {
     var notifyOnCanceled: Bool {
         get { defaults.bool(forKey: Keys.notifyOnCanceled) }
         set { defaults.set(newValue, forKey: Keys.notifyOnCanceled) }
+    }
+    var notificationClickAction: NotificationClickAction {
+        get {
+            defaults.string(forKey: Keys.notificationClickAction)
+                .flatMap(NotificationClickAction.init(rawValue:)) ?? .deployment
+        }
+        set { defaults.set(newValue.rawValue, forKey: Keys.notificationClickAction) }
     }
     var pollIntervalSeconds: Int {
         get { max(10, defaults.integer(forKey: Keys.pollInterval)) }

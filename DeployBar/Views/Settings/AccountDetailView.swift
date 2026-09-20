@@ -27,8 +27,11 @@ struct AccountDetailView: View {
     let settings: SettingsStore
     let store: DeploymentStore
     let account: Account
+    let onRename: (String) -> Void
 
     @State private var tab: AccountDetailTab = .information
+    @State private var name = ""
+    @FocusState private var isNameFocused: Bool
     /// Mirrors the persisted overrides so a pick repaints the swatches at once;
     /// `SettingsStore` reads through to `UserDefaults` and isn't observable.
     @State private var scopeColors: [String: Int] = [:]
@@ -64,13 +67,17 @@ struct AccountDetailView: View {
         }
     }
 
-    /// Read-only: tokens are write-once into the Keychain, so re-authenticating
-    /// means removing the account and adding it again.
+    /// The local name is editable independently of the provider and credentials.
     private var informationForm: some View {
         Form {
             Section {
-                LabeledContent(String(localized: "Name", comment: "Account detail label"),
-                               value: account.label)
+                TextField(String(localized: "Name", comment: "Account detail label"), text: $name)
+                    .multilineTextAlignment(.trailing)
+                    .focused($isNameFocused)
+                    .onSubmit(saveName)
+                    .onChange(of: isNameFocused) { _, focused in
+                        if !focused { saveName() }
+                    }
                 LabeledContent(String(localized: "Provider", comment: "Account detail label"),
                                value: account.provider.displayName)
                 LabeledContent(String(localized: "Credential", comment: "Account detail label"),
@@ -110,7 +117,21 @@ struct AccountDetailView: View {
             }
         }
         .formStyle(.grouped)
-        .onAppear { scopeColors = settings.scopeColorOverrides }
+        .onAppear {
+            scopeColors = settings.scopeColorOverrides
+            name = account.label
+        }
+        .onDisappear(perform: saveName)
+    }
+
+    private func saveName() {
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else {
+            name = account.label
+            return
+        }
+        name = trimmed
+        if trimmed != account.label { onRename(trimmed) }
     }
 
     private var projects: [SourcedProject] {

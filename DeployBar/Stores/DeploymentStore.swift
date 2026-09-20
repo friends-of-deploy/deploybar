@@ -3,10 +3,8 @@ import Foundation
 import Observation
 import os
 
-/// What the menu bar glyph shows. There is deliberately no "ready" case: a
-/// successful deploy and a quiet bar draw the same upright rocket, so the
-/// distinction was invisible in the one place this type is used.
-enum IconState: Equatable { case building, failure, loggedOut, idle }
+/// What the menu bar glyph shows, including unacknowledged deploy outcomes.
+enum IconState: Equatable { case building, success, failure, loggedOut, idle }
 
 /// Factory that builds a per-scope provider client for an account+team, pulling
 /// the token via the AccountStore. Returns nil for unimplemented providers (skipped).
@@ -94,6 +92,12 @@ final class DeploymentStore {
     @ObservationIgnored private let accountStore: AccountStore
     @ObservationIgnored private let settings: SettingsStore
     @ObservationIgnored private let notifier: NotificationManager
+    @ObservationIgnored private let organizationFetch: GitHubClient.Fetch?
+    @ObservationIgnored private let now: () -> Date
+    @ObservationIgnored private var accountPollTimes: [UUID: Date] = [:]
+    @ObservationIgnored private var accountPollTicks: [UUID: Int] = [:]
+    @ObservationIgnored private var scopeGenerations: [ScopeRef: Int] = [:]
+    @ObservationIgnored private var knownAccountIds: Set<UUID>
     @ObservationIgnored private var makeClient: ClientFactory = { _, _ in nil }
 
     // MARK: Notification baseline (one list across all sources, keyed by uid)
@@ -153,8 +157,13 @@ final class DeploymentStore {
     init(accountStore: AccountStore,
          settings: SettingsStore,
          makeClient: ClientFactory? = nil,
+         organizationFetch: GitHubClient.Fetch? = nil,
+         now: @escaping () -> Date = Date.init,
          reloadToken: @escaping () -> String? = { try? TokenProvider().credentials().token },
          authRetryBackoff: Duration = .milliseconds(800)) {
+        self.knownAccountIds = Set(accountStore.accounts.map(\.id))
+        self.now = now
+        self.organizationFetch = organizationFetch
         self.accountStore = accountStore
         self.settings = settings
         self.notifier = NotificationManager(settings: settings)
@@ -186,8 +195,8 @@ final class DeploymentStore {
                 self.cliBaseToken = token
             }
             // Start from the cached org/team lists so the very first poll already
-            // covers every scope and rows carry real names — `loadTeams` and
-            // `loadGitHubOrganizations` refresh them.
+            // covers known scopes and rows carry real names; account discovery
+            // refreshes these lists after startup.
             settings.migrateCachedTeams(cliAccountId: cli.id)
         }
         self.orgsByAccount = settings.cachedOrgs
@@ -213,6 +222,17 @@ final class DeploymentStore {
             .sorted(by: SourcedProject.displayOrder)
         guard !unfilteredDeployments.isEmpty || !unfilteredProjects.isEmpty else { return }
 
+        // Seed the replay store as well as the notification baseline: the first
+        // budgeted tick may not fetch most of the restored scopes.
+        for scope in availableScopes {
+            let ref = ScopeRef(accountId: scope.account.id, teamId: scope.teamId)
+            let deps = unfilteredDeployments.filter { $0.scope == ref }.map(\.deployment)
+            let projs = unfilteredProjects.filter { $0.scope == ref }.map(\.project)
+            if !deps.isEmpty || !projs.isEmpty {
+                lastGood[ref] = ScopeResult(account: scope.account, teamId: scope.teamId,
+                                            deployments: deps, projects: projs)
+            }
+        }
         applyDisplayFilter()
         // Cached rows are shown, so the list is no longer "waiting for first data".
         isLoadingInitial = false
@@ -452,26 +472,27 @@ final class DeploymentStore {
 
     // MARK: - Icon state
 
-    /// Green/red are an "alert" that clears when the user opens the popover; a
-    /// fresh success/failure re-raises it. Orange (something running) is a live
-    /// status, never acknowledged away.
+    /// Success/failure badges clear when the user opens the popover; a fresh
+    /// outcome re-raises them. A running deployment is a live status, never
+    /// acknowledged away.
     private var alertAcknowledged = false
 
-    /// Acknowledge the current green/red alert — called when the popover opens.
+    /// Acknowledge the current outcome badge — called when the popover opens.
     func acknowledge() { alertAcknowledged = true }
 
     var iconState: IconState {
         if isLoggedOut { return .loggedOut }
         let base = Self.baseState(for: sourcedDeployments.map(\.deployment.state))
-        if base == .building { return .building }   // running → orange, always shown
-        if alertAcknowledged { return .idle }       // red cleared until a new event
-        return base                                 // .failure / .idle
+        if base == .building { return .building }
+        if alertAcknowledged { return .idle }
+        return base
     }
 
-    /// Pure derivation (no acknowledgment): running > failure > idle.
+    /// Pure derivation (no acknowledgment): running > failure > success > idle.
     static func baseState(for states: [DeploymentState]) -> IconState {
         if states.contains(where: { $0 == .building || $0 == .queued }) { return .building }
         if states.contains(.error) { return .failure }
+        if states.contains(.ready) { return .success }
         return .idle
     }
 
@@ -526,40 +547,53 @@ final class DeploymentStore {
         return true
     }
 
-    // MARK: - Teams / user (account-level; CLI/first account)
+    // MARK: - Account organization discovery
 
-    func loadTeams() async {
-        guard let teamsClient, let cli = accountStore.cliAccount else { return }
-        // A failed fetch keeps the cached list rather than blanking scope names.
-        guard let fetched = try? await teamsClient.teams() else { return }
-        let changed = fetched.map(\.id) != teams.map(\.id)
-        setOrganizations(fetched, for: cli.id)
-        // In "All" the team list defines what gets polled. Re-poll only when the
-        // set actually changed — with a warm cache it usually hasn't.
-        if filter == .all, changed {
-            await poll()
+    /// The same account-specific discovery path serves startup and account-add.
+    /// Injected legacy CLI clients retain their transport and refresh behavior.
+    func loadOrganizations(for account: Account) async {
+        guard let token = accountStore.token(for: account) else { return }
+        do {
+            let fetched: [Team]
+            switch account.provider {
+            case .github:
+                if let organizationFetch {
+                    fetched = try await GitHubOrgsClient(token: token, fetch: organizationFetch).organizations()
+                } else {
+                    fetched = try await GitHubOrgsClient(token: token).organizations()
+                }
+            case .vercel:
+                if account.source == .vercelCLI, let teamsClient {
+                    fetched = try await teamsClient.teams()
+                } else {
+                    fetched = try await TeamsClient(token: token,
+                        fetch: organizationFetch ?? accountStore.vercelFetch(for: account)).teams()
+                }
+            case .azureDevOps: return
+            }
+            guard accountStore.accounts.contains(where: { $0.id == account.id }) else { return }
+            let changed = fetched.map(\.id) != organizations(for: account).map(\.id)
+            setOrganizations(fetched, for: account.id)
+            if changed { await poll() }
+        } catch {
+            // Keep cached organizations during a transient discovery failure.
+            os_log("organization fetch failed for %{public}@: %{public}@", account.label, error.localizedDescription)
         }
     }
 
-    /// Loads each GitHub account's organizations so they become scopes. A
-    /// failure is non-fatal: the account keeps its single account-level scope,
-    /// exactly as before this existed.
+    func loadOrganizations() async {
+        for account in accountStore.accounts { await loadOrganizations(for: account) }
+    }
+
+    func loadTeams() async {
+        for account in accountStore.accounts where account.provider == .vercel {
+            await loadOrganizations(for: account)
+        }
+    }
+
     func loadGitHubOrganizations() async {
         for account in accountStore.accounts where account.provider == .github {
-            guard let token = accountStore.token(for: account) else { continue }
-            do {
-                let orgs = try await GitHubOrgsClient(token: token).organizations()
-                let changed = orgs.map(\.id) != organizations(for: account).map(\.id)
-                setOrganizations(orgs, for: account.id)
-                // Mirrors `loadTeams`: a newly discovered organization must not
-                // wait for the next timer tick before it is polled.
-                if filter == .all, changed {
-                    await poll()
-                }
-            } catch {
-                os_log("github org fetch failed for %{public}@: %{public}@",
-                       account.label, error.localizedDescription)
-            }
+            await loadOrganizations(for: account)
         }
     }
 
@@ -639,11 +673,9 @@ final class DeploymentStore {
         // Default view is "All": every connected provider, and every Vercel team,
         // in one list. `scopeName` stays "all" and the filter is left untouched.
         //
-        // Teams load asynchronously, so the first poll only covers the persisted
-        // team; `loadTeams` re-polls once the full list arrives (see loadTeams()).
+        // Discovery joins new organizations into the same budgeted rotation.
         Task { await poll() }
-        Task { await loadTeams() }
-        Task { await loadGitHubOrganizations() }
+        Task { await loadOrganizations() }
         Task { await loadUser() }
         scheduleTimer()
         observeWake()
@@ -691,17 +723,13 @@ final class DeploymentStore {
 
     // MARK: - Polling (fan out across scopes)
 
-    /// Tick counter driving the round-robin rotation. Monotonic; only its
-    /// remainder matters.
-    @ObservationIgnored private var pollTick = 0
-
     /// Estimated requests one scope costs per poll. GitHub fans out a
     /// workflow-runs request per repository on top of the repo listing, so its
     /// scopes cost several times what a Vercel scope does (one deployments
     /// call, one projects call).
     private func estimatedRequestsPerScope(for account: Account) -> Int {
         switch account.provider {
-        case .github:                return 6
+        case .github:                return GitHubClient.maxRequestsPerScope
         case .vercel, .azureDevOps:  return 2
         }
     }
@@ -721,31 +749,43 @@ final class DeploymentStore {
     /// How often any one of this account's scopes actually refreshes. Equal to
     /// the poll interval until the account has more scopes than one tick can
     /// afford, after which they rotate. Surfaced in Settings.
-    func effectiveRefreshInterval(for account: Account) -> Int {
-        let count = availableScopes.filter { $0.account.id == account.id }.count
-        let budget = ScopePollBudget.requestsPerTick(
-            scopeCount: count,
+    private func accountPollInterval(for account: Account) -> Int {
+        ScopePollBudget.accountIntervalSeconds(
             pollIntervalSeconds: settings.pollIntervalSeconds,
             hourlyLimit: hourlyLimit(for: account),
             requestsPerScope: estimatedRequestsPerScope(for: account))
-        return ScopePollBudget.effectiveIntervalSeconds(
-            scopeCount: count, budget: budget,
-            pollIntervalSeconds: settings.pollIntervalSeconds)
     }
 
-    /// The scopes this tick may fetch: per account, at most what its budget
-    /// affords, rotating so every scope comes round in turn.
+    func effectiveRefreshInterval(for account: Account) -> Int {
+        let count = availableScopes.filter { $0.account.id == account.id }.count
+        let interval = accountPollInterval(for: account)
+        let budget = ScopePollBudget.requestsPerTick(
+            scopeCount: count, pollIntervalSeconds: interval,
+            hourlyLimit: hourlyLimit(for: account),
+            requestsPerScope: estimatedRequestsPerScope(for: account))
+        return ScopePollBudget.effectiveIntervalSeconds(
+            scopeCount: count, budget: budget, pollIntervalSeconds: interval)
+    }
+
+    /// Only advance an account's rotation when it can actually afford a fetch.
     private func scopesToPollThisTick() -> [Scope] {
         let byAccount = Dictionary(grouping: availableScopes, by: { $0.account.id })
         return byAccount.flatMap { accountId, scopes -> [Scope] in
             guard let account = account(accountId) else { return [] }
+            let interval = accountPollInterval(for: account)
+            let timestamp = now()
+            if interval > settings.pollIntervalSeconds,
+               let previous = accountPollTimes[accountId],
+               timestamp.timeIntervalSince(previous) < Double(interval) { return [] }
+            accountPollTimes[accountId] = timestamp
+            accountPollTicks[accountId, default: 0] += 1
             let budget = ScopePollBudget.requestsPerTick(
-                scopeCount: scopes.count,
-                pollIntervalSeconds: settings.pollIntervalSeconds,
+                scopeCount: scopes.count, pollIntervalSeconds: interval,
                 hourlyLimit: hourlyLimit(for: account),
                 requestsPerScope: estimatedRequestsPerScope(for: account))
             let ids = scopes.map { ScopeRef(accountId: accountId, teamId: $0.teamId).id }
-            let chosen = Set(ScopePollBudget.slice(scopeIds: ids, budget: budget, tick: pollTick))
+            let chosen = Set(ScopePollBudget.slice(scopeIds: ids, budget: budget,
+                                                  tick: accountPollTicks[accountId]!))
             return scopes.filter {
                 chosen.contains(ScopeRef(accountId: accountId, teamId: $0.teamId).id)
             }
@@ -756,7 +796,10 @@ final class DeploymentStore {
     /// than a snapshot from before it was switched off.
     func scopeEnablementChanged(accountId: UUID, teamId: String?) {
         let ref = ScopeRef(accountId: accountId, teamId: teamId)
+        scopeGenerations[ref, default: 0] += 1
         lastGood.removeValue(forKey: ref)
+        unfilteredDeployments.removeAll { $0.scope == ref }
+        unfilteredProjects.removeAll { $0.scope == ref }
         scopeErrors.removeValue(forKey: ref)
         applyDisplayFilter()
     }
@@ -814,8 +857,9 @@ final class DeploymentStore {
             return
         }
 
-        pollTick &+= 1
         let scopes = scopesToPollThisTick()
+        let generations = scopeGenerations
+        var firstSuccessScopes = Set<ScopeRef>()
 
         var merged: [ScopeResult] = []
         var errors: [ScopeRef: String] = [:]
@@ -845,12 +889,16 @@ final class DeploymentStore {
                     }
                 }
                 let ref = ScopeRef(accountId: scope.account.id, teamId: scope.teamId)
+                guard availableScopes.contains(where: {
+                    $0.account.id == ref.accountId && $0.teamId == ref.teamId
+                }), scopeGenerations[ref, default: 0] == generations[ref, default: 0] else { continue }
                 switch result {
                 case .success(let (deps, projs)):
                     consecutiveAuthFailures[ref] = 0
                     freshSuccessCount += 1
                     let res = ScopeResult(account: scope.account, teamId: scope.teamId,
                                           deployments: deps, projects: projs)
+                    if lastGood[ref] == nil { firstSuccessScopes.insert(ref) }
                     lastGood[ref] = res
                     merged.append(res)
                 case .failure(let error):
@@ -871,6 +919,16 @@ final class DeploymentStore {
             }) else { continue }
             merged.append(previous)
         }
+
+        // A different scope may have been disabled/removed while awaiting the
+        // final task-group child, after its own result had already arrived.
+        let liveResultScopes = Set(availableScopes.map { ScopeRef(accountId: $0.account.id, teamId: $0.teamId) })
+        merged.removeAll { result in
+            let ref = ScopeRef(accountId: result.account.id, teamId: result.teamId)
+            return !liveResultScopes.contains(ref)
+                || scopeGenerations[ref, default: 0] != generations[ref, default: 0]
+        }
+        errors = errors.filter { liveResultScopes.contains($0.key) }
 
         // Tag + merge across all sources (unfiltered).
         let allDeployments = merged.flatMap { res in
@@ -897,14 +955,24 @@ final class DeploymentStore {
 
         // Notification diff runs over the FULL merged set (before display filtering),
         // against the persistent snapshot. Changing the ScopeFilter never re-notifies.
-        let snapshots = allDeployments.map {
+        let snapshots = unfilteredDeployments.map {
             DeploymentSnapshot($0.deployment, key: deploymentKey(for: $0))
+        }
+        // Each scope gets a silent first-success baseline, even if another
+        // rotation slice completed earlier. Cached scopes already have a
+        // baseline, so real changes since the cache still raise alerts.
+        if previousSnapshots != nil {
+            let known = Set(previousSnapshots!.map(\.uid))
+            previousSnapshots!.append(contentsOf: unfilteredDeployments
+                .filter { firstSuccessScopes.contains($0.scope) }
+                .map { DeploymentSnapshot($0.deployment, key: deploymentKey(for: $0)) }
+                .filter { !known.contains($0.uid) })
         }
         let transitions = DeploymentDiffer.transitions(previous: previousSnapshots, current: snapshots)
         notifier.handle(transitions)
         previousSnapshots = snapshots
 
-        // A fresh success/failure re-raises the green/red icon alert the user
+        // A fresh success/failure re-raises the outcome badge the user
         // last acknowledged by opening the popover.
         if transitions.contains(where: { $0.event == .success || $0.event == .failure }) {
             alertAcknowledged = false
@@ -954,6 +1022,8 @@ final class DeploymentStore {
         let liveScopes = Set(availableScopes.map { ScopeRef(accountId: $0.account.id, teamId: $0.teamId) })
         lastGood = lastGood.filter { liveIds.contains($0.key.accountId) && liveScopes.contains($0.key) }
         consecutiveAuthFailures = consecutiveAuthFailures.filter { liveIds.contains($0.key.accountId) }
+        accountPollTimes = accountPollTimes.filter { liveIds.contains($0.key) }
+        accountPollTicks = accountPollTicks.filter { liveIds.contains($0.key) }
     }
 
     /// Drop every trace of accounts that are no longer connected, then re-poll.
@@ -966,6 +1036,8 @@ final class DeploymentStore {
     /// so the rows would come back at the next launch.
     func accountsChanged() async {
         let live = Set(accountStore.accounts.map(\.id))
+        let added = live.subtracting(knownAccountIds)
+        knownAccountIds = live
         lastGood = lastGood.filter { live.contains($0.key.accountId) }
         consecutiveAuthFailures = consecutiveAuthFailures.filter { live.contains($0.key.accountId) }
         scopeErrors = scopeErrors.filter { live.contains($0.key.accountId) }
@@ -977,6 +1049,9 @@ final class DeploymentStore {
                                        projects: unfilteredProjects,
                                        savedAt: Date())
         applyDisplayFilter()
+        for account in accountStore.accounts where added.contains(account.id) {
+            await loadOrganizations(for: account)
+        }
         await poll()
     }
 

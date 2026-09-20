@@ -8,6 +8,8 @@ struct DeployBarApp: App {
     @State private var settings: SettingsStore
     @State private var accountStore: AccountStore
     @State private var updater: UpdaterController
+    @State private var onboarding: OnboardingWindowController
+    @State private var crashReporting: CrashReportingController?
 
     init() {
         // Demo mode: an invented world for documentation screenshots, off unless
@@ -15,6 +17,7 @@ struct DeployBarApp: App {
         // polling — is the production path, so a screenshot shows the real app
         // rather than a mock-up.
         if let demo = DemoEnvironment.buildFromEnvironment() {
+            _crashReporting = State(initialValue: nil)
             let store = DeploymentStore(accountStore: demo.accountStore,
                                         settings: demo.settings,
                                         makeClient: demo.makeClient)
@@ -23,11 +26,19 @@ struct DeployBarApp: App {
             _accountStore = State(initialValue: demo.accountStore)
             _store = State(initialValue: store)
             _updater = State(initialValue: UpdaterController(settings: demo.settings))
+            let state = OnboardingState(defaults: UserDefaults(suiteName: "io.eightlines.deploybar.onboarding-preview")!)
+            let welcome = OnboardingWindowController(state: state, accounts: demo.accountStore, store: store,
+                                                     settings: demo.settings)
+            _onboarding = State(initialValue: welcome)
+            if ProcessInfo.processInfo.environment["DEPLOYBAR_ONBOARDING"] == "1" {
+                DispatchQueue.main.async { welcome.present() }
+            }
             store.start()
             return
         }
 
         let settings = SettingsStore()
+        _crashReporting = State(initialValue: CrashReportingController(settings: settings))
         let accountStore = AccountStore()
         if let cli = accountStore.cliAccount {
             settings.migrateLegacyFollowData(cliAccountId: cli.id)
@@ -37,7 +48,14 @@ struct DeployBarApp: App {
         _accountStore = State(initialValue: accountStore)
         _store = State(initialValue: store)
         _updater = State(initialValue: UpdaterController(settings: settings))
-        // Start polling (and request notification authorization) at launch.
+        let state = OnboardingState()
+        let welcome = OnboardingWindowController(state: state, accounts: accountStore, store: store,
+                                                 settings: settings)
+        _onboarding = State(initialValue: welcome)
+        if state.shouldPresentAutomatically(hasAccounts: accountStore.hadPersistedAccounts) {
+            DispatchQueue.main.async { welcome.present() }
+        }
+        // Start polling at launch. Notification permission is requested in context.
         // The popover's `.task` runs only when the menu bar item is first
         // opened, so relying on it alone meant a user who never opened the
         // popover got no background polling and no notifications.
@@ -46,17 +64,17 @@ struct DeployBarApp: App {
 
     var body: some Scene {
         MenuBarExtra {
-            MenuBarContentView(store: store)
+            MenuBarContentView(store: store, openOnboarding: { onboarding.present() })
                 .task {
                     store.start()
                 }
         } label: {
-            MenuBarIcon(state: store.iconState)
+            MenuBarLabel(state: store.iconState)
         }
         .menuBarExtraStyle(.window)
 
         Settings {
-            SettingsView(settings: settings, store: store, accountStore: accountStore, updater: updater)
+            SettingsView(settings: settings, store: store, accountStore: accountStore, updater: updater, openOnboarding: { onboarding.present() })
         }
     }
 }
@@ -65,11 +83,29 @@ struct DeployBarApp: App {
 private struct MenuBarContentView: View {
     @Environment(\.openSettings) private var openSettings
     let store: DeploymentStore
+    let openOnboarding: () -> Void
 
     var body: some View {
-        PopoverView(store: store) {
+        PopoverView(store: store, openSettings: {
             NSApp.activate(ignoringOtherApps: true)
             openSettings()
-        }
+        }, openOnboarding: openOnboarding)
+    }
+}
+
+/// Capture the Settings action from a SwiftUI scene that is present at launch.
+/// The welcome window is hosted by AppKit and has no scene environment of its own.
+private struct MenuBarLabel: View {
+    @Environment(\.openSettings) private var openSettings
+    let state: IconState
+
+    var body: some View {
+        MenuBarIcon(state: state)
+            .onAppear {
+                SettingsNavigation.shared.openSettings = {
+                    NSApp.activate(ignoringOtherApps: true)
+                    openSettings()
+                }
+            }
     }
 }

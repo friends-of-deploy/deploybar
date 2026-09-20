@@ -100,9 +100,13 @@ struct AccountsSettingsTab: View {
                              allScopeIds: store.allScopeIds,
                              settings: settings,
                              overrides: $scopeColors)
-            Image(systemName: account.provider.iconName)
+            Image(account.provider.iconAssetName)
+                .resizable()
+                .scaledToFit()
                 .foregroundStyle(.secondary)
-                .frame(width: 14)
+                .frame(width: 14, height: 14)
+                .accessibilityLabel(account.provider.displayName)
+                .help(account.provider.displayName)
             VStack(alignment: .leading, spacing: 2) {
                 Text(account.label)
                     .lineLimit(1)
@@ -116,11 +120,6 @@ struct AccountsSettingsTab: View {
                     .lineLimit(1)
             }
             Spacer()
-            Text(account.provider.displayName)
-                .font(.caption)
-                .padding(.horizontal, 6)
-                .padding(.vertical, 2)
-                .background(.quaternary, in: Capsule())
         }
         .padding(.vertical, 2)
     }
@@ -133,13 +132,19 @@ struct AccountsSettingsTab: View {
         case .newAccount:
             AddAccountForm(accountStore: accountStore) { added in
                 selection = .account(added.id)
+                Task {
+                    await store.accountsChanged()
+                    await store.loadUser()
+                }
             }
         case .account:
             if let account = selectedAccount {
                 // `.id` re-creates the detail (and its @State segment and
                 // filter) when the selection moves to another account.
-                AccountDetailView(settings: settings, store: store, account: account)
-                    .id(account.id)
+                AccountDetailView(settings: settings, store: store, account: account) { name in
+                    accountStore.renameAccount(account, label: name)
+                }
+                .id(account.id)
             } else {
                 emptyState
             }
@@ -183,51 +188,68 @@ private struct AddAccountForm: View {
     let accountStore: AccountStore
     let onAdded: (Account) -> Void
 
-    @State private var provider: Provider = Provider.allCases.first(where: \.isImplemented) ?? .vercel
+    @State private var connection = AccountConnectionStore()
+    @State private var connectionTask: Task<Void, Never>?
     @State private var label = ""
-    @State private var token = ""
 
     var body: some View {
         Form {
             Section {
                 Picker(String(localized: "Provider", comment: "Add account provider picker"),
-                       selection: $provider) {
+                       selection: $connection.provider) {
                     ForEach(Provider.allCases.filter(\.isImplemented), id: \.self) { provider in
-                        Text(provider.displayName).tag(provider)
+                        Label(provider.displayName, image: provider.iconAssetName).tag(provider)
                     }
                 }
                 TextField(String(localized: "Label (optional)", comment: "Add account label field"),
                           text: $label,
-                          prompt: Text(provider.displayName))
+                          prompt: Text(connection.provider.displayName))
                 SecureField(String(localized: "Token", comment: "Add account token field"),
-                            text: $token)
+                            text: $connection.token)
             } header: {
                 Text(String(localized: "Add account", comment: "Accounts tab add-account section header"))
             } footer: {
-                Text(String(localized: "DeployBar reuses your Vercel CLI login. Run `vercel login` in Terminal to sign in.",
-                            comment: "Accounts tab CLI login guidance footer"))
-                    .foregroundStyle(.secondary)
+                VStack(alignment: .leading, spacing: 8) {
+                    Link("Create a token ↗", destination: URL(string: connection.provider == .github
+                         ? "https://github.com/settings/personal-access-tokens/new"
+                         : "https://vercel.com/account/settings/tokens")!)
+                    Text(connection.provider == .github
+                         ? "For GitHub, allow read access to your repositories and Actions."
+                         : "Use a Vercel token with access to the projects you want to follow.")
+                    Label("Stored in macOS Keychain", systemImage: "lock.shield")
+                }
+                .foregroundStyle(.secondary)
+            }
+
+            if let error = connection.errorMessage {
+                Text(error).foregroundStyle(.red).font(.callout)
             }
 
             Section {
                 HStack {
+                    if connection.isConnecting { ProgressView().controlSize(.small) }
                     Spacer()
                     Button(String(localized: "Add", comment: "Add account button"), action: add)
                         .buttonStyle(.borderedProminent)
-                        .disabled(token.isEmpty)
+                        .disabled(!connection.canConnect)
                 }
             }
         }
         .formStyle(.grouped)
+        .disabled(connection.isConnecting)
+        .onDisappear {
+            connectionTask?.cancel()
+            connection.token = ""
+        }
     }
 
     private func add() {
-        let resolved = label.isEmpty ? provider.displayName : label
-        let account = accountStore.addKeychainAccount(provider: provider,
-                                                      label: resolved,
-                                                      token: token)
-        label = ""
-        token = ""
-        onAdded(account)
+        guard connection.canConnect else { return }
+        connectionTask = Task {
+            if let account = await connection.connect(to: accountStore, label: label) {
+                label = ""
+                onAdded(account)
+            }
+        }
     }
 }

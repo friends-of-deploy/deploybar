@@ -1,7 +1,7 @@
 import Foundation
 
 enum LinkBuilder {
-    /// The same primary target is used by deployment rows and notification clicks.
+    /// The primary target used by deployment rows.
     /// Provider pages win; failed Vercel builds prefer their logs over the live URL.
     static func deploymentDestination(for deployment: Deployment) -> URL? {
         if let web = deployment.webURL { return web }

@@ -5,6 +5,7 @@ import Observation
 @MainActor
 final class AccountStore {
     private(set) var accounts: [Account] = []
+    let hadPersistedAccounts: Bool
 
     @ObservationIgnored private let defaults: UserDefaults
     @ObservationIgnored private let credentials: CredentialStore
@@ -26,7 +27,9 @@ final class AccountStore {
         self.reloadCLIToken = reloadCLIToken
         self.reloadGitHubToken = reloadGitHubToken
         self.vercelCLISession = vercelCLISession
-        self.accounts = Self.load(defaults)
+        let savedAccounts = Self.load(defaults)
+        self.accounts = savedAccounts
+        self.hadPersistedAccounts = !savedAccounts.isEmpty
 
         if detectCLI(), cliAccount == nil {
             let cli = Account.vercelCLI(id: UUID(), label: "Vercel CLI")
@@ -78,6 +81,16 @@ final class AccountStore {
     /// are auto-detected in production, so there is no other way to seed one.
     func adoptDemoAccount(_ account: Account) {
         accounts.append(account)
+        persist()
+    }
+
+    /// Labels are local metadata, including for automatically detected CLI accounts.
+    func renameAccount(_ account: Account, label: String) {
+        let name = label.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !name.isEmpty,
+              let index = accounts.firstIndex(where: { $0.id == account.id }),
+              accounts[index].label != name else { return }
+        accounts[index].label = name
         persist()
     }
 

@@ -216,7 +216,43 @@ final class GitHubClientTests: XCTestCase {
 
         _ = try await client.projects()
 
-        XCTAssertEqual(paths.first, "/orgs/Vorciu/repos")
+        XCTAssertEqual(paths.first, "/user/repos")
+    }
+
+
+    func test_orgScopeOnlyIncludesAccessibleRepositoriesOwnedByThatOrg() async throws {
+        let client = GitHubClient(token: "fine-grained", org: "acme") { req in
+            let json = req.url!.path == "/user/repos" ? Self.reposJSON : "[]"
+            return (Data(json.utf8), Self.ok(req))
+        }
+        let projects = try await client.projects()
+        XCTAssertEqual(projects.map(\.id), ["acme/web", "acme/api"])
+        let other = GitHubClient(token: "fine-grained", org: "unrelated") { req in
+            (Data(Self.reposJSON.utf8), Self.ok(req))
+        }
+        let unrelated = try await other.projects()
+        XCTAssertTrue(unrelated.isEmpty)
+    }
+
+
+    private actor RequestCounter {
+        var count = 0
+        func increment() { count += 1 }
+    }
+
+    func test_worstCaseScopeCostsFortyRequests() async throws {
+        let requests = RequestCounter()
+        let entry = #"{"id":1,"name":"repo","full_name":"acme/repo","owner":{"login":"acme"},"html_url":"https://github.com/acme/repo"}"#
+        let page = Data(("[" + Array(repeating: entry, count: 100).joined(separator: ",") + "]").utf8)
+        let client = GitHubClient(token: "t", org: "acme") { req in
+            await requests.increment()
+            return (req.url!.path == "/user/repos" ? page : Data(#"{"workflow_runs":[]}"#.utf8), Self.ok(req))
+        }
+        _ = try await client.projects()
+        _ = try await client.deployments(limit: 100)
+        let requestCount = await requests.count
+        XCTAssertEqual(requestCount, 40)
+        XCTAssertLessThanOrEqual(requestCount, GitHubClient.maxRequestsPerScope)
     }
 
     static func ok(_ req: URLRequest) -> HTTPURLResponse {
