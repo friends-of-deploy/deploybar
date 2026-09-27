@@ -367,6 +367,39 @@ final class GitHubClientTests: XCTestCase {
                        "a failed listing must not be served for the rest of the tick")
     }
 
+    /// While GitHub throttles, re-listing for each wave of organizations only
+    /// digs the hole deeper: the rest of the tick gets the same error for free.
+    func test_rateLimitedListingIsKeptUntilTheNextTick() async throws {
+        let listing = GitHubRepositoryListing()
+        let log = ListingLog()
+        let client = GitHubClient(token: "t", org: "acme", listing: listing) { req in
+            guard req.url!.path == "/user/repos" else {
+                return (Data(#"{"workflow_runs":[]}"#.utf8), Self.ok(req))
+            }
+            await log.add(req.url!.query ?? "")
+            let throttled = await log.queries.count == 1
+            let resp = HTTPURLResponse(url: req.url!, statusCode: throttled ? 403 : 200, httpVersion: nil,
+                                       headerFields: throttled ? ["x-ratelimit-remaining": "0"] : nil)!
+            return (Data((throttled ? "{}" : Self.reposJSON).utf8), resp)
+        }
+
+        for attempt in 1...2 {
+            do {
+                _ = try await client.projects()
+                XCTFail("attempt \(attempt) must report the throttle")
+            } catch ProviderClientError.rateLimited {
+            } catch {
+                XCTFail("attempt \(attempt): expected rateLimited, got \(error)")
+            }
+        }
+        let throttledListings = await log.queries.count
+        XCTAssertEqual(throttledListings, 1, "a throttled listing is not re-requested within the tick")
+
+        await listing.reset()
+        let projects = try await client.projects()
+        XCTAssertEqual(projects.map(\.id), ["acme/web", "acme/api"], "the next tick lists again")
+    }
+
     func test_differentTokensDoNotShareAListing() async throws {
         let listing = GitHubRepositoryListing()
         let log = ListingLog()

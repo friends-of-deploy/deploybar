@@ -6,7 +6,10 @@ import Foundation
 /// Organization scopes all read the same authenticated listing and keep only
 /// their owner's repositories, so without sharing each one listed it again —
 /// twice, for projects and for deployments. Concurrent callers join the one
-/// in-flight fetch. A failed fetch is not kept: the next caller fetches again.
+/// in-flight fetch. A failed fetch is not kept, so the next caller fetches
+/// again, unless GitHub was throttling: a rate-limited listing stays until
+/// `reset()`, so every later organization of the tick gets the same error
+/// without spending another request against an exhausted limit.
 actor GitHubRepositoryListing {
     private var entries: [String: Task<[GHRepo], Error>] = [:]
 
@@ -20,8 +23,10 @@ actor GitHubRepositoryListing {
         do {
             return try await entry.value
         } catch {
-            // A reset and a newer fetch may have replaced it meanwhile.
-            if entries[token] == entry { entries[token] = nil }
+            // A throttle stays until `reset()`. Anything else is dropped, unless
+            // a reset and a newer fetch have replaced it meanwhile.
+            let throttled = if case ProviderClientError.rateLimited = error { true } else { false }
+            if !throttled, entries[token] == entry { entries[token] = nil }
             throw error
         }
     }
