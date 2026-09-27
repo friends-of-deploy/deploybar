@@ -29,6 +29,13 @@ final class VercelCLICredential: CredentialStrategy {
 
     func handles(_ source: CredentialSource) -> Bool { source == .vercelCLI }
 
+    /// The renewing CLI session transport, independent of whether a token can
+    /// be read from disk right now.
+    var transport: HTTPFetch {
+        let session = self.session
+        return { try await session.data(for: $0) }
+    }
+
     func detectAccount() -> DetectedAccount? {
         guard detect() else { return nil }
         return DetectedAccount(account: .vercelCLI(id: UUID(), label: "Vercel CLI"), placement: .first)
@@ -37,8 +44,7 @@ final class VercelCLICredential: CredentialStrategy {
     func resolve(_ account: Account) -> ResolvedCredential? {
         guard let token = reload() else { return nil }
         lastResolvedToken = token
-        let session = self.session
-        return ResolvedCredential(token: token, transport: { try await session.data(for: $0) })
+        return ResolvedCredential(token: token, transport: transport)
     }
 
     func recoverFromUnauthorized(_ account: Account) -> AuthRecovery {
