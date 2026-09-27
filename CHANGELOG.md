@@ -3,6 +3,28 @@
 Release notes for DeployBar. Earlier releases are available on
 [GitHub Releases](https://github.com/friends-of-deploy/deploybar/releases).
 
+## [1.2.2] - 2026-09-27
+
+DeployBar 1.2.2 keeps the menu responsive while it refreshes and makes
+Settings open from every place that offers it.
+
+### A menu that keeps up
+
+- The menu no longer stalls while DeployBar refreshes an account connected
+  through the GitHub CLI. The `gh` token used to be re-read for every
+  organization on every refresh, holding up the menu each time, so with many
+  organizations the list could stop scrolling and buttons stop responding.
+  DeployBar now reads it once and refreshes it in the background.
+
+### Settings that always open
+
+- Settings in the menu bar icon's right-click menu opens Settings again. It
+  had stopped doing anything on every supported version of macOS.
+- Settings comes to the front when opened, including when its window is
+  already open behind another app.
+
+[Full changes since 1.2.1](https://github.com/friends-of-deploy/deploybar/compare/v1.2.1...v1.2.2)
+
 ## [1.2.1] - 2026-09-27
 
 DeployBar 1.2.1 fixes a menu bar icon that could keep showing a deploy in
