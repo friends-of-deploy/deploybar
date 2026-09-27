@@ -2,6 +2,50 @@
 <rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle">
   <channel>
     <item>
+      <title>1.2.1</title>
+      <pubDate>Sun, 27 Sep 2026 15:24:56 +0000</pubDate>
+      <sparkle:version>19</sparkle:version>
+      <sparkle:shortVersionString>1.2.1</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <description sparkle:format="markdown"><![CDATA[
+DeployBar 1.2.1 fixes a menu bar icon that could keep showing a deploy in
+progress long after it had finished, and refreshes GitHub organizations much
+more often while staying within GitHub's rate limit.
+
+### An icon you can trust
+
+- A finished run no longer leaves the icon on "deploying". Accounts with many
+  GitHub organizations refresh each one in turn, and a run caught mid-build
+  used to keep the icon busy until its organization came round again — up to
+  a quarter of an hour. Runs still in progress are now re-checked individually
+  on every refresh, so the icon settles within one interval.
+- Only a build that is actually running shows "deploying". Queued runs, and
+  GitHub runs waiting for an environment approval, no longer keep the icon busy.
+
+### Faster, steadier GitHub refreshes
+
+- GitHub organizations now share one repository listing per refresh instead of
+  each listing every repository again, and each organization is budgeted by
+  what it actually costs. Small organizations refresh together, so a full round
+  of many organizations takes minutes rather than a quarter of an hour. The
+  first round after installing is still conservative until DeployBar learns
+  each organization's size; Settings shows the resulting interval.
+- Refreshing by hand, waking your Mac, or switching sources between scheduled
+  refreshes now spends only the share of GitHub's hourly allowance that time
+  has earned, so frequent refreshes can't exhaust a limit your `gh` CLI shares.
+- When GitHub rate-limits the repository listing, DeployBar waits for the next
+  refresh instead of retrying it for every organization.
+- Refreshes that overlap a slow one are combined into a single follow-up
+  instead of queuing up behind each other.
+
+[Full changes since 1.2.0](https://github.com/friends-of-deploy/deploybar/compare/v1.2.0...v1.2.1)
+]]></description>
+      <enclosure url="https://github.com/friends-of-deploy/deploybar/releases/download/v1.2.1/DeployBar-1.2.1.zip"
+                 length="5260501"
+                 type="application/octet-stream"
+                 sparkle:edSignature="yVqnwQh/7jVnLp4158JeJR74oufuqMuxaeSq6HT151X9EbNMkzvUhSnVelHlYNunmE40S/hdc5z1A5ULcq/KAA==" />
+    </item>
+    <item>
       <title>1.2.0</title>
       <pubDate>Sun, 20 Sep 2026 12:35:21 +0000</pubDate>
       <sparkle:version>18</sparkle:version>
