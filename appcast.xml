@@ -2,6 +2,38 @@
 <rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle">
   <channel>
     <item>
+      <title>1.2.2</title>
+      <pubDate>Sun, 27 Sep 2026 18:36:14 +0000</pubDate>
+      <sparkle:version>20</sparkle:version>
+      <sparkle:shortVersionString>1.2.2</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <description sparkle:format="markdown"><![CDATA[
+DeployBar 1.2.2 keeps the menu responsive while it refreshes and makes
+Settings open from every place that offers it.
+
+### A menu that keeps up
+
+- The menu no longer stalls while DeployBar refreshes an account connected
+  through the GitHub CLI. The `gh` token used to be re-read for every
+  organization on every refresh, holding up the menu each time, so with many
+  organizations the list could stop scrolling and buttons stop responding.
+  DeployBar now reads it once and refreshes it in the background.
+
+### Settings that always open
+
+- Settings in the menu bar icon's right-click menu opens Settings again. It
+  had stopped doing anything on every supported version of macOS.
+- Settings comes to the front when opened, including when its window is
+  already open behind another app.
+
+[Full changes since 1.2.1](https://github.com/friends-of-deploy/deploybar/compare/v1.2.1...v1.2.2)
+]]></description>
+      <enclosure url="https://github.com/friends-of-deploy/deploybar/releases/download/v1.2.2/DeployBar-1.2.2.zip"
+                 length="5265699"
+                 type="application/octet-stream"
+                 sparkle:edSignature="qx7Qp6kM77YZz6FQ79MUjpEAIrbji6B4zIWloqs+D22yBMLsz+U+4SgmA3R8q8JHpfAJJIyvM4ZvnpQtw5uSCQ==" />
+    </item>
+    <item>
       <title>1.2.1</title>
       <pubDate>Sun, 27 Sep 2026 15:24:56 +0000</pubDate>
       <sparkle:version>19</sparkle:version>
