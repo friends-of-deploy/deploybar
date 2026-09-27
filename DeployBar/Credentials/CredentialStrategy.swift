@@ -33,7 +33,8 @@ protocol CredentialStrategy: AnyObject {
     /// The account to add when this source's login is present.
     func detectAccount() -> DetectedAccount?
     func resolve(_ account: Account) -> ResolvedCredential?
-    func recoverFromUnauthorized(_ account: Account) -> AuthRecovery
+    /// `rejectedToken` is the token the failed client was built with.
+    func recoverFromUnauthorized(_ account: Account, rejectedToken: String) -> AuthRecovery
     /// A follow key stored by project name before keys used ids, still honoured.
     func legacyFollowKey(for account: Account, projectName: String) -> ProjectKey?
 }
@@ -43,6 +44,6 @@ extension CredentialStrategy {
     var signInHint: LocalizedStringResource? { nil }
     var loggedOutHint: String? { nil }
     func detectAccount() -> DetectedAccount? { nil }
-    func recoverFromUnauthorized(_ account: Account) -> AuthRecovery { .retryAfterBackoff }
+    func recoverFromUnauthorized(_ account: Account, rejectedToken: String) -> AuthRecovery { .retryAfterBackoff }
     func legacyFollowKey(for account: Account, projectName: String) -> ProjectKey? { nil }
 }

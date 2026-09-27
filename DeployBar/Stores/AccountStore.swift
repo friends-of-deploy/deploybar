@@ -65,8 +65,8 @@ final class AccountStore {
         resolve(account)?.token
     }
 
-    func recoverFromUnauthorized(_ account: Account) -> AuthRecovery {
-        strategy(for: account)?.recoverFromUnauthorized(account) ?? .retryAfterBackoff
+    func recoverFromUnauthorized(_ account: Account, rejectedToken: String) -> AuthRecovery {
+        strategy(for: account)?.recoverFromUnauthorized(account, rejectedToken: rejectedToken) ?? .retryAfterBackoff
     }
 
     /// Test hook: the in-flight background `gh` re-read.

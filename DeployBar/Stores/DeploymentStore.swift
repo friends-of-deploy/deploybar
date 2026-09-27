@@ -1159,13 +1159,21 @@ final class DeploymentStore {
     /// A client for one scope, or nil when its provider has no integration or
     /// its account has no usable credential. Both are skipped silently.
     private func makeClient(for scope: Scope) -> DeploymentProviderClient? {
+        makeClientAndCredential(for: scope)?.client
+    }
+
+    /// The client plus the credential it was built with, so a 401 can be
+    /// judged against the token that was actually rejected.
+    private func makeClientAndCredential(for scope: Scope)
+        -> (client: DeploymentProviderClient, credential: ResolvedCredential)? {
         guard let integration = registry.integration(for: scope.account.provider),
-              let credential = accountStore.resolve(scope.account) else { return nil }
-        return integration.client(for: scope, using: credential)
+              let credential = accountStore.resolve(scope.account),
+              let client = integration.client(for: scope, using: credential) else { return nil }
+        return (client, credential)
     }
 
     private func fetch(for scope: Scope) async throws -> ([Deployment], [Project]) {
-        guard let client = makeClient(for: scope) else {
+        guard let (client, credential) = makeClientAndCredential(for: scope) else {
             return ([], [])          // no integration or no credential → skip silently
         }
         do {
@@ -1177,7 +1185,7 @@ final class DeploymentStore {
             // was built (the Vercel CLI) gets a fresh client at once; anything
             // else waits out a transient blip and tries the same client again.
             let retryClient: DeploymentProviderClient
-            switch accountStore.recoverFromUnauthorized(scope.account) {
+            switch accountStore.recoverFromUnauthorized(scope.account, rejectedToken: credential.token) {
             case .retryWithFreshClient:
                 retryClient = makeClient(for: scope) ?? client
             case .retryAfterBackoff:

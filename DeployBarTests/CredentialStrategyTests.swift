@@ -23,15 +23,24 @@ final class CredentialStrategyTests: XCTestCase {
     func test_vercelCLIRebuildsOnlyAfterTheCLIRotated() {
         let disk = Disk("stale")
         let strategy = vercel(disk)
-        _ = strategy.resolve(cliAccount)
-        XCTAssertEqual(strategy.recoverFromUnauthorized(cliAccount), .retryAfterBackoff, "nothing new on disk")
+        XCTAssertEqual(strategy.recoverFromUnauthorized(cliAccount, rejectedToken: "stale"), .retryAfterBackoff,
+                       "nothing new on disk")
         disk.token = "fresh"
-        XCTAssertEqual(strategy.recoverFromUnauthorized(cliAccount), .retryWithFreshClient)
-        _ = strategy.resolve(cliAccount)
-        XCTAssertEqual(strategy.recoverFromUnauthorized(cliAccount), .retryAfterBackoff,
-                       "the fresh token is now the one clients hold")
+        XCTAssertEqual(strategy.recoverFromUnauthorized(cliAccount, rejectedToken: "stale"), .retryWithFreshClient)
+        XCTAssertEqual(strategy.recoverFromUnauthorized(cliAccount, rejectedToken: "fresh"), .retryAfterBackoff,
+                       "the rejected client already held the token on disk")
         disk.token = ""
-        XCTAssertEqual(strategy.recoverFromUnauthorized(cliAccount), .retryAfterBackoff, "an empty file is no rotation")
+        XCTAssertEqual(strategy.recoverFromUnauthorized(cliAccount, rejectedToken: "stale"), .retryAfterBackoff,
+                       "an empty file is no rotation")
+    }
+
+    /// Only the rejected token counts: resolving the rotated token elsewhere
+    /// (another scope, an identity load) must not hide the rotation.
+    func test_vercelCLIRecoveryIgnoresOtherResolves() {
+        let disk = Disk("fresh")
+        let strategy = vercel(disk)
+        _ = strategy.resolve(cliAccount)
+        XCTAssertEqual(strategy.recoverFromUnauthorized(cliAccount, rejectedToken: "stale"), .retryWithFreshClient)
     }
 
     func test_vercelCLIDetectsItselfFirstInTheList() throws {
@@ -59,7 +68,7 @@ final class CredentialStrategyTests: XCTestCase {
         XCTAssertEqual(detected.account.source, .githubCLI)
         XCTAssertEqual(detected.placement, .last)
         XCTAssertEqual(strategy.resolve(detected.account)?.token, "gho")
-        XCTAssertEqual(strategy.recoverFromUnauthorized(detected.account), .retryAfterBackoff)
+        XCTAssertEqual(strategy.recoverFromUnauthorized(detected.account, rejectedToken: "gho"), .retryAfterBackoff)
     }
 
     // MARK: Keychain

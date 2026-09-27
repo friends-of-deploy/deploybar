@@ -8,8 +8,6 @@ final class VercelCLICredential: CredentialStrategy {
     private let detect: () -> Bool
     private let reload: () -> String?
     private let session: VercelCLISession
-    /// The token the most recent client was built with.
-    private var lastResolvedToken: String?
 
     init(detect: @escaping () -> Bool = { (try? TokenProvider().credentials()) != nil },
          reload: @escaping () -> String? = { try? TokenProvider().credentials().token },
@@ -43,12 +41,13 @@ final class VercelCLICredential: CredentialStrategy {
 
     func resolve(_ account: Account) -> ResolvedCredential? {
         guard let token = reload() else { return nil }
-        lastResolvedToken = token
         return ResolvedCredential(token: token, transport: transport)
     }
 
-    func recoverFromUnauthorized(_ account: Account) -> AuthRecovery {
-        guard let fresh = reload(), !fresh.isEmpty, fresh != lastResolvedToken else { return .retryAfterBackoff }
+    /// Compared with the token the failed client held, not the last one handed
+    /// out: another scope may already have resolved the rotated token.
+    func recoverFromUnauthorized(_ account: Account, rejectedToken: String) -> AuthRecovery {
+        guard let fresh = reload(), !fresh.isEmpty, fresh != rejectedToken else { return .retryAfterBackoff }
         return .retryWithFreshClient
     }
 

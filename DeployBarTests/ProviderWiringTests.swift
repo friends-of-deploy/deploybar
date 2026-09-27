@@ -55,6 +55,51 @@ final class ProviderWiringTests: XCTestCase {
         XCTAssertNotEqual(store.iconState, .loggedOut)
     }
 
+    /// Rejects everything but "fresh". On rejection the CLI rotates on disk and
+    /// something else resolves the rotated token before the 401 is handled.
+    private struct InterleavedClient: DeploymentProviderClient {
+        let token: String
+        let disk: Disk
+        let recorder: Recorder
+        let resolveElsewhere: @Sendable () async -> Void
+        func deployments(limit: Int) async throws -> [Deployment] {
+            guard token == "fresh" else {
+                disk.token = "fresh"
+                await resolveElsewhere()
+                throw ProviderClientError.unauthorized
+            }
+            return [Deployment(uid: "d_personal", name: "web", stateRaw: "READY", url: "web.vercel.app", createdAt: 1)]
+        }
+        func projects() async throws -> [Project] { [] }
+    }
+
+    /// A scope whose client was built with the old token gets a fresh client at
+    /// once, even when another scope (or an identity load) resolved the rotated
+    /// token between that build and the 401.
+    func test_rotationSeenByAnotherResolveStillRebuildsTheRejectedClient() async {
+        let disk = Disk("stale")
+        let recorder = Recorder()
+        let accounts = AccountStore(defaults: UserDefaults(suiteName: UUID().uuidString)!,
+                                    credentials: InMemoryCredentialStore(),
+                                    detectCLI: { true }, reloadCLIToken: { disk.token },
+                                    detectGitHubCLI: { false })
+        let cli = accounts.cliAccount!
+        let store = DeploymentStore(
+            accountStore: accounts,
+            settings: SettingsStore(defaults: UserDefaults(suiteName: UUID().uuidString)!),
+            makeClient: { account, _ in
+                recorder.clientsBuilt += 1
+                return InterleavedClient(token: accounts.token(for: account) ?? "", disk: disk, recorder: recorder,
+                                         resolveElsewhere: { await MainActor.run { _ = accounts.resolve(cli) } })
+            },
+            authRetryBackoff: .zero)
+
+        await store.poll()
+
+        XCTAssertEqual(store.deployments.map(\.uid), ["d_personal"], "recovers within the same poll")
+        XCTAssertEqual(recorder.clientsBuilt, 2, "the rejected client is rebuilt, not retried")
+    }
+
     /// Review focus 2.
     func test_accountWithoutACredentialIsSkippedSilently() async {
         let credentials = InMemoryCredentialStore()
