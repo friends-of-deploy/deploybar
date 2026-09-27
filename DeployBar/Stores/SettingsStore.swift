@@ -65,6 +65,9 @@ final class SettingsStore {
             Keys.pollInterval:     30,
             Keys.autoFollowNew:    true,
         ])
+        // Retired in the provider-integration refactor: the scope picker only
+        // filters the view, so the last pick no longer needs to survive a launch.
+        defaults.removeObject(forKey: Keys.selectedTeamId)
     }
 
     var notifyOnFailure: Bool {
@@ -103,16 +106,6 @@ final class SettingsStore {
     var updateChannel: UpdateChannel {
         get { UpdateChannel.from(storedValue: defaults.string(forKey: Keys.updateChannel)) }
         set { defaults.set(newValue.rawValue, forKey: Keys.updateChannel) }
-    }
-
-    /// The user-selected team id, or nil for personal / CLI default.
-    /// Stores "__personal__" as a sentinel to distinguish "personal explicitly chosen" from "never set".
-    var selectedTeamId: String? {
-        get { defaults.string(forKey: Keys.selectedTeamId) }
-        set {
-            if let newValue { defaults.set(newValue, forKey: Keys.selectedTeamId) }
-            else { defaults.removeObject(forKey: Keys.selectedTeamId) }
-        }
     }
 
     /// Last known Vercel team list, cached so a relaunch can label scopes and

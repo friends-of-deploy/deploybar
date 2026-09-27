@@ -2,7 +2,7 @@ import Foundation
 
 /// The scope an item was fetched from: an account plus, for Vercel, the team.
 /// Carried on the item itself because "All" polls several teams of the SAME
-/// account concurrently — the store's `currentTeamId` can't tell them apart.
+/// account concurrently — an account id alone can't tell them apart.
 struct ScopeRef: Hashable, Sendable {
     let accountId: UUID
     let teamId: String?

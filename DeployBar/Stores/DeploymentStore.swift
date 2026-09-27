@@ -119,9 +119,6 @@ final class DeploymentStore {
     /// Backoff before the in-poll auth retry. Production 0.8s; tests pass 0.
     @ObservationIgnored private let authRetryBackoff: Duration
 
-    // MARK: Legacy single-scope team switching (CLI/first account only)
-    @ObservationIgnored private(set) var currentTeamId: String?
-
     // Unfiltered merge, kept so `setFilter` can re-derive the display slice
     // without re-polling.
     @ObservationIgnored private var unfilteredDeployments: [SourcedDeployment] = []
@@ -152,7 +149,6 @@ final class DeploymentStore {
         self.scopeName = "all"
 
         if let cli = accountStore.cliAccount {
-            self.currentTeamId = settings.selectedTeamId == "__personal__" ? nil : settings.selectedTeamId
             // Start from the cached org/team lists so the very first poll already
             // covers known scopes and rows carry real names; account discovery
             // refreshes these lists after startup.
@@ -244,9 +240,9 @@ final class DeploymentStore {
         // A full logout isn't attributable to one source — `sourceErrors` may
         // even be empty — so it is reported on its own.
         if isLoggedOut {
-            if accountStore.cliAccount != nil {
-                return [String(localized: "Not logged in — run `vercel login`",
-                               comment: "Health issue: the Vercel CLI has no session")]
+            if let hint = accountStore.accounts.lazy
+                .compactMap({ self.accountStore.strategy(for: $0)?.loggedOutHint }).first {
+                return [hint]
             }
             if let first = sourceErrors.values.sorted().first { return [first] }
             return [String(localized: "Not signed in",
@@ -273,21 +269,20 @@ final class DeploymentStore {
         settings.isScopeEnabled(ref.id)
     }
 
-    /// Every scope of an account: the account itself, plus one per organization
-    /// (Vercel team or GitHub org alike). Includes disabled scopes; callers that
-    /// only want polled scopes filter through `settings.isScopeEnabled`.
+    /// Every scope of an account: the account itself (unless its provider has
+    /// no account-level scope), plus one per organization (Vercel team or
+    /// GitHub org alike). Includes disabled scopes; callers that only want
+    /// polled scopes filter through `settings.isScopeEnabled`.
+    ///
+    /// An account whose organizations haven't loaded yet polls only its own
+    /// scope.
     private func allScopes(for account: Account) -> [Scope] {
-        let orgs = organizations(for: account)
-        // A Vercel CLI account with no fetched teams still polls whichever team
-        // the CLI itself is pointed at.
-        guard !orgs.isEmpty else {
-            let teamId = account.source == .vercelCLI ? currentTeamId : nil
-            return [Scope(account: account, teamId: teamId, teamName: nil)]
-        }
-        let accountScope = Scope(account: account, teamId: nil, teamName: nil)
-        return [accountScope] + orgs.map { org in
+        let organizations = organizations(for: account).map { org in
             Scope(account: account, teamId: org.id, teamName: org.slug ?? org.name)
         }
+        let hasAccountScope = registry.integration(for: account.provider)?.hasAccountScope ?? true
+        guard hasAccountScope else { return organizations }
+        return [Scope(account: account, teamId: nil, teamName: nil)] + organizations
     }
 
     /// Look up an account by UUID.
@@ -481,17 +476,13 @@ final class DeploymentStore {
 
     // MARK: - Scope selection (dropdown)
 
-    /// Select the scope shown in the popover: filters deployments AND projects to
-    /// that account (+ team), and for the Vercel CLI account also switches the
-    /// polled team.
+    /// Select the scope shown in the popover: filters deployments AND projects
+    /// to that account (+ team). Every enabled scope is polled regardless, so
+    /// this is a display change only.
     func select(accountId: UUID, teamId: String?) async {
         filter = .scope(accountId: accountId, teamId: teamId)
         scopeName = scopeName(accountId: accountId, teamId: teamId) ?? "all"
-        if account(accountId)?.source == .vercelCLI, teamId != currentTeamId {
-            switchTeam(teamId)
-        } else {
-            applyDisplayFilter()
-        }
+        applyDisplayFilter()
     }
 
     /// Show every connected source at once. Widens `availableScopes` to all Vercel
@@ -503,37 +494,6 @@ final class DeploymentStore {
         // Rows already on screen stay visible while the wider fetch lands.
         applyDisplayFilter()
         await poll()
-    }
-
-    // MARK: - Legacy team switching (thin compatibility, CLI/first account)
-
-    /// Switch the active team for the CLI account at runtime. Records the
-    /// choice, persists it, silently re-seeds the notification baseline, and
-    /// re-derives the displayed rows from the existing merge.
-    ///
-    /// No poll here: `availableScopes` fans out to every enabled scope of every
-    /// account (see `allScopes(for:)`), not just the CLI account's current team,
-    /// so every scope's rows are already being polled and already sit in
-    /// `unfilteredDeployments`/`unfilteredProjects`. `currentTeamId` only still
-    /// matters in two narrower places — the pre-load fallback in
-    /// `allScopes(for:)` for an account whose orgs haven't loaded yet, and
-    /// client construction — so changing it here is purely a display-filter
-    /// change, and `applyDisplayFilter()` below is sufficient.
-    func switchScope(teamId: String?, scopeName: String) async {
-        guard teamId != currentTeamId else { return }
-        self.scopeName = scopeName
-        switchTeam(teamId)
-    }
-
-    private func switchTeam(_ teamId: String?) {
-        currentTeamId = teamId
-        settings.selectedTeamId = teamId ?? "__personal__"
-        previousSnapshots = nil               // silent re-seed for the new scope
-        scopeErrors = [:]
-        // Deliberately NOT clearing the row lists: `applyDisplayFilter` re-derives
-        // them from the unfiltered merge, so the popover shows the new scope's
-        // known rows immediately instead of flashing empty until the poll lands.
-        applyDisplayFilter()
     }
 
     // MARK: - Lifecycle
@@ -765,8 +725,8 @@ final class DeploymentStore {
 
     /// Refresh every scope.
     ///
-    /// Overlapping calls are *coalesced*, not dropped. `switchTeam`/`selectAll`
-    /// mutate the active scope and then `await poll()` to fetch it; when the
+    /// Overlapping calls are *coalesced*, not dropped. `selectAll`
+    /// mutates the active scope and then `await poll()` to fetch it; when the
     /// periodic timer happened to be mid-poll, the old `guard` returned without
     /// fetching and the popover sat on the previous scope's rows — under a new
     /// label — until the next tick (up to the full poll interval). Now the
@@ -1125,26 +1085,25 @@ final class DeploymentStore {
         followed(account: sp.account, projectId: sp.project.id, projectName: sp.project.name)
     }
 
-    /// Sets follow state for a project, keeping the legacy CLI name-key in sync
-    /// so a re-enable actually un-hides a previously name-muted CLI project.
+    /// Sets follow state for a project, keeping a legacy name-keyed follow in
+    /// sync so a re-enable actually un-hides a project muted by name.
     func setFollowed(_ sp: SourcedProject, _ followed: Bool) {
-        let idKey = ProjectKey(provider: sp.account.provider, accountId: sp.account.id, projectId: sp.project.id)
-        settings.setFollowed(idKey, followed)
-        if sp.account.source == .vercelCLI {
-            let nameKey = ProjectKey(provider: .vercel, accountId: sp.account.id, projectId: sp.project.name)
-            settings.setFollowed(nameKey, followed)
+        settings.setFollowed(ProjectKey(provider: sp.account.provider, accountId: sp.account.id,
+                                        projectId: sp.project.id), followed)
+        if let legacy = accountStore.strategy(for: sp.account)?
+            .legacyFollowKey(for: sp.account, projectName: sp.project.name) {
+            settings.setFollowed(legacy, followed)
         }
     }
 
-    /// Core follow check. Explicit id-based key is the primary; for the CLI account
-    /// ONLY, also honor a legacy name-based key (Task 8 stored old mutes by name).
-    /// If either key says unfollowed, treat as unfollowed.
+    /// Core follow check. The id-based key is primary; a source with legacy
+    /// name-keyed follows (the Vercel CLI) must also allow it.
     private func followed(account: Account, projectId: String, projectName: String) -> Bool {
-        let idKey = ProjectKey(provider: account.provider, accountId: account.id, projectId: projectId)
-        let idFollowed = settings.isFollowed(idKey)
-        guard account.source == .vercelCLI else { return idFollowed }
-        let nameKey = ProjectKey(provider: .vercel, accountId: account.id, projectId: projectName)
-        return idFollowed && settings.isFollowed(nameKey)
+        let idFollowed = settings.isFollowed(ProjectKey(provider: account.provider, accountId: account.id,
+                                                        projectId: projectId))
+        guard let legacy = accountStore.strategy(for: account)?
+            .legacyFollowKey(for: account, projectName: projectName) else { return idFollowed }
+        return idFollowed && settings.isFollowed(legacy)
     }
 
     /// The notification key for a deployment: id-based when the project is known;

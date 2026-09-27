@@ -102,4 +102,48 @@ final class ScopeHealthTests: XCTestCase {
         await store.poll()
         XCTAssertTrue(store.healthIssues.isEmpty)
     }
+
+    /// Behaviour change 3: picking a scope only filters the view; it no longer
+    /// wipes that scope's health messages.
+    func test_selectingAScopeKeepsItsHealthIssues() async {
+        let store = makeStore(teams: teams, failingTeams: { ["team_b"] })
+        for _ in 0..<5 { await store.poll() }
+        XCTAssertFalse(store.healthIssues.isEmpty)
+
+        let cli = store.connectedAccounts.first { $0.source == .vercelCLI }!
+        await store.select(accountId: cli.id, teamId: "team_b")
+
+        XCTAssertFalse(store.healthIssues.isEmpty, "selecting must not clear a real problem")
+    }
+
+    /// Review focus 5 (behaviour change 2).
+    func test_upgradeDropsTheOldTeamPickAndPollsPersonalFirst() {
+        let defaults = UserDefaults(suiteName: UUID().uuidString)!
+        defaults.set("team_x", forKey: "selectedTeamId")
+        let settings = SettingsStore(defaults: defaults)
+        XCTAssertNil(defaults.string(forKey: "selectedTeamId"), "the retired key is removed on launch")
+
+        let accountStore = AccountStore(defaults: UserDefaults(suiteName: UUID().uuidString)!,
+                                        credentials: InMemoryCredentialStore(),
+                                        detectCLI: { true }, reloadCLIToken: { "tok" },
+                                        detectGitHubCLI: { false })
+        let store = DeploymentStore(accountStore: accountStore, settings: settings,
+                                    makeClient: { _, _ in StubClient() }, authRetryBackoff: .zero)
+
+        XCTAssertEqual(store.scopes(for: accountStore.cliAccount!).map(\.teamId), [nil],
+                       "before its teams load, the CLI account polls its personal scope")
+    }
+
+    func test_cliLogoutExplainsHowToSignIn() async {
+        let accountStore = AccountStore(defaults: UserDefaults(suiteName: UUID().uuidString)!,
+                                        credentials: InMemoryCredentialStore(),
+                                        detectCLI: { true }, reloadCLIToken: { "tok" },
+                                        detectGitHubCLI: { false })
+        let store = DeploymentStore(accountStore: accountStore,
+                                    settings: SettingsStore(defaults: UserDefaults(suiteName: UUID().uuidString)!),
+                                    makeClient: { _, _ in StubClient(error: ProviderClientError.unauthorized) },
+                                    authRetryBackoff: .zero)
+        for _ in 0..<5 { await store.poll() }
+        XCTAssertEqual(store.healthIssues, ["Not logged in — run `vercel login`"])
+    }
 }
