@@ -46,6 +46,41 @@ enum ScopePollBudget {
         return max(1, Int((minimum / Double(interval)).rounded(.up))) * interval
     }
 
+    /// Requests one tick of an account may spend: its share of the hourly limit.
+    static func tickRequestBudget(pollIntervalSeconds: Int, hourlyLimit: Int) -> Int {
+        Int((Double(max(0, hourlyLimit)) * Double(max(1, pollIntervalSeconds)) / 3600).rounded(.down))
+    }
+
+    /// How many scopes, taken in rotation order from `start`, fit in `budget`
+    /// requests. Always at least one, so a scope dearer than a whole tick still
+    /// gets its turn — `accountIntervalSeconds` keeps that one inside the limit.
+    static func packedCount(costs: [Int], start: Int, budget: Int) -> Int {
+        guard !costs.isEmpty else { return 0 }
+        var spent = 0
+        var taken = 0
+        while taken < costs.count {
+            let cost = max(0, costs[(start + taken) % costs.count])
+            if taken > 0, spent + cost > budget { break }
+            spent += cost
+            taken += 1
+        }
+        return taken
+    }
+
+    /// Ticks one full rotation takes when every tick packs as many scopes as
+    /// fit. Shown in Settings, so the cost of enabling many organizations is
+    /// visible rather than mysterious.
+    static func ticksPerRotation(costs: [Int], budget: Int) -> Int {
+        guard !costs.isEmpty else { return 1 }
+        var covered = 0
+        var ticks = 0
+        while covered < costs.count {
+            covered += packedCount(costs: costs, start: covered, budget: budget)
+            ticks += 1
+        }
+        return ticks
+    }
+
     /// The scopes to poll on `tick`, rotating so each comes round in turn.
     ///
     /// Rotation is by tick index rather than by "least recently polled" so the
