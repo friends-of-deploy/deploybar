@@ -106,4 +106,45 @@ final class InProgressRefreshTests: XCTestCase {
         XCTAssertEqual(state(of: "d_org5", in: store), .building,
                        "a failed re-read must not blank or guess the row")
     }
+
+    private static func project(_ id: String) -> Project {
+        try! JSONDecoder().decode(Project.self, from: Data(#"{"id":"\#(id)","name":"repo"}"#.utf8))
+    }
+
+    /// 25 one-repository organizations, the first `building` of them mid-run
+    /// when the app last cached its rows.
+    private func makeSmallOrgStore(building: Int) -> DeploymentStore {
+        let accounts = AccountStore(defaults: UserDefaults(suiteName: UUID().uuidString)!,
+                                    credentials: InMemoryCredentialStore(),
+                                    detectCLI: { false }, reloadCLIToken: { nil },
+                                    detectGitHubCLI: { true }, reloadGitHubToken: { "tok" })
+        let account = accounts.githubCLIAccount!
+        let settings = SettingsStore(defaults: UserDefaults(suiteName: UUID().uuidString)!)
+        let orgs = (0..<25).map { "org\($0)" }
+        settings.cachedOrgs = [account.id: orgs.map(Self.team)]
+        settings.cachedRows = RowCache(
+            deployments: orgs.enumerated().map { index, org in
+                SourcedDeployment(deployment: StubClient.deployment(uid: "d_\(org)",
+                                                                    state: index < building ? "BUILDING" : "READY"),
+                                  account: account, teamId: org)
+            },
+            projects: orgs.map { SourcedProject(project: Self.project("p_\($0)"), account: account, teamId: $0) },
+            savedAt: Date())
+        let world = World()
+        return DeploymentStore(accountStore: accounts, settings: settings,
+                               makeClient: { _, teamId in StubClient(world: world, key: teamId ?? "account") },
+                               reloadToken: { nil }, authRetryBackoff: .zero)
+    }
+
+    /// Every in-progress run is re-read each tick, one request apiece, so those
+    /// requests come out of the tick before any scope is scheduled.
+    func test_inProgressReReadsComeOutOfTheTickBudget() {
+        let quiet = makeSmallOrgStore(building: 0)
+        let busy = makeSmallOrgStore(building: 10)
+
+        // 41 requests a tick, less the 10-page listing: 31, or 21 with ten re-reads.
+        XCTAssertEqual(quiet.effectiveRefreshInterval(for: quiet.connectedAccounts[0]), 60)
+        XCTAssertEqual(busy.effectiveRefreshInterval(for: busy.connectedAccounts[0]), 90,
+                       "ten runs re-read every tick leave room for fewer scope fetches")
+    }
 }

@@ -266,6 +266,23 @@ final class AllScopeTests: XCTestCase {
                        "every scope must be fetched at least once within a full rotation")
     }
 
+    /// Once a rotation has shown each organization holds a single repository,
+    /// they cost one runs request apiece and share a tick instead of taking
+    /// fourteen.
+    func test_smallOrganizationsShareATickOnceTheirSizeIsKnown() async {
+        let recorder = FetchRecorder()
+        let (store, github) = makeRotatingGitHubStore(recorder: recorder)
+        for _ in 0..<15 { await store.poll() }      // one rotation at the unknown-size cap
+
+        recorder.reset()
+        await store.poll()
+
+        XCTAssertEqual(Set(recorder.fetchedTeamIds), Set((0..<14).map { "org\($0)" as String? }),
+                       "fourteen one-repository organizations fit one tick together")
+        XCTAssertEqual(store.effectiveRefreshInterval(for: github), 60,
+                       "the account scope on one tick, every organization on the next")
+    }
+
     /// A scope deferred to a later tick keeps showing its last-known rows
     /// instead of blinking out of the menu while it waits its turn.
     func test_deferredScopeKeepsItsRowsBetweenTicks() async {

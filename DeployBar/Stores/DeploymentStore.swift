@@ -98,7 +98,8 @@ final class DeploymentStore {
     @ObservationIgnored private let gitHubRepositoryListing: GitHubRepositoryListing
     @ObservationIgnored private let now: () -> Date
     @ObservationIgnored private var accountPollTimes: [UUID: Date] = [:]
-    @ObservationIgnored private var accountPollTicks: [UUID: Int] = [:]
+    /// Where each account's rotation resumes: the first scope the last tick left out.
+    @ObservationIgnored private var accountRotationCursors: [UUID: Int] = [:]
     @ObservationIgnored private var scopeGenerations: [ScopeRef: Int] = [:]
     @ObservationIgnored private var knownAccountIds: Set<UUID>
     @ObservationIgnored private var makeClient: ClientFactory = { _, _ in nil }
@@ -737,10 +738,9 @@ final class DeploymentStore {
 
     // MARK: - Polling (fan out across scopes)
 
-    /// Estimated requests one scope costs per poll. GitHub fans out a
-    /// workflow-runs request per repository on top of the repo listing, so its
-    /// scopes cost several times what a Vercel scope does (one deployments
-    /// call, one projects call).
+    /// Worst-case requests of one scope's fetch. Sets how often the account
+    /// may poll at all (`accountIntervalSeconds`): the costliest scope must fit
+    /// one tick. Per-tick packing uses the finer `estimatedCost(of:)`.
     private func estimatedRequestsPerScope(for account: Account) -> Int {
         switch account.provider {
         case .github:                return GitHubClient.maxRequestsPerScope
@@ -771,17 +771,45 @@ final class DeploymentStore {
     }
 
     func effectiveRefreshInterval(for account: Account) -> Int {
-        let count = availableScopes.filter { $0.account.id == account.id }.count
+        let scopes = availableScopes.filter { $0.account.id == account.id }
         let interval = accountPollInterval(for: account)
-        let budget = ScopePollBudget.requestsPerTick(
-            scopeCount: count, pollIntervalSeconds: interval,
-            hourlyLimit: hourlyLimit(for: account),
-            requestsPerScope: estimatedRequestsPerScope(for: account))
-        return ScopePollBudget.effectiveIntervalSeconds(
-            scopeCount: count, budget: budget, pollIntervalSeconds: interval)
+        return interval * ScopePollBudget.ticksPerRotation(
+            costs: scopes.map(estimatedCost(of:)),
+            budget: requestBudget(for: account, scopes: scopes, interval: interval))
+    }
+
+    /// What one scope's fetch is expected to cost, in requests.
+    ///
+    /// A GitHub organization reads its repositories from the account's shared
+    /// listing, reserved once per tick in `requestBudget`, so what is left is
+    /// one workflow-runs request per repository, up to the fan-out cap. Its
+    /// last result says how many repositories that is. With no result — or
+    /// none listed, which a restored cache can't tell from unknown — assume the cap.
+    private func estimatedCost(of scope: Scope) -> Int {
+        guard scope.account.provider == .github, scope.teamId != nil else {
+            return estimatedRequestsPerScope(for: scope.account)
+        }
+        let ref = ScopeRef(accountId: scope.account.id, teamId: scope.teamId)
+        let repositories = lastGood[ref]?.projects.count ?? 0
+        return repositories > 0 ? min(repositories, GitHubClient.maxRunRequestsPerScope)
+                                : GitHubClient.maxRunRequestsPerScope
+    }
+
+    /// Requests a tick leaves for the account's scope fetches: its share of the
+    /// hourly limit, less what the tick spends besides — the shared GitHub
+    /// repository listing and the by-id re-reads of in-progress runs.
+    private func requestBudget(for account: Account, scopes: [Scope], interval: Int) -> Int {
+        let tick = ScopePollBudget.tickRequestBudget(pollIntervalSeconds: interval,
+                                                     hourlyLimit: hourlyLimit(for: account))
+        guard account.provider == .github else { return tick }
+        let listing = scopes.contains { $0.teamId != nil } ? GitHubClient.maxRepoListingRequests : 0
+        let inProgress = lastGood.filter { $0.key.accountId == account.id }.values
+            .reduce(0) { $0 + $1.deployments.filter(\.state.isInProgress).count }
+        return tick - listing - min(inProgress, Self.maxInProgressRefreshesPerTick)
     }
 
     /// Only advance an account's rotation when it can actually afford a fetch.
+    /// A tick then takes as many scopes, in rotation order, as its budget covers.
     private func scopesToPollThisTick() -> [Scope] {
         let byAccount = Dictionary(grouping: availableScopes, by: { $0.account.id })
         return byAccount.flatMap { accountId, scopes -> [Scope] in
@@ -792,17 +820,15 @@ final class DeploymentStore {
                let previous = accountPollTimes[accountId],
                timestamp.timeIntervalSince(previous) < Double(interval) { return [] }
             accountPollTimes[accountId] = timestamp
-            accountPollTicks[accountId, default: 0] += 1
-            let budget = ScopePollBudget.requestsPerTick(
-                scopeCount: scopes.count, pollIntervalSeconds: interval,
-                hourlyLimit: hourlyLimit(for: account),
-                requestsPerScope: estimatedRequestsPerScope(for: account))
-            let ids = scopes.map { ScopeRef(accountId: accountId, teamId: $0.teamId).id }
-            let chosen = Set(ScopePollBudget.slice(scopeIds: ids, budget: budget,
-                                                  tick: accountPollTicks[accountId]!))
-            return scopes.filter {
-                chosen.contains(ScopeRef(accountId: accountId, teamId: $0.teamId).id)
-            }
+            // The first tick starts one past the account scope, where the
+            // tick-indexed rotation this replaced began.
+            let start = accountRotationCursors[accountId, default: 1] % scopes.count
+            let count = ScopePollBudget.packedCount(
+                costs: scopes.map(estimatedCost(of:)), start: start,
+                budget: requestBudget(for: account, scopes: scopes, interval: interval))
+            accountRotationCursors[accountId] = (start + count) % scopes.count
+            if count == scopes.count { return scopes }
+            return (0..<count).map { scopes[(start + $0) % scopes.count] }
         }
     }
 
@@ -1058,7 +1084,7 @@ final class DeploymentStore {
         lastGood = lastGood.filter { liveIds.contains($0.key.accountId) && liveScopes.contains($0.key) }
         consecutiveAuthFailures = consecutiveAuthFailures.filter { liveIds.contains($0.key.accountId) }
         accountPollTimes = accountPollTimes.filter { liveIds.contains($0.key) }
-        accountPollTicks = accountPollTicks.filter { liveIds.contains($0.key) }
+        accountRotationCursors = accountRotationCursors.filter { liveIds.contains($0.key) }
     }
 
     /// Upper bound on by-id re-reads per tick. Each costs one request, so a
