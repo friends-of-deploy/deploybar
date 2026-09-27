@@ -12,10 +12,13 @@ import XCTest
 final class InProgressRefreshTests: XCTestCase {
 
     /// What the provider currently reports, and which uids were re-read by id.
+    /// Re-reads of several scopes run concurrently, so recording them is locked.
     private final class World: @unchecked Sendable {
         var states: [String: String] = [:]
         var refreshedUids: [String] = []
         var refreshFails = false
+        private let lock = NSLock()
+        func noteRefreshed(_ uids: [String]) { lock.withLock { refreshedUids.append(contentsOf: uids) } }
     }
 
     private struct StubClient: DeploymentProviderClient {
@@ -26,7 +29,7 @@ final class InProgressRefreshTests: XCTestCase {
         }
         func projects() async throws -> [Project] { [] }
         func refreshed(_ deployments: [Deployment]) async throws -> [Deployment] {
-            world.refreshedUids.append(contentsOf: deployments.map(\.uid))
+            world.noteRefreshed(deployments.map(\.uid))
             if world.refreshFails { throw ProviderClientError.http(500) }
             return deployments.map { Self.deployment(uid: $0.uid, state: world.states[$0.uid] ?? "READY") }
         }
@@ -166,7 +169,45 @@ final class InProgressRefreshTests: XCTestCase {
             projects: [], savedAt: Date())
         return DeploymentStore(accountStore: accounts, settings: settings,
                                makeClient: { _, teamId in StubClient(world: world, key: teamId ?? "account") },
-                               reloadToken: { nil }, authRetryBackoff: .zero)
+                               now: SteppingClock().next, reloadToken: { nil }, authRetryBackoff: .zero)
+    }
+
+    /// Six organizations of unknown size, each with a run still going.
+    private func makeBusyOrgStore(world: World, now: @escaping () -> Date) -> DeploymentStore {
+        let accounts = AccountStore(defaults: UserDefaults(suiteName: UUID().uuidString)!,
+                                    credentials: InMemoryCredentialStore(),
+                                    detectCLI: { false }, reloadCLIToken: { nil },
+                                    detectGitHubCLI: { true }, reloadGitHubToken: { "tok" })
+        let account = accounts.githubCLIAccount!
+        let settings = SettingsStore(defaults: UserDefaults(suiteName: UUID().uuidString)!)
+        let orgs = (0..<6).map { "org\($0)" }
+        settings.cachedOrgs = [account.id: orgs.map(Self.team)]
+        settings.cachedRows = RowCache(
+            deployments: orgs.map { org in
+                SourcedDeployment(deployment: StubClient.deployment(uid: "d_\(org)", state: "BUILDING"),
+                                  account: account, teamId: org)
+            },
+            projects: [], savedAt: Date())
+        for org in orgs { world.states["d_\(org)"] = "BUILDING" }
+        return DeploymentStore(accountStore: accounts, settings: settings,
+                               makeClient: { _, teamId in StubClient(world: world, key: teamId ?? "account") },
+                               now: now, reloadToken: { nil }, authRetryBackoff: .zero)
+    }
+
+    /// A refresh click 3 s after a tick has earned 41 × 3 / 30 = 4 requests.
+    /// No scope fits that, but building rows still refresh, within it.
+    func test_pollBetweenTicksReReadsOnlyWhatItsShareAffords() async {
+        let world = World()
+        var timestamp = Date()
+        let store = makeBusyOrgStore(world: world, now: { timestamp })
+        await store.poll()
+
+        world.refreshedUids = []
+        timestamp.addTimeInterval(3)
+        await store.poll()
+
+        XCTAssertEqual(world.refreshedUids.count, 4,
+                       "six runs are waiting; four requests' worth of them are re-read")
     }
 
     /// A tick spent entirely on the account scope (40 of its 41-request share)

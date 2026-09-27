@@ -109,6 +109,7 @@ final class RateLimitTests: XCTestCase {
             accountStore: accountStore,
             settings: SettingsStore(defaults: UserDefaults(suiteName: UUID().uuidString)!),
             makeClient: { _, _ in ThrottledClient() },
+            now: SteppingClock().next,
             reloadToken: { nil },
             authRetryBackoff: .zero
         )

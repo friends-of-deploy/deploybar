@@ -86,7 +86,7 @@ final class ScopeSwitchTests: XCTestCase {
                 recorder.record(teamId)
                 return RecordingStubClient(teamId: teamId)
             },
-            reloadToken: { nil }, authRetryBackoff: .zero)
+            now: SteppingClock().next, reloadToken: { nil }, authRetryBackoff: .zero)
         store.setOrganizations([Self.team(id: "org_a", slug: "org_a"),
                                 Self.team(id: "org_b", slug: "org_b")], for: github.id)
 

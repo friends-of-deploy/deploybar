@@ -55,6 +55,26 @@ final class ScopePollBudgetTests: XCTestCase {
         XCTAssertEqual(ScopePollBudget.packedCount(costs: [], start: 0, budget: 10), 0)
     }
 
+    // MARK: fittingCount
+
+    func test_fittingTakesScopesWhileTheyFit() {
+        XCTAssertEqual(ScopePollBudget.fittingCount(costs: [40, 5, 5, 5], start: 1, budget: 12), 2)
+    }
+
+    func test_fittingTakesNothingWhenTheFirstScopeDoesNotFit() {
+        XCTAssertEqual(ScopePollBudget.fittingCount(costs: [40, 5, 5], start: 0, budget: 31), 0)
+        XCTAssertEqual(ScopePollBudget.fittingCount(costs: [5], start: 0, budget: -6), 0)
+    }
+
+    func test_fittingWrapsAroundButNeverTakesAScopeTwice() {
+        XCTAssertEqual(ScopePollBudget.fittingCount(costs: [1, 1, 30], start: 2, budget: 31), 2)
+        XCTAssertEqual(ScopePollBudget.fittingCount(costs: [1, 1, 1], start: 2, budget: 100), 3)
+    }
+
+    func test_fittingAnEmptyRotationTakesNothing() {
+        XCTAssertEqual(ScopePollBudget.fittingCount(costs: [], start: 0, budget: 10), 0)
+    }
+
     // MARK: ticksPerRotation
 
     func test_rotationIsOneTickWhenEverythingFits() {
@@ -72,5 +92,21 @@ final class ScopePollBudgetTests: XCTestCase {
 
     func test_emptyRotationIsOneTick() {
         XCTAssertEqual(ScopePollBudget.ticksPerRotation(costs: [], budget: 10), 1)
+    }
+}
+
+/// A clock for stores polled several times in a row, where each poll stands
+/// for a timer tick: every read is `step` seconds after the last. Without it,
+/// back-to-back polls land between ticks and spend only the share earned
+/// meanwhile. The store reads its clock once per account per poll.
+final class SteppingClock {
+    private var current = Date()
+    private let step: TimeInterval
+
+    init(step: TimeInterval = 30) { self.step = step }
+
+    func next() -> Date {
+        defer { current.addTimeInterval(step) }
+        return current
     }
 }

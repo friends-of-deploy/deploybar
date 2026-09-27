@@ -190,7 +190,8 @@ final class AllScopeTests: XCTestCase {
     /// factory reports every scope it is asked to build a client for into
     /// `recorder`, so a test can see exactly which scopes a given `poll()`
     /// actually fetched versus which it left to replay from `lastGood`.
-    private func makeGitHubStore(recorder: FetchRecorder) -> (DeploymentStore, Account, SettingsStore) {
+    private func makeGitHubStore(recorder: FetchRecorder,
+                                 now: @escaping () -> Date = Date.init) -> (DeploymentStore, Account, SettingsStore) {
         let accountStore = AccountStore(defaults: UserDefaults(suiteName: UUID().uuidString)!,
                                         credentials: InMemoryCredentialStore(),
                                         detectCLI: { false }, reloadCLIToken: { nil },
@@ -205,7 +206,7 @@ final class AllScopeTests: XCTestCase {
                 return StubClient(deps: [Self.deployment(uid: "d_\(key)", name: "repo")],
                                   projs: [Self.project(id: "p_\(key)", name: "repo")])
             },
-            reloadToken: { nil }, authRetryBackoff: .zero)
+            now: now, reloadToken: { nil }, authRetryBackoff: .zero)
         return (store, github, settings)
     }
 
@@ -220,8 +221,10 @@ final class AllScopeTests: XCTestCase {
     /// poll interval, GitHub's budget (5000/hr, at most 40 requests/scope) affords 1
     /// scopes per tick, so a full rotation takes 15 ticks — enough
     /// to force real rotation through `poll()`, not just the pure budget math.
-    private func makeRotatingGitHubStore(recorder: FetchRecorder) -> (DeploymentStore, Account) {
-        let (store, github, _) = makeGitHubStore(recorder: recorder)
+    /// Each poll lands on the next timer tick unless `now` says otherwise.
+    private func makeRotatingGitHubStore(recorder: FetchRecorder,
+                                         now: @escaping () -> Date = SteppingClock().next) -> (DeploymentStore, Account) {
+        let (store, github, _) = makeGitHubStore(recorder: recorder, now: now)
         store.setOrganizations((0..<14).map { Self.team(id: "org\($0)", slug: "org\($0)") },
                                for: github.id)
         return (store, github)
@@ -338,6 +341,30 @@ final class AllScopeTests: XCTestCase {
         store.acknowledge()
         await store.poll()
         XCTAssertEqual(store.iconState, .idle)
+    }
+
+    /// A refresh click, a wake or a scope change polls between timer ticks.
+    /// Each one used to spend a whole tick's share, so a few dozen extra polls
+    /// an hour took GitHub past 5,000. Between ticks an account now spends
+    /// only what the time since its last poll has earned.
+    func test_pollBetweenTicksSpendsOnlyTheShareItHasEarned() async {
+        let recorder = FetchRecorder()
+        var timestamp = Date()
+        let (store, _) = makeRotatingGitHubStore(recorder: recorder, now: { timestamp })
+
+        await store.poll()
+        XCTAssertFalse(recorder.fetchedTeamIds.isEmpty, "a full tick fetches")
+
+        recorder.reset()
+        timestamp.addTimeInterval(3)
+        await store.poll()
+        XCTAssertTrue(recorder.fetchedTeamIds.isEmpty,
+                      "3 s earn 4 requests, too few for any scope: \(recorder.fetchedTeamIds)")
+
+        recorder.reset()
+        timestamp.addTimeInterval(27)
+        await store.poll()
+        XCTAssertFalse(recorder.fetchedTeamIds.isEmpty, "the next timer tick is a full tick again")
     }
 
     func test_shortGitHubIntervalIsThrottledAndReported() async {

@@ -51,6 +51,22 @@ enum ScopePollBudget {
         return taken
     }
 
+    /// How many scopes, taken in rotation order from `start`, fit in `budget`
+    /// requests — with no floor, so possibly none. For a poll between timer
+    /// ticks: it has only part of a tick's share, and a scope it can't afford
+    /// waits for the next tick rather than overspending the hour.
+    static func fittingCount(costs: [Int], start: Int, budget: Int) -> Int {
+        var spent = 0
+        var taken = 0
+        while taken < costs.count {
+            let cost = max(0, costs[(start + taken) % costs.count])
+            if spent + cost > budget { break }
+            spent += cost
+            taken += 1
+        }
+        return taken
+    }
+
     /// Ticks one full rotation takes when every tick packs as many scopes as
     /// fit. Shown in Settings, so the cost of enabling many organizations is
     /// visible rather than mysterious.

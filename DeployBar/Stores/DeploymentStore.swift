@@ -815,16 +815,35 @@ final class DeploymentStore {
     }
 
     /// Requests a tick leaves for the account's scope fetches: its share of the
-    /// hourly limit, less what the tick spends besides — the shared GitHub
+    /// hourly limit (or `share`, the part earned by a poll between ticks), less
+    /// what the tick spends besides — the shared GitHub
     /// repository listing and the by-id re-reads of in-progress runs. Packing
     /// still reserves the in-progress re-reads so normal ticks leave them room;
     /// `scopesToPollThisTick` computes the real, post-packing allowance below.
-    private func requestBudget(for account: Account, scopes: [Scope], interval: Int) -> Int {
-        let tick = tickShare(for: account, interval: interval)
+    private func requestBudget(for account: Account, scopes: [Scope], interval: Int,
+                               share: Int? = nil) -> Int {
+        let tick = share ?? tickShare(for: account, interval: interval)
         guard account.provider == .github else { return tick }
         let inProgress = lastGood.filter { $0.key.accountId == account.id }.values
             .reduce(0) { $0 + $1.deployments.filter(\.state.isInProgress).count }
         return tick - listingReserve(for: account, scopes: scopes) - min(inProgress, Self.maxInProgressRefreshesPerTick)
+    }
+
+    /// What a GitHub poll between timer ticks may spend: the tick share,
+    /// earned back over the interval since the account's last poll. Nil for a
+    /// full tick — the first poll, one at least ~an interval on (timer jitter
+    /// allowed), or any other provider.
+    ///
+    /// Refresh clicks, wakes and scope changes all poll off the timer. Each one
+    /// spending a full share took GitHub past 5,000 requests an hour; this way
+    /// a click at t+15 s leaves the next tick half a share, and the hour stays
+    /// at about one share per interval however often the user refreshes.
+    private func offCycleShare(for account: Account, interval: Int, since previous: Date?,
+                               at timestamp: Date) -> Int? {
+        guard account.provider == .github, let previous else { return nil }
+        let elapsed = timestamp.timeIntervalSince(previous)
+        guard elapsed < 0.9 * Double(interval) else { return nil }
+        return Int(Double(tickShare(for: account, interval: interval)) * max(0, elapsed) / Double(interval))
     }
 
     /// Only advance an account's rotation when it can actually afford a fetch.
@@ -839,14 +858,20 @@ final class DeploymentStore {
             if interval > settings.pollIntervalSeconds,
                let previous = accountPollTimes[accountId],
                timestamp.timeIntervalSince(previous) < Double(interval) { return [] }
+            let offCycle = offCycleShare(for: account, interval: interval,
+                                         since: accountPollTimes[accountId], at: timestamp)
             accountPollTimes[accountId] = timestamp
+            let share = offCycle ?? tickShare(for: account, interval: interval)
             // The first tick starts one past the account scope, where the
             // tick-indexed rotation this replaced began.
             let start = accountRotationCursors[accountId, default: 1] % scopes.count
             let costs = scopes.map(estimatedCost(of:))
-            let count = ScopePollBudget.packedCount(
-                costs: costs, start: start,
-                budget: requestBudget(for: account, scopes: scopes, interval: interval))
+            let budget = requestBudget(for: account, scopes: scopes, interval: interval, share: share)
+            // A full tick always takes at least one scope; a partial share
+            // takes only what it can afford, possibly none.
+            let count = offCycle == nil
+                ? ScopePollBudget.packedCount(costs: costs, start: start, budget: budget)
+                : ScopePollBudget.fittingCount(costs: costs, start: start, budget: budget)
             accountRotationCursors[accountId] = (start + count) % scopes.count
             let chosen = count == scopes.count ? scopes
                                                 : (0..<count).map { scopes[(start + $0) % scopes.count] }
@@ -855,7 +880,7 @@ final class DeploymentStore {
             // account's share is what the in-progress re-reads may spend.
             let spent = listingReserve(for: account, scopes: chosen)
                 + (0..<count).reduce(0) { $0 + costs[(start + $1) % scopes.count] }
-            inProgressRefreshAllowance[accountId] = max(0, tickShare(for: account, interval: interval) - spent)
+            inProgressRefreshAllowance[accountId] = max(0, share - spent)
             return chosen
         }
     }

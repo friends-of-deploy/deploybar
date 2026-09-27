@@ -61,7 +61,7 @@ final class TeamsLoadingTests: XCTestCase {
             }, organizationFetch: { req in
                 (Data(#"[{"owner":{"login":"acme","type":"Organization"}}]"#.utf8),
                  HTTPURLResponse(url: req.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!)
-            })
+            }, now: SteppingClock(step: 60).next)
         store.start()
         await fulfillment(of: [fetchedOrg], timeout: 2)
         XCTAssertEqual(store.organizations(for: github).map(\.id), ["acme"])

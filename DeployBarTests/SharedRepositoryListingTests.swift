@@ -36,6 +36,7 @@ final class SharedRepositoryListingTests: XCTestCase {
                                                               httpVersion: nil, headerFields: nil)!
                                    return (Data(body.utf8), resp)
                                },
+                               now: SteppingClock(step: 3600).next,
                                reloadToken: { nil }, authRetryBackoff: .zero)
     }
 
