@@ -59,6 +59,7 @@ private struct SettingsDockPresence: NSViewRepresentable {
             let notifications = NotificationCenter.default
             notifications.removeObserver(self)
             guard let window else { return }
+            SettingsNavigation.shared.window = window
 
             notifications.addObserver(self, selector: #selector(showDockIcon),
                                       name: NSWindow.didBecomeKeyNotification, object: window)

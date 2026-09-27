@@ -68,13 +68,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                    in: button)
     }
 
-    @objc func openSettings() {
-        NSApp.activate(ignoringOtherApps: true)
-        // macOS 14 (Sonoma) renamed the Settings action selector.
-        if #available(macOS 14, *) {
-            NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
-        } else {
-            NSApp.sendAction(Selector(("showPreferencesWindow:")), to: nil, from: nil)
-        }
+    /// Not `showSettingsWindow:`: since macOS 14 SwiftUI refuses that selector
+    /// ("Please use SettingsLink for opening the Settings scene.") and this
+    /// menu item silently did nothing.
+    @MainActor @objc func openSettings() {
+        SettingsNavigation.shared.open()
     }
 }

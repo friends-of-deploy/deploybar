@@ -87,14 +87,19 @@ private struct MenuBarContentView: View {
 
     var body: some View {
         PopoverView(store: store, openSettings: {
-            NSApp.activate(ignoringOtherApps: true)
-            openSettings()
+            SettingsNavigation.shared.open()
         }, openOnboarding: openOnboarding)
+        .onAppear {
+            // Also captured by the label; registering here too means the
+            // popover's own button never depends on the label having appeared.
+            SettingsNavigation.shared.openSettings = { openSettings() }
+        }
     }
 }
 
 /// Capture the Settings action from a SwiftUI scene that is present at launch.
-/// The welcome window is hosted by AppKit and has no scene environment of its own.
+/// The welcome window and the icon's context menu are AppKit and have no
+/// scene environment of their own.
 private struct MenuBarLabel: View {
     @Environment(\.openSettings) private var openSettings
     let state: IconState
@@ -102,10 +107,7 @@ private struct MenuBarLabel: View {
     var body: some View {
         MenuBarIcon(state: state)
             .onAppear {
-                SettingsNavigation.shared.openSettings = {
-                    NSApp.activate(ignoringOtherApps: true)
-                    openSettings()
-                }
+                SettingsNavigation.shared.openSettings = { openSettings() }
             }
     }
 }
