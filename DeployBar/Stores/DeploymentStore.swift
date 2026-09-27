@@ -80,14 +80,7 @@ final class DeploymentStore {
     private(set) var identities: [UUID: AccountIdentity] = [:]
 
     @ObservationIgnored private let now: () -> Date
-    @ObservationIgnored private var accountPollTimes: [UUID: Date] = [:]
-    /// Where each account's rotation resumes: the first scope the last tick left out.
-    @ObservationIgnored private var accountRotationCursors: [UUID: Int] = [:]
-    /// How many by-id in-progress re-reads each account's tick can still afford,
-    /// after its chosen scopes' fetches (and, for GitHub, the shared listing).
-    /// Rebuilt every tick in `scopesToPollThisTick`; an account gated this tick
-    /// has no entry, so it re-reads nothing until its next eligible tick.
-    @ObservationIgnored private var inProgressRefreshAllowance: [UUID: Int] = [:]
+    @ObservationIgnored private let planner = PollPlanner()
     @ObservationIgnored private var scopeGenerations: [ScopeRef: Int] = [:]
     @ObservationIgnored private var knownAccountIds: Set<UUID>
 
@@ -561,146 +554,35 @@ final class DeploymentStore {
 
     // MARK: - Polling (fan out across scopes)
 
-    /// Worst-case requests of one scope's fetch. Sets how often the account
-    /// may poll at all (`accountIntervalSeconds`): the costliest scope must fit
-    /// one tick. Per-tick packing uses the finer `estimatedCost(of:)`.
-    private func estimatedRequestsPerScope(for account: Account) -> Int {
-        switch account.provider {
-        case .github:                return GitHubClient.maxRequestsPerScope
-        case .vercel, .azureDevOps:  return 2
-        }
+    /// The planner's view of one account: its scopes, its provider's costs,
+    /// and what its last results say about size and in-progress runs.
+    private func accountLoad(_ account: Account, scopes: [Scope]) -> PollPlanner.AccountLoad? {
+        guard let integration = registry.integration(for: account.provider) else { return nil }
+        let good = lastGood
+        let inProgress = good.filter { $0.key.accountId == account.id }.values
+            .reduce(0) { $0 + $1.deployments.filter(\.state.isInProgress).count }
+        return PollPlanner.AccountLoad(
+            account: account,
+            scopes: scopes,
+            cost: integration.pollCost,
+            knownProjectCount: { scope in
+                good[ScopeRef(accountId: scope.account.id, teamId: scope.teamId)]?.projects.count ?? 0
+            },
+            inProgressCount: inProgress)
     }
 
-    /// Provider hourly request ceiling used to size the budget.
-    private func hourlyLimit(for account: Account) -> Int {
-        switch account.provider {
-        case .github:      return 5000     // authenticated REST limit
-        // Vercel rate-limits per-endpoint per-minute, far more generously than
-        // an hourly figure implies — this is a safety rail against pathological
-        // scope counts, not a mirror of a documented quota.
-        case .vercel:      return 20000
-        case .azureDevOps: return 1000
+    private func scopesToPollThisTick() -> [Scope] {
+        let byAccount = Dictionary(grouping: availableScopes, by: { $0.account.id })
+        let loads = byAccount.compactMap { accountId, scopes in
+            account(accountId).flatMap { accountLoad($0, scopes: scopes) }
         }
-    }
-
-    /// How often any one of this account's scopes actually refreshes. Equal to
-    /// the poll interval until the account has more scopes than one tick can
-    /// afford, after which they rotate. Surfaced in Settings.
-    private func accountPollInterval(for account: Account) -> Int {
-        ScopePollBudget.accountIntervalSeconds(
-            pollIntervalSeconds: settings.pollIntervalSeconds,
-            hourlyLimit: hourlyLimit(for: account),
-            requestsPerScope: estimatedRequestsPerScope(for: account))
+        return planner.plan(loads, pollIntervalSeconds: settings.pollIntervalSeconds, now: now)
     }
 
     func effectiveRefreshInterval(for account: Account) -> Int {
         let scopes = availableScopes.filter { $0.account.id == account.id }
-        let interval = accountPollInterval(for: account)
-        return interval * ScopePollBudget.ticksPerRotation(
-            costs: scopes.map(estimatedCost(of:)),
-            budget: requestBudget(for: account, scopes: scopes, interval: interval))
-    }
-
-    /// What one scope's fetch is expected to cost, in requests.
-    ///
-    /// A GitHub organization reads its repositories from the account's shared
-    /// listing, reserved once per tick in `requestBudget`, so what is left is
-    /// one workflow-runs request per repository, up to the fan-out cap. Its
-    /// last result says how many repositories that is. With no result — or
-    /// none listed, which a restored cache can't tell from unknown — assume the cap.
-    private func estimatedCost(of scope: Scope) -> Int {
-        guard scope.account.provider == .github, scope.teamId != nil else {
-            return estimatedRequestsPerScope(for: scope.account)
-        }
-        let ref = ScopeRef(accountId: scope.account.id, teamId: scope.teamId)
-        let repositories = lastGood[ref]?.projects.count ?? 0
-        return repositories > 0 ? min(repositories, GitHubClient.maxRunRequestsPerScope)
-                                : GitHubClient.maxRunRequestsPerScope
-    }
-
-    /// This account's share of the hourly limit for one tick, before any
-    /// reserve is taken out of it.
-    private func tickShare(for account: Account, interval: Int) -> Int {
-        ScopePollBudget.tickRequestBudget(pollIntervalSeconds: interval,
-                                          hourlyLimit: hourlyLimit(for: account))
-    }
-
-    /// The shared GitHub repository listing this tick reserves, given the
-    /// scopes it is choosing among (or, for the allowance, the scopes it chose).
-    private func listingReserve(for account: Account, scopes: [Scope]) -> Int {
-        guard account.provider == .github, scopes.contains(where: { $0.teamId != nil }) else { return 0 }
-        return GitHubClient.maxRepoListingRequests
-    }
-
-    /// Requests a tick leaves for the account's scope fetches: its share of the
-    /// hourly limit (or `share`, the part earned by a poll between ticks), less
-    /// what the tick spends besides — the shared GitHub
-    /// repository listing and the by-id re-reads of in-progress runs. Packing
-    /// still reserves the in-progress re-reads so normal ticks leave them room;
-    /// `scopesToPollThisTick` computes the real, post-packing allowance below.
-    private func requestBudget(for account: Account, scopes: [Scope], interval: Int,
-                               share: Int? = nil) -> Int {
-        let tick = share ?? tickShare(for: account, interval: interval)
-        guard account.provider == .github else { return tick }
-        let inProgress = lastGood.filter { $0.key.accountId == account.id }.values
-            .reduce(0) { $0 + $1.deployments.filter(\.state.isInProgress).count }
-        return tick - listingReserve(for: account, scopes: scopes) - min(inProgress, Self.maxInProgressRefreshesPerTick)
-    }
-
-    /// What a GitHub poll between timer ticks may spend: the tick share,
-    /// earned back over the interval since the account's last poll. Nil for a
-    /// full tick — the first poll, one at least ~an interval on (timer jitter
-    /// allowed), or any other provider.
-    ///
-    /// Refresh clicks, wakes and scope changes all poll off the timer. Each one
-    /// spending a full share took GitHub past 5,000 requests an hour; this way
-    /// a click at t+15 s leaves the next tick half a share, and the hour stays
-    /// at about one share per interval however often the user refreshes.
-    private func offCycleShare(for account: Account, interval: Int, since previous: Date?,
-                               at timestamp: Date) -> Int? {
-        guard account.provider == .github, let previous else { return nil }
-        let elapsed = timestamp.timeIntervalSince(previous)
-        guard elapsed < 0.9 * Double(interval) else { return nil }
-        return Int(Double(tickShare(for: account, interval: interval)) * max(0, elapsed) / Double(interval))
-    }
-
-    /// Only advance an account's rotation when it can actually afford a fetch.
-    /// A tick then takes as many scopes, in rotation order, as its budget covers.
-    private func scopesToPollThisTick() -> [Scope] {
-        inProgressRefreshAllowance = [:]
-        let byAccount = Dictionary(grouping: availableScopes, by: { $0.account.id })
-        return byAccount.flatMap { accountId, scopes -> [Scope] in
-            guard let account = account(accountId) else { return [] }
-            let interval = accountPollInterval(for: account)
-            let timestamp = now()
-            if interval > settings.pollIntervalSeconds,
-               let previous = accountPollTimes[accountId],
-               timestamp.timeIntervalSince(previous) < Double(interval) { return [] }
-            let offCycle = offCycleShare(for: account, interval: interval,
-                                         since: accountPollTimes[accountId], at: timestamp)
-            accountPollTimes[accountId] = timestamp
-            let share = offCycle ?? tickShare(for: account, interval: interval)
-            // The first tick starts one past the account scope, where the
-            // tick-indexed rotation this replaced began.
-            let start = accountRotationCursors[accountId, default: 1] % scopes.count
-            let costs = scopes.map(estimatedCost(of:))
-            let budget = requestBudget(for: account, scopes: scopes, interval: interval, share: share)
-            // A full tick always takes at least one scope; a partial share
-            // takes only what it can afford, possibly none.
-            let count = offCycle == nil
-                ? ScopePollBudget.packedCount(costs: costs, start: start, budget: budget)
-                : ScopePollBudget.fittingCount(costs: costs, start: start, budget: budget)
-            accountRotationCursors[accountId] = (start + count) % scopes.count
-            let chosen = count == scopes.count ? scopes
-                                                : (0..<count).map { scopes[(start + $0) % scopes.count] }
-            // What this tick actually spent on fetches (plus the listing, if an
-            // organization is among them) is fixed now; whatever remains of the
-            // account's share is what the in-progress re-reads may spend.
-            let spent = listingReserve(for: account, scopes: chosen)
-                + (0..<count).reduce(0) { $0 + costs[(start + $1) % scopes.count] }
-            inProgressRefreshAllowance[accountId] = max(0, share - spent)
-            return chosen
-        }
+        guard let load = accountLoad(account, scopes: scopes) else { return settings.pollIntervalSeconds }
+        return planner.effectiveRefreshInterval(for: load, pollIntervalSeconds: settings.pollIntervalSeconds)
     }
 
     /// Forgets a scope's cached rows so re-enabling it shows fresh data rather
@@ -953,15 +835,8 @@ final class DeploymentStore {
         let liveScopes = Set(availableScopes.map { ScopeRef(accountId: $0.account.id, teamId: $0.teamId) })
         lastGood = lastGood.filter { liveIds.contains($0.key.accountId) && liveScopes.contains($0.key) }
         consecutiveAuthFailures = consecutiveAuthFailures.filter { liveIds.contains($0.key.accountId) }
-        accountPollTimes = accountPollTimes.filter { liveIds.contains($0.key) }
-        accountRotationCursors = accountRotationCursors.filter { liveIds.contains($0.key) }
-        inProgressRefreshAllowance = inProgressRefreshAllowance.filter { liveIds.contains($0.key) }
+        planner.prune(keeping: liveIds)
     }
-
-    /// Upper bound on by-id re-reads per tick. Each costs one request, so a
-    /// burst of parallel CI runs can't blow through the provider's budget; any
-    /// beyond the cap still refresh when their scope comes round.
-    private static let maxInProgressRefreshesPerTick = 10
 
     /// Re-reads, by id, the in-progress rows of every scope with no fresh
     /// result this tick, and patches `lastGood` so the replay shows real state.
@@ -969,14 +844,14 @@ final class DeploymentStore {
     ///
     /// Bounded twice over: the global cap guards against a burst of parallel
     /// CI runs blowing through the provider's budget regardless of account,
-    /// and each account's `inProgressRefreshAllowance` — what its own tick's
+    /// and each account's `planner.inProgressAllowance` — what its own tick's
     /// share has left after its chosen scopes' fetches — keeps a tick that
     /// spent most of its share on one costly scope (the personal scope, say)
     /// from adding unbudgeted re-reads on top.
     private func refreshInProgressRows(skipping fresh: Set<ScopeRef>,
                                        generations: [ScopeRef: Int]) async {
-        var remaining = Self.maxInProgressRefreshesPerTick
-        var allowance = inProgressRefreshAllowance
+        var remaining = PollPlanner.maxInProgressRefreshesPerTick
+        var allowance = planner.inProgressAllowance
         var work: [(ref: ScopeRef, client: DeploymentProviderClient, rows: [Deployment])] = []
         for scope in availableScopes where remaining > 0 {
             let ref = ScopeRef(accountId: scope.account.id, teamId: scope.teamId)
