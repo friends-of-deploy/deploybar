@@ -21,34 +21,40 @@ struct GitHubClient: Sendable {
     let org: String?
     /// Number of most-recently-pushed repos to fetch workflow runs for per poll.
     let runFanoutLimit: Int
+    /// Account-wide listing shared by organization scopes; nil lists per call.
+    let listing: GitHubRepositoryListing?
     let fetch: Fetch
 
     /// Runaway guard for repository listing pagination.
-    private let maxRepoPages = 10
+    static let maxRepoListingRequests = 10
+    /// Default workflow-run fan-out: one runs request per repository.
+    static let maxRunRequestsPerScope = 20
 
     /// Two bounded repository listings plus the default workflow-run fan-out.
-    static let maxRequestsPerScope = 10 + 10 + 20
+    static let maxRequestsPerScope = 2 * maxRepoListingRequests + maxRunRequestsPerScope
 
     init(token: String,
          org: String? = nil,
-         runFanoutLimit: Int = 20,
+         runFanoutLimit: Int = GitHubClient.maxRunRequestsPerScope,
+         listing: GitHubRepositoryListing? = nil,
          fetch: @escaping Fetch = { try await URLSession.shared.data(for: $0) }) {
         self.token = token
         self.org = org
         self.runFanoutLimit = max(1, runFanoutLimit)
+        self.listing = listing
         self.fetch = fetch
     }
 
     // MARK: - DeploymentProviderClient surface
 
     func projects() async throws -> [Project] {
-        try await repositories(maxPages: maxRepoPages, perPage: 100).map(Self.project(from:))
+        try await repositories(maxPages: Self.maxRepoListingRequests, perPage: 100).map(Self.project(from:))
     }
 
     func deployments(limit: Int) async throws -> [Deployment] {
         // Personal scope needs one listing page. Organization scopes scan the
         // bounded accessible list before selecting the 20 most recently pushed repositories.
-        let repos = Array(try await repositories(maxPages: org == nil ? 1 : maxRepoPages,
+        let repos = Array(try await repositories(maxPages: org == nil ? 1 : Self.maxRepoListingRequests,
                                                  perPage: org == nil ? runFanoutLimit : 100)
             .prefix(runFanoutLimit))
         guard !repos.isEmpty else { return [] }
@@ -123,7 +129,24 @@ struct GitHubClient: Sendable {
     /// would also include unrelated public repositories. Organization filtering
     /// happens after pagination so other owners cannot crowd out the target.
     /// Personal scope retains its existing owner-only affiliation boundary.
+    ///
+    /// Every organization scope reads the same unfiltered listing, so with a
+    /// shared `listing` the account fetches it once per tick for all of them.
     private func repositories(maxPages: Int, perPage: Int) async throws -> [GHRepo] {
+        guard let org else { return try await listRepositories(maxPages: maxPages, perPage: perPage) }
+        let all: [GHRepo]
+        if let listing {
+            all = try await listing.repositories(token: token) {
+                try await self.listRepositories(maxPages: Self.maxRepoListingRequests, perPage: 100)
+            }
+        } else {
+            all = try await listRepositories(maxPages: maxPages, perPage: perPage)
+        }
+        return all.filter { $0.owner.login.caseInsensitiveCompare(org) == .orderedSame }
+    }
+
+    /// One walk of `/user/repos`, most recent push first.
+    private func listRepositories(maxPages: Int, perPage: Int) async throws -> [GHRepo] {
         var all: [GHRepo] = []
         for page in 1...max(1, maxPages) {
             var query = [
@@ -131,16 +154,12 @@ struct GitHubClient: Sendable {
                 URLQueryItem(name: "per_page", value: String(perPage)),
                 URLQueryItem(name: "page", value: String(page)),
             ]
-            let path = "/user/repos"
             if org == nil {
                 query.append(URLQueryItem(name: "affiliation", value: "owner"))
             }
-            let data = try await get(path: path, query: query)
+            let data = try await get(path: "/user/repos", query: query)
             let batch = try Self.decoder.decode([GHRepo].self, from: data)
-            all.append(contentsOf: batch.filter { repo in
-                guard let org else { return true }
-                return repo.owner.login.caseInsensitiveCompare(org) == .orderedSame
-            })
+            all.append(contentsOf: batch)
             if batch.count < perPage { break }
         }
         return all

@@ -105,6 +105,7 @@
 		A14097599D9F23EA187355AF /* GitHubActionsErrorReport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7DD458B00EA53255D53F877F /* GitHubActionsErrorReport.swift */; };
 		A2D2F23D32D107AC5EAEE4B5 /* StateTransition.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5BF87A3C8F157577CBACA30D /* StateTransition.swift */; };
 		A399990B3B1754C930EDD0E8 /* ScopeColorPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 718BC1490051E62D3E4B4334 /* ScopeColorPicker.swift */; };
+		A45A3CA325C2FACBC3B2CF92 /* GitHubRepositoryListing.swift in Sources */ = {isa = PBXBuildFile; fileRef = 08F56E606B24CD10EB5E19DB /* GitHubRepositoryListing.swift */; };
 		A58D1083AFF9DB99170BAE91 /* GitHubCLITokenProviderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 25C9F632B66D2D3D831877A4 /* GitHubCLITokenProviderTests.swift */; };
 		A6420D2DE19628FA56D15373 /* VercelClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 91A0EE20CBAED0CF2E98D0EA /* VercelClient.swift */; };
 		A6B6D0826C24CD9026218FF2 /* DemoClock.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2182648C63548B446EE0E8DE /* DemoClock.swift */; };
@@ -184,6 +185,7 @@
 /* Begin PBXFileReference section */
 		08B3FD0A4A7D2B851A5D900F /* Scope.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Scope.swift; sourceTree = "<group>"; };
 		08CB8CC4D570FB5256D83340 /* Provider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Provider.swift; sourceTree = "<group>"; };
+		08F56E606B24CD10EB5E19DB /* GitHubRepositoryListing.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GitHubRepositoryListing.swift; sourceTree = "<group>"; };
 		0CD31943215A1B07BE618266 /* TeamsClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TeamsClient.swift; sourceTree = "<group>"; };
 		1049A05673BFAD96CAD2455D /* ScopeColorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScopeColorTests.swift; sourceTree = "<group>"; };
 		10909CFA5E939D84F76594A7 /* FaviconCache.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FaviconCache.swift; sourceTree = "<group>"; };
@@ -529,6 +531,7 @@
 				74299387DF1EA4D4C946A81F /* DeploymentProviderClient.swift */,
 				5C45520C48C2F7C0E83C4E00 /* GitHubClient.swift */,
 				908ABB87743CF0DA153A8984 /* GitHubOrgsClient.swift */,
+				08F56E606B24CD10EB5E19DB /* GitHubRepositoryListing.swift */,
 				2B583275940E87AD51F09C7B /* GitHubTokenProvider.swift */,
 				171831EB706F154D65EC9487 /* ProviderClientError.swift */,
 				4EC059A6A8C152E20A42C7D7 /* ScopeResolver.swift */,
@@ -781,6 +784,7 @@
 				E085B66D1F7B0C7BB7F8AEF5 /* GitHubClient.swift in Sources */,
 				BAA52454E6032E521E7F8E61 /* GitHubDTO.swift in Sources */,
 				E2DFE9C11A94078586FE5519 /* GitHubOrgsClient.swift in Sources */,
+				A45A3CA325C2FACBC3B2CF92 /* GitHubRepositoryListing.swift in Sources */,
 				30E704ADB7DAFE6D8042D4B0 /* GitHubTokenProvider.swift in Sources */,
 				C7FA25B6E0BB241044A723FD /* HealthDot.swift in Sources */,
 				88ACCA45695CE12422DFB8B2 /* IconActionButton.swift in Sources */,

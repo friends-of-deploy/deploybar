@@ -293,6 +293,104 @@ final class GitHubClientTests: XCTestCase {
         XCTAssertLessThanOrEqual(requestCount, GitHubClient.maxRequestsPerScope)
     }
 
+    // MARK: - Shared organization listing
+
+    /// Records each `/user/repos` request's query, so a test can count listings.
+    private actor ListingLog {
+        private(set) var queries: [String] = []
+        func add(_ query: String) { queries.append(query) }
+    }
+
+    /// Serves `reposJSON` (two `acme` repositories) for listings, with the
+    /// status `listingStatus` picks, and an empty run list for everything else.
+    private func listingClient(org: String?, token: String = "t",
+                               listing: GitHubRepositoryListing, log: ListingLog,
+                               listingStatus: @escaping @Sendable () async -> Int = { 200 }) -> GitHubClient {
+        GitHubClient(token: token, org: org, listing: listing) { req in
+            guard req.url!.path == "/user/repos" else {
+                return (Data(#"{"workflow_runs":[]}"#.utf8), Self.ok(req))
+            }
+            await log.add(req.url!.query ?? "")
+            let status = await listingStatus()
+            let resp = HTTPURLResponse(url: req.url!, statusCode: status, httpVersion: nil, headerFields: nil)!
+            return (Data((status == 200 ? Self.reposJSON : "{}").utf8), resp)
+        }
+    }
+
+    func test_organizationScopesShareOneListing() async throws {
+        let listing = GitHubRepositoryListing()
+        let log = ListingLog()
+        let acme = listingClient(org: "acme", listing: listing, log: log)
+        let beta = listingClient(org: "beta", listing: listing, log: log)
+
+        async let acmeProjects = acme.projects()
+        async let acmeRuns = acme.deployments(limit: 100)
+        async let betaProjects = beta.projects()
+        async let betaRuns = beta.deployments(limit: 100)
+        let (ap, _, bp, _) = try await (acmeProjects, acmeRuns, betaProjects, betaRuns)
+
+        XCTAssertEqual(ap.map(\.id), ["acme/web", "acme/api"])
+        XCTAssertTrue(bp.isEmpty, "another owner's repositories stay out of the scope")
+        let listings = await log.queries.count
+        XCTAssertEqual(listings, 1, "two organizations, projects and runs each: one listing")
+    }
+
+    func test_resetStartsAFreshListing() async throws {
+        let listing = GitHubRepositoryListing()
+        let log = ListingLog()
+        let client = listingClient(org: "acme", listing: listing, log: log)
+
+        _ = try await client.projects()
+        await listing.reset()
+        _ = try await client.projects()
+
+        let listings = await log.queries.count
+        XCTAssertEqual(listings, 2, "a new tick must see new pushes")
+    }
+
+    func test_failedListingIsFetchedAgain() async throws {
+        let listing = GitHubRepositoryListing()
+        let log = ListingLog()
+        let attempts = RequestCounter()
+        let client = listingClient(org: "acme", listing: listing, log: log) {
+            await attempts.increment()
+            return await attempts.count == 1 ? 500 : 200
+        }
+
+        do {
+            _ = try await client.projects()
+            XCTFail("the first listing fails")
+        } catch {}
+        let projects = try await client.projects()
+
+        XCTAssertEqual(projects.map(\.id), ["acme/web", "acme/api"],
+                       "a failed listing must not be served for the rest of the tick")
+    }
+
+    func test_differentTokensDoNotShareAListing() async throws {
+        let listing = GitHubRepositoryListing()
+        let log = ListingLog()
+
+        _ = try await listingClient(org: "acme", token: "one", listing: listing, log: log).projects()
+        _ = try await listingClient(org: "acme", token: "two", listing: listing, log: log).projects()
+
+        let listings = await log.queries.count
+        XCTAssertEqual(listings, 2, "a rotated or different token sees its own repositories")
+    }
+
+    func test_personalScopeKeepsItsOwnerOnlyListing() async throws {
+        let listing = GitHubRepositoryListing()
+        let log = ListingLog()
+
+        _ = try await listingClient(org: "acme", listing: listing, log: log).projects()
+        _ = try await listingClient(org: nil, listing: listing, log: log).projects()
+
+        let queries = await log.queries
+        XCTAssertEqual(queries.count, 2)
+        XCTAssertTrue(queries[1].contains("affiliation=owner"),
+                      "the personal scope must not reuse the organizations' listing: \(queries[1])")
+    }
+
     static func ok(_ req: URLRequest) -> HTTPURLResponse {
         HTTPURLResponse(url: req.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!
     }
