@@ -3,6 +3,40 @@
 Release notes for DeployBar. Earlier releases are available on
 [GitHub Releases](https://github.com/friends-of-deploy/deploybar/releases).
 
+## [1.2.1] - 2026-09-27
+
+DeployBar 1.2.1 fixes a menu bar icon that could keep showing a deploy in
+progress long after it had finished, and refreshes GitHub organizations much
+more often while staying within GitHub's rate limit.
+
+### An icon you can trust
+
+- A finished run no longer leaves the icon on "deploying". Accounts with many
+  GitHub organizations refresh each one in turn, and a run caught mid-build
+  used to keep the icon busy until its organization came round again — up to
+  a quarter of an hour. Runs still in progress are now re-checked individually
+  on every refresh, so the icon settles within one interval.
+- Only a build that is actually running shows "deploying". Queued runs, and
+  GitHub runs waiting for an environment approval, no longer keep the icon busy.
+
+### Faster, steadier GitHub refreshes
+
+- GitHub organizations now share one repository listing per refresh instead of
+  each listing every repository again, and each organization is budgeted by
+  what it actually costs. Small organizations refresh together, so a full round
+  of many organizations takes minutes rather than a quarter of an hour. The
+  first round after installing is still conservative until DeployBar learns
+  each organization's size; Settings shows the resulting interval.
+- Refreshing by hand, waking your Mac, or switching sources between scheduled
+  refreshes now spends only the share of GitHub's hourly allowance that time
+  has earned, so frequent refreshes can't exhaust a limit your `gh` CLI shares.
+- When GitHub rate-limits the repository listing, DeployBar waits for the next
+  refresh instead of retrying it for every organization.
+- Refreshes that overlap a slow one are combined into a single follow-up
+  instead of queuing up behind each other.
+
+[Full changes since 1.2.0](https://github.com/friends-of-deploy/deploybar/compare/v1.2.0...v1.2.1)
+
 ## [1.2.0] - 2026-09-20
 
 DeployBar 1.2 makes getting started easier and brings your personal accounts,
