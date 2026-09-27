@@ -10,8 +10,21 @@ final class AccountStore {
     @ObservationIgnored private let defaults: UserDefaults
     @ObservationIgnored private let credentials: CredentialStore
     @ObservationIgnored private let reloadCLIToken: () -> String?
-    @ObservationIgnored private let reloadGitHubToken: () -> String?
+    @ObservationIgnored private let reloadGitHubToken: @Sendable () -> String?
     @ObservationIgnored private let vercelCLISession: VercelCLISession
+    @ObservationIgnored private let now: () -> Date
+
+    /// The last `gh auth token` result and when it was read. `nil` read time
+    /// means `gh` has not been asked yet this launch.
+    @ObservationIgnored private var gitHubCLIToken: String?
+    @ObservationIgnored private var gitHubCLITokenReadAt: Date?
+    /// The in-flight background re-read, so stale callers share one `gh` run.
+    @ObservationIgnored private(set) var gitHubCLITokenRefresh: Task<Void, Never>?
+
+    /// How long a `gh` token is served before it is re-read in the background.
+    /// Long enough that a poll tick reuses one read across all its scopes;
+    /// short enough that `gh auth refresh` or a new login is picked up soon.
+    static let gitHubCLITokenFreshness: TimeInterval = 60
 
     private enum Keys { static let accounts = "connectedAccounts" }
 
@@ -20,13 +33,15 @@ final class AccountStore {
          detectCLI: () -> Bool = { (try? TokenProvider().credentials()) != nil },
          reloadCLIToken: @escaping () -> String? = { try? TokenProvider().credentials().token },
          detectGitHubCLI: () -> Bool = { GitHubTokenProvider().token() != nil },
-         reloadGitHubToken: @escaping () -> String? = { GitHubTokenProvider().token() },
-         vercelCLISession: VercelCLISession = .shared) {
+         reloadGitHubToken: @escaping @Sendable () -> String? = { GitHubTokenProvider().token() },
+         vercelCLISession: VercelCLISession = .shared,
+         now: @escaping () -> Date = Date.init) {
         self.defaults = defaults
         self.credentials = credentials
         self.reloadCLIToken = reloadCLIToken
         self.reloadGitHubToken = reloadGitHubToken
         self.vercelCLISession = vercelCLISession
+        self.now = now
         let savedAccounts = Self.load(defaults)
         self.accounts = savedAccounts
         self.hadPersistedAccounts = !savedAccounts.isEmpty
@@ -51,9 +66,35 @@ final class AccountStore {
     func token(for account: Account) -> String? {
         switch account.source {
         case .vercelCLI:            return reloadCLIToken()
-        case .githubCLI:            return reloadGitHubToken()
+        case .githubCLI:            return cachedGitHubCLIToken()
         case .keychain(let name):   return credentials.token(for: name)
         }
+    }
+
+    /// `gh auth token` spawns a process and waits for it. This store is on the
+    /// main actor and the poll builds a client per scope, so reading it on
+    /// every call froze the popover — scrolling and buttons included — for as
+    /// long as a tick's worth of `gh` runs took. Only the first read of a
+    /// launch waits; after that a stale token is served while one background
+    /// re-read replaces it.
+    private func cachedGitHubCLIToken() -> String? {
+        guard let readAt = gitHubCLITokenReadAt else {
+            gitHubCLIToken = reloadGitHubToken()
+            gitHubCLITokenReadAt = now()
+            return gitHubCLIToken
+        }
+        if now().timeIntervalSince(readAt) >= Self.gitHubCLITokenFreshness,
+           gitHubCLITokenRefresh == nil {
+            let read = reloadGitHubToken
+            gitHubCLITokenRefresh = Task { [weak self] in
+                let token = await Task.detached(priority: .utility) { read() }.value
+                guard let self else { return }
+                self.gitHubCLIToken = token
+                self.gitHubCLITokenReadAt = self.now()
+                self.gitHubCLITokenRefresh = nil
+            }
+        }
+        return gitHubCLIToken
     }
 
     /// Only CLI accounts share the renewable CLI session. Explicit API tokens

@@ -116,6 +116,42 @@ final class AccountStoreTests: XCTestCase {
         XCTAssertEqual(s.token(for: s.githubCLIAccount!), "gho_live")
     }
 
+    /// `gh auth token` is a subprocess; running it for every client the poll
+    /// builds blocked the main thread once per scope, per tick, and froze the
+    /// popover for users with many organizations.
+    func test_githubCLIToken_isReadOncePerFreshnessWindow() {
+        var reads = 0
+        let s = AccountStore(defaults: UserDefaults(suiteName: UUID().uuidString)!,
+                             credentials: InMemoryCredentialStore(),
+                             detectCLI: { false },
+                             detectGitHubCLI: { true },
+                             reloadGitHubToken: { reads += 1; return "gho_live" })
+        let gh = s.githubCLIAccount!
+        for _ in 0..<20 { XCTAssertEqual(s.token(for: gh), "gho_live") }
+        XCTAssertEqual(reads, 1)
+    }
+
+    /// A stale token is still served at once; the re-read happens off the main
+    /// thread and the next caller gets the rotated token.
+    func test_staleGitHubCLIToken_isRefreshedInTheBackground() async {
+        var now = Date(timeIntervalSince1970: 0)
+        var current = "gho_old"
+        let s = AccountStore(defaults: UserDefaults(suiteName: UUID().uuidString)!,
+                             credentials: InMemoryCredentialStore(),
+                             detectCLI: { false },
+                             detectGitHubCLI: { true },
+                             reloadGitHubToken: { current },
+                             now: { now })
+        let gh = s.githubCLIAccount!
+        XCTAssertEqual(s.token(for: gh), "gho_old")
+
+        current = "gho_new"
+        now += AccountStore.gitHubCLITokenFreshness + 1
+        XCTAssertEqual(s.token(for: gh), "gho_old")
+        await s.gitHubCLITokenRefresh?.value
+        XCTAssertEqual(s.token(for: gh), "gho_new")
+    }
+
     func test_githubCLIAccount_idStableAcrossInstances() {
         let d = UserDefaults(suiteName: UUID().uuidString)!
         let first = store(detectGH: true, defaults: d).githubCLIAccount!.id
