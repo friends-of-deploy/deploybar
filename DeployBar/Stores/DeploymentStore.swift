@@ -106,9 +106,12 @@ final class DeploymentStore {
     // MARK: Polling machinery
     @ObservationIgnored private var timer: Timer?
     @ObservationIgnored private var isPollInFlight = false
-    /// The poll currently running (or the last one chained onto it). Lets
-    /// `poll()` coalesce racing callers instead of dropping their request.
+    /// The poll currently running. Lets `poll()` coalesce racing callers
+    /// instead of dropping their request.
     @ObservationIgnored private var currentPoll: Task<Void, Never>?
+    /// The single run queued behind `currentPoll`, shared by every caller that
+    /// arrives mid-poll.
+    @ObservationIgnored private var followUpPoll: Task<Void, Never>?
     /// Wake observer, so a sleeping Mac refreshes the moment it comes back.
     @ObservationIgnored private var wakeObserver: NSObjectProtocol?
     @ObservationIgnored private var isLoggedOut = false
@@ -687,6 +690,7 @@ final class DeploymentStore {
     deinit {
         timer?.invalidate()
         currentPoll?.cancel()
+        followUpPoll?.cancel()
         if let wakeObserver {
             NSWorkspace.shared.notificationCenter.removeObserver(wakeObserver)
         }
@@ -821,21 +825,34 @@ final class DeploymentStore {
     /// label — until the next tick (up to the full poll interval). Now the
     /// racing caller waits for the in-flight poll and then gets its own run,
     /// so the data always catches up with the scope the user picked.
+    ///
+    /// At most one run waits behind the in-flight one, and every caller that
+    /// arrives meanwhile shares it: it starts after all of them asked, so it
+    /// serves them all. Queuing one run per caller let a poll slower than the
+    /// timer interval build an ever-growing backlog of back-to-back fetches.
     func poll() async {
-        // Mid-poll: chain onto the current run so we start only once it is done,
-        // and record that chained task so further callers join it rather than
-        // stacking a run each.
-        if let inFlight = currentPoll {
-            let chained = Task { @MainActor [weak self] in
-                _ = await inFlight.value
-                guard let self else { return }
-                await self.runPoll()
-            }
-            currentPoll = chained
-            await chained.value
-            if currentPoll == chained { currentPoll = nil }
+        if let followUp = followUpPoll {
+            await followUp.value
             return
         }
+        guard let inFlight = currentPoll else {
+            await runCurrentPoll()
+            return
+        }
+        let followUp = Task { @MainActor [weak self] in
+            _ = await inFlight.value
+            guard let self else { return }
+            // Now running: later callers need a newer run than this one.
+            self.followUpPoll = nil
+            await self.runCurrentPoll()
+        }
+        followUpPoll = followUp
+        await followUp.value
+    }
+
+    /// Runs one poll as the in-flight one. Wrapped in a task so follow-ups
+    /// can wait on it and a cancelled caller can't cut a poll short.
+    private func runCurrentPoll() async {
         let task = Task { @MainActor [weak self] in
             guard let self else { return }
             await self.runPoll()

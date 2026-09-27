@@ -76,6 +76,37 @@ final class PollCoalescingTests: XCTestCase {
                        "the racing poll must fetch too — it used to be dropped by the re-entrancy guard")
     }
 
+    /// Many callers racing one slow poll share a single follow-up run. Queuing
+    /// one run per caller let a poll slower than the timer interval build an
+    /// ever-growing backlog of back-to-back fetches.
+    func test_manyRacingPollsShareOneFollowUpRun() async {
+        let recorder = Recorder()
+        let store = makeStore(recorder)
+
+        let released = expectation(description: "first poll released")
+        var release: (() -> Void)?
+        recorder.gate = {
+            await withCheckedContinuation { (c: CheckedContinuation<Void, Never>) in
+                release = { c.resume() }
+                released.fulfill()
+            }
+            recorder.gate = nil
+        }
+
+        let first = Task { await store.poll() }
+        await fulfillment(of: [released], timeout: 2)
+
+        let racers = (0..<5).map { _ in Task { await store.poll() } }
+        for _ in 0..<10 { await Task.yield() }     // let every racer join
+        release?()
+
+        await first.value
+        for racer in racers { await racer.value }
+
+        XCTAssertEqual(recorder.fetches, 2,
+                       "racing callers must share one follow-up fetch, not queue one each")
+    }
+
     /// The guard's original purpose survives: a poll is never re-entered
     /// concurrently, so the two runs are sequential rather than interleaved.
     func test_pollsDoNotOverlap() async {
