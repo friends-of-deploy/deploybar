@@ -492,8 +492,11 @@ final class DeploymentStore {
     }
 
     /// Pure derivation (no acknowledgment): running > failure > success > idle.
+    /// Only a build that is actually running counts — a queued run can wait
+    /// indefinitely (GitHub environment approvals), and "deploying" for days
+    /// reads as the app being stuck.
     static func baseState(for states: [DeploymentState]) -> IconState {
-        if states.contains(where: \.isInProgress) { return .building }
+        if states.contains(.building) { return .building }
         if states.contains(.error) { return .failure }
         if states.contains(.ready) { return .success }
         return .idle

@@ -14,8 +14,8 @@ enum DeploymentState: String, Sendable {
         }
     }
 
-    /// Still running on the provider — the states that put the menu bar icon
-    /// into "deploying".
+    /// Not finished on the provider yet, so its row is still worth re-reading.
+    /// Only `.building` lights the menu bar icon; see `DeploymentStore.baseState`.
     var isInProgress: Bool { self == .building || self == .queued }
 
     /// Human-readable, localized label for badges and status text.

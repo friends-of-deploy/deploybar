@@ -26,7 +26,15 @@ final class DeploymentStoreTests: XCTestCase {
         XCTAssertEqual(DeploymentStore.baseState(for: [.ready, .ready]), .success)
         XCTAssertEqual(DeploymentStore.baseState(for: [.canceled]), .idle)
         XCTAssertEqual(DeploymentStore.baseState(for: []), .idle)
-        XCTAssertEqual(DeploymentStore.baseState(for: [.queued]), .building)
+    }
+
+    /// Only a build that is actually running lights "deploying". A queued run —
+    /// including a GitHub run waiting days for environment approval — does not.
+    func test_queuedRunDoesNotLightTheDeployingIcon() {
+        XCTAssertEqual(DeploymentStore.baseState(for: [.queued]), .idle)
+        XCTAssertEqual(DeploymentStore.baseState(for: [.queued, .ready]), .success)
+        XCTAssertEqual(DeploymentStore.baseState(for: [.queued, .error]), .failure)
+        XCTAssertEqual(DeploymentStore.baseState(for: [.queued, .building]), .building)
     }
 
     func test_firstPollPopulatesAndClearsError() async throws {
