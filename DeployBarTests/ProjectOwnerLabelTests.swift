@@ -18,8 +18,7 @@ final class ProjectOwnerLabelTests: XCTestCase {
         let settings = SettingsStore(defaults: UserDefaults(suiteName: UUID().uuidString)!)
         let store = DeploymentStore(
             accountStore: accountStore, settings: settings,
-            makeClient: { _, _ in StubOwnerClient() },
-            reloadToken: { "tok" }, authRetryBackoff: .zero)
+            makeClient: { _, _ in StubOwnerClient() }, authRetryBackoff: .zero)
         return (store, cli)
     }
 
@@ -34,7 +33,7 @@ final class ProjectOwnerLabelTests: XCTestCase {
     /// The point of the method: the username, not the "Vercel CLI" account label.
     func test_usesTheVercelUsernameForThePersonalScope() {
         let (store, cli) = makeStore()
-        store.user = VercelUser(username: "konrad-8lines", name: "Konrad", email: nil, avatar: nil)
+        store.setIdentity(AccountIdentity(username: "konrad-8lines"), for: cli.id)
 
         let owner = store.projectOwnerLabel(accountId: cli.id, teamId: nil)
         XCTAssertEqual(owner, "konrad-8lines")
@@ -45,7 +44,7 @@ final class ProjectOwnerLabelTests: XCTestCase {
     /// missing username must leave the title unprefixed rather than guess.
     func test_noOwnerUntilTheUserIsKnown() {
         let (store, cli) = makeStore()
-        XCTAssertNil(store.user)
+        XCTAssertNil(store.identity(for: cli))
         XCTAssertNil(store.projectOwnerLabel(accountId: cli.id, teamId: nil))
     }
 

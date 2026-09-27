@@ -40,7 +40,6 @@ final class PollCoalescingTests: XCTestCase {
             accountStore: accountStore,
             settings: SettingsStore(defaults: UserDefaults(suiteName: UUID().uuidString)!),
             makeClient: { _, _ in StubClient(recorder: recorder) },
-            reloadToken: { nil },
             authRetryBackoff: .zero
         )
     }
@@ -212,8 +211,7 @@ final class PollCoalescingTests: XCTestCase {
         let settings = SettingsStore(defaults: UserDefaults(suiteName: UUID().uuidString)!)
         let store = DeploymentStore(
             accountStore: accountStore, settings: settings,
-            makeClient: { _, _ in nil },
-            reloadToken: { nil }, authRetryBackoff: .zero)
+            makeClient: { _, _ in nil }, authRetryBackoff: .zero)
         return (store, accounts, settings)
     }
 }

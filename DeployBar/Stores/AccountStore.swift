@@ -76,16 +76,6 @@ final class AccountStore {
 
     static let gitHubCLITokenFreshness = GitHubCLICredential.freshness
 
-    /// Only CLI accounts share the renewable CLI session. Explicit API tokens
-    /// must keep using the credentials selected for that account. Routed by
-    /// source, not by whether a token can be read right now: a transient nil
-    /// read must not silently drop a CLI account to plain `URLSession`.
-    /// Removed in Task 4, once `DeploymentStore` resolves credentials itself.
-    func vercelFetch(for account: Account) -> VercelClient.Fetch {
-        if let cli = strategy(for: account) as? VercelCLICredential { return cli.transport }
-        return { try await URLSession.shared.data(for: $0) }
-    }
-
     @discardableResult
     func addKeychainAccount(provider: Provider, label: String, token: String) -> Account {
         let kcName = "acct-\(UUID().uuidString)"

@@ -51,10 +51,9 @@ final class AccountConnectionStore {
     }
 
     private static func validateToken(provider: Provider, token: String) async throws -> String {
-        switch provider {
-        case .vercel: return try await UserClient(token: token).user().username
-        case .github: return try await GitHubClient(token: token).authenticatedLogin()
-        case .azureDevOps: throw URLError(.unsupportedURL)
+        guard let integration = ProviderRegistry.live().integration(for: provider) else {
+            throw URLError(.unsupportedURL)
         }
+        return try await integration.identity(using: .plain(token)).username
     }
 }

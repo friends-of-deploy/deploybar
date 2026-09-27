@@ -15,8 +15,7 @@ final class DeploymentStoreTests: XCTestCase {
             settings: SettingsStore(defaults: UserDefaults(suiteName: UUID().uuidString)!),
             makeClient: { _, teamId in
                 VercelClient(credentials: VercelCredentials(token: "x", teamId: teamId), fetch: fetch)
-            },
-            reloadToken: { nil }, authRetryBackoff: .zero)
+            }, authRetryBackoff: .zero)
     }
 
     private func makeStore(deploymentsData: Data,
@@ -149,8 +148,7 @@ final class DeploymentStoreTests: XCTestCase {
                 counter.clientsBuilt += 1
                 return TokenClient(token: accounts.token(for: account) ?? "", key: teamId ?? "personal",
                                    disk: disk, counter: counter, rotatesOnFailure: rotatesOnFailure)
-            },
-            reloadToken: { disk.token }, authRetryBackoff: .zero)
+            }, authRetryBackoff: .zero)
     }
 
     func test_rotatedCLITokenRebuildsTheClientAndRecovers() async {

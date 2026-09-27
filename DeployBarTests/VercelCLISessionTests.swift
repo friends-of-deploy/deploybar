@@ -185,15 +185,14 @@ final class VercelCLISessionTests: XCTestCase {
                                     reloadCLIToken: { try? provider.credentials().token },
                                     detectGitHubCLI: { false }, vercelCLISession: session(dir, transport: transport))
         let store = DeploymentStore(accountStore: accounts,
-                                    settings: SettingsStore(defaults: UserDefaults(suiteName: UUID().uuidString)!),
-                                    reloadToken: { try? provider.credentials().token }, authRetryBackoff: .zero)
+                                    settings: SettingsStore(defaults: UserDefaults(suiteName: UUID().uuidString)!), authRetryBackoff: .zero)
         async let poll: Void = store.poll()
-        async let teams: Void = store.loadTeams()
-        async let user: Void = store.loadUser()
+        async let teams: Void = store.loadOrganizations()
+        async let user: Void = store.loadIdentities()
         _ = await (poll, teams, user)
         XCTAssertEqual(store.deployments.map(\.uid), ["dpl_test"])
         XCTAssertEqual(store.projects.map(\.id), ["prj_test"])
-        XCTAssertEqual(store.user?.username, "tester")
+        XCTAssertEqual(store.identity(for: accounts.cliAccount!)?.username, "tester")
         XCTAssertTrue(store.healthIssues.isEmpty)
         let requests = await transport.requests
         XCTAssertTrue(requests.contains { $0.url?.path == "/v2/teams" })

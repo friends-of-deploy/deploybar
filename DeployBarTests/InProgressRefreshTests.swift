@@ -58,8 +58,7 @@ final class InProgressRefreshTests: XCTestCase {
                               account: account, teamId: "org\(index)")
         }, projects: [], savedAt: Date())
         return DeploymentStore(accountStore: accounts, settings: settings,
-                               makeClient: { _, teamId in StubClient(world: world, key: teamId ?? "account") },
-                               reloadToken: { nil }, authRetryBackoff: .zero)
+                               makeClient: { _, teamId in StubClient(world: world, key: teamId ?? "account") }, authRetryBackoff: .zero)
     }
 
     private func state(of uid: String, in store: DeploymentStore) -> DeploymentState? {
@@ -135,8 +134,7 @@ final class InProgressRefreshTests: XCTestCase {
             savedAt: Date())
         let world = World()
         return DeploymentStore(accountStore: accounts, settings: settings,
-                               makeClient: { _, teamId in StubClient(world: world, key: teamId ?? "account") },
-                               reloadToken: { nil }, authRetryBackoff: .zero)
+                               makeClient: { _, teamId in StubClient(world: world, key: teamId ?? "account") }, authRetryBackoff: .zero)
     }
 
     /// Every in-progress run is re-read each tick, one request apiece, so those
@@ -169,7 +167,7 @@ final class InProgressRefreshTests: XCTestCase {
             projects: [], savedAt: Date())
         return DeploymentStore(accountStore: accounts, settings: settings,
                                makeClient: { _, teamId in StubClient(world: world, key: teamId ?? "account") },
-                               now: SteppingClock().next, reloadToken: { nil }, authRetryBackoff: .zero)
+                               now: SteppingClock().next, authRetryBackoff: .zero)
     }
 
     /// Six organizations of unknown size, each with a run still going.
@@ -191,7 +189,7 @@ final class InProgressRefreshTests: XCTestCase {
         for org in orgs { world.states["d_\(org)"] = "BUILDING" }
         return DeploymentStore(accountStore: accounts, settings: settings,
                                makeClient: { _, teamId in StubClient(world: world, key: teamId ?? "account") },
-                               now: now, reloadToken: { nil }, authRetryBackoff: .zero)
+                               now: now, authRetryBackoff: .zero)
     }
 
     /// A refresh click 3 s after a tick has earned 41 × 3 / 30 = 4 requests.

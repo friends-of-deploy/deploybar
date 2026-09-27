@@ -18,10 +18,8 @@ struct DeployBarApp: App {
         // rather than a mock-up.
         if let demo = DemoEnvironment.buildFromEnvironment() {
             _crashReporting = State(initialValue: nil)
-            let store = DeploymentStore(accountStore: demo.accountStore,
-                                        settings: demo.settings,
-                                        makeClient: demo.makeClient)
-            store.teams = demo.teams
+            let store = DeploymentStore(accountStore: demo.accountStore, settings: demo.settings,
+                                        registry: demo.registry)
             _settings = State(initialValue: demo.settings)
             _accountStore = State(initialValue: demo.accountStore)
             _store = State(initialValue: store)
@@ -43,7 +41,7 @@ struct DeployBarApp: App {
         if let cli = accountStore.cliAccount {
             settings.migrateLegacyFollowData(cliAccountId: cli.id)
         }
-        let store = DeploymentStore(accountStore: accountStore, settings: settings)
+        let store = DeploymentStore(accountStore: accountStore, settings: settings, registry: .live())
         _settings = State(initialValue: settings)
         _accountStore = State(initialValue: accountStore)
         _store = State(initialValue: store)

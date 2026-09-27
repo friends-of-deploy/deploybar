@@ -46,7 +46,7 @@ final class RefactorCharacterizationTests: XCTestCase {
                 recorder.record(ScopeRef(accountId: account.id, teamId: teamId))
                 return StubClient(key: "\(account.label)-\(teamId ?? "account")")
             },
-            now: SteppingClock().next, reloadToken: { nil }, authRetryBackoff: .zero)
+            now: SteppingClock().next, authRetryBackoff: .zero)
         store.setOrganizations([Team(id: "t1", slug: "t1", name: "t1"),
                                 Team(id: "t2", slug: "t2", name: "t2")], for: vercel.id)
         store.setOrganizations([Team(id: "o1", slug: "o1", name: "o1"),
@@ -78,8 +78,7 @@ final class RefactorCharacterizationTests: XCTestCase {
         settings.setFollowed(ProjectKey(provider: .vercel, accountId: cli.id, projectId: "web"), false)
         let store = DeploymentStore(
             accountStore: accounts, settings: settings,
-            makeClient: { _, _ in NamedProjectClient() },
-            reloadToken: { "tok" }, authRetryBackoff: .zero)
+            makeClient: { _, _ in NamedProjectClient() }, authRetryBackoff: .zero)
 
         await store.poll()
 

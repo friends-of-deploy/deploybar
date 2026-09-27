@@ -50,19 +50,36 @@ final class DemoEnvironmentTests: XCTestCase {
         XCTAssertNotNil(built.accountStore.cliAccount, "the vercelCLI account drives team scopes")
     }
 
-    func test_exposesScenarioTeams() throws {
-        let built = DemoEnvironment.build(scenario: try scenario(), clock: .frozen(at: 0))
-        XCTAssertEqual(built.teams.map(\.slug), ["northwind"])
-    }
-
-    func test_factoryReturnsADemoClientForASeededAccount() async throws {
+    func test_exposesScenarioTeams() async throws {
         let built = DemoEnvironment.build(scenario: try scenario(), clock: .frozen(at: 0))
         let cli = try XCTUnwrap(built.accountStore.cliAccount)
+        let integration = try XCTUnwrap(built.registry.integration(for: cli.provider))
+        let teams = try await integration.organizations(for: cli, using: .plain("demo-token"))
+        XCTAssertEqual(teams.map(\.slug), ["northwind"])
+    }
 
-        let client = try XCTUnwrap(built.makeClient(cli, nil))
+    func test_registryReturnsADemoClientForASeededAccount() async throws {
+        let built = DemoEnvironment.build(scenario: try scenario(), clock: .frozen(at: 0))
+        let cli = try XCTUnwrap(built.accountStore.cliAccount)
+        let integration = try XCTUnwrap(built.registry.integration(for: cli.provider))
+        let client = try XCTUnwrap(integration.client(for: Scope(account: cli, teamId: nil, teamName: nil),
+                                                      using: .plain("demo-token")))
         let deps = try await client.deployments(limit: 100)
-
         XCTAssertEqual(deps.map(\.uid), ["d1"])
+    }
+
+    /// Demo screenshots have always shown only the Vercel CLI account's teams.
+    func test_demoShowsOnlyTheVercelCLITeams() async throws {
+        let built = DemoEnvironment.build(scenario: try DemoScenarioLoader.load(named: "default"),
+                                          clock: .frozen(at: 0))
+        let gh = try XCTUnwrap(built.accountStore.githubCLIAccount)
+        let cli = try XCTUnwrap(built.accountStore.cliAccount)
+        let github = try XCTUnwrap(built.registry.integration(for: .github))
+        let vercel = try XCTUnwrap(built.registry.integration(for: .vercel))
+        let ghOrgs = try await github.organizations(for: gh, using: .plain("demo-token"))
+        let cliTeams = try await vercel.organizations(for: cli, using: .plain("demo-token"))
+        XCTAssertTrue(ghOrgs.isEmpty)
+        XCTAssertEqual(cliTeams.count, 2)
     }
 
     func test_appliesFollowStateFromTheScenario() throws {
@@ -134,7 +151,9 @@ final class DemoEnvironmentTests: XCTestCase {
             scenario: scenario,
             clock: .frozen(at: DemoEnvironment.freezeOffsetSeconds))
         let cli = try XCTUnwrap(built.accountStore.cliAccount)
-        let client = try XCTUnwrap(built.makeClient(cli, nil))
+        let integration = try XCTUnwrap(built.registry.integration(for: cli.provider))
+        let client = try XCTUnwrap(integration.client(for: Scope(account: cli, teamId: nil, teamName: nil),
+                                                      using: .plain("demo-token")))
 
         let deps = try await client.deployments(limit: 100)
 

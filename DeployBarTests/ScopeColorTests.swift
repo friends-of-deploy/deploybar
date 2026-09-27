@@ -222,8 +222,7 @@ final class ScopeColorTests: XCTestCase {
         let settings = SettingsStore(defaults: UserDefaults(suiteName: UUID().uuidString)!)
         let store = DeploymentStore(
             accountStore: accountStore, settings: settings,
-            makeClient: { _, _ in nil },
-            reloadToken: { nil }, authRetryBackoff: .zero)
+            makeClient: { _, _ in nil }, authRetryBackoff: .zero)
         return (store, accounts, settings)
     }
 }

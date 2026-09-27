@@ -45,7 +45,7 @@ final class ScopeSwitchTests: XCTestCase {
                 recorder.record(teamId)
                 return RecordingStubClient(teamId: teamId)
             },
-            now: SteppingClock().next, reloadToken: { nil }, authRetryBackoff: .zero)
+            now: SteppingClock().next, authRetryBackoff: .zero)
         store.setOrganizations([Self.team(id: "org_a", slug: "org_a"),
                                 Self.team(id: "org_b", slug: "org_b")], for: github.id)
 
@@ -89,8 +89,7 @@ final class ScopeSwitchTests: XCTestCase {
         let settings = SettingsStore(defaults: UserDefaults(suiteName: UUID().uuidString)!)
         let store = DeploymentStore(
             accountStore: accountStore, settings: settings,
-            makeClient: { _, _ in StubClient() },
-            reloadToken: { nil }, authRetryBackoff: .zero)
+            makeClient: { _, _ in StubClient() }, authRetryBackoff: .zero)
         return (store, github, settings)
     }
 
@@ -128,8 +127,7 @@ final class ScopeSwitchTests: XCTestCase {
         let settings = SettingsStore(defaults: UserDefaults(suiteName: UUID().uuidString)!)
         let store = DeploymentStore(
             accountStore: accountStore, settings: settings,
-            makeClient: { _, _ in StubClient() },
-            reloadToken: { "tok" }, authRetryBackoff: .zero)
+            makeClient: { _, _ in StubClient() }, authRetryBackoff: .zero)
 
         XCTAssertEqual(Set(PopoverView.menuAccounts(store: store).map(\.id)),
                        Set([vercel.id, github.id]))

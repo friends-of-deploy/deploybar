@@ -42,7 +42,6 @@ final class ScopeHealthTests: XCTestCase {
                 let bad = teamId.map { failingTeams().contains($0) } ?? false
                 return StubClient(error: bad ? VercelClientError.unauthorized : nil)
             },
-            reloadToken: { "tok" },
             authRetryBackoff: .zero
         )
         store.setOrganizations(teams, for: accountStore.cliAccount!.id)

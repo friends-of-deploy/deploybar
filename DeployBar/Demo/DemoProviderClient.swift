@@ -3,7 +3,7 @@ import Foundation
 /// A `DeploymentProviderClient` backed by a fixture instead of the network.
 ///
 /// One instance serves one scope (account + optional team), mirroring how the
-/// real clients are built per scope by `ClientFactory`. Timeline progression is
+/// real clients are built per scope by a `ProviderIntegration`. Timeline progression is
 /// a pure function of `clock.elapsed` evaluated on each call, so the store's
 /// existing poll timer drives the simulation and a frozen clock is deterministic
 /// by construction — no timer, no mutable state, nothing to race.

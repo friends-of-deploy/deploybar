@@ -80,7 +80,6 @@ extension AggregationTests {
                     return StubClient(deps: [depB], projs: [projB], error: nil)
                 }
             },
-            reloadToken: { nil },
             authRetryBackoff: .zero
         )
 
@@ -147,7 +146,6 @@ extension AggregationTests {
                     return StubClient(deps: [kcDep], projs: [kcProj], error: nil)
                 }
             },
-            reloadToken: { "cli-token" },
             authRetryBackoff: .zero
         )
 
@@ -191,8 +189,7 @@ extension AggregationTests {
             accountStore: accountStore, settings: settings,
             makeClient: { account, _ in
                 account.id == acct.id ? StubClient(deps: [dep], projs: [], error: nil) : nil
-            },
-            reloadToken: { nil }, authRetryBackoff: .zero)
+            }, authRetryBackoff: .zero)
         return (store, accountStore)
     }
 
@@ -231,8 +228,7 @@ extension AggregationTests {
             settings: SettingsStore(defaults: UserDefaults(suiteName: UUID().uuidString)!),
             makeClient: { source, _ in
                 StubClient(deps: source.id == account.id ? [deployment] : [], projs: [], error: nil)
-            },
-            reloadToken: { nil }, authRetryBackoff: .zero)
+            }, authRetryBackoff: .zero)
 
         await store.poll()
         XCTAssertEqual(store.iconState, .success)
@@ -268,8 +264,7 @@ extension AggregationTests {
                                  projs: [Fixtures.project(id: "pv", name: "web")], error: nil)
                     : StubClient(deps: [Fixtures.deployment(uid: "gd", name: "acme/web")],
                                  projs: [Fixtures.project(id: "pg", name: "acme/web")], error: nil)
-            },
-            reloadToken: { nil }, authRetryBackoff: .zero)
+            }, authRetryBackoff: .zero)
         await store.poll()
 
         await store.select(accountId: g.id, teamId: nil)

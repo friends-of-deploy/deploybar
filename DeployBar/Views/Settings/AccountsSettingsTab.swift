@@ -134,7 +134,6 @@ struct AccountsSettingsTab: View {
                 selection = .account(added.id)
                 Task {
                     await store.accountsChanged()
-                    await store.loadUser()
                 }
             }
         case .account:

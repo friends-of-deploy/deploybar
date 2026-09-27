@@ -36,8 +36,7 @@ final class AccountRemovalCacheTests: XCTestCase {
                 StubClient(projs: account.id == keep.id
                            ? [Project(id: "keep", name: "keeper")]
                            : [Project(id: "drop", name: "dropper")])
-            },
-            reloadToken: { nil }, authRetryBackoff: .zero)
+            }, authRetryBackoff: .zero)
 
         await store.poll()
         XCTAssertEqual(store.sourcedProjects.count, 2)
@@ -58,8 +57,7 @@ final class AccountRemovalCacheTests: XCTestCase {
 
         let store = DeploymentStore(
             accountStore: accountStore, settings: settings,
-            makeClient: { _, _ in StubClient(projs: [Project(id: "p", name: "web")]) },
-            reloadToken: { nil }, authRetryBackoff: .zero)
+            makeClient: { _, _ in StubClient(projs: [Project(id: "p", name: "web")]) }, authRetryBackoff: .zero)
 
         await store.poll()
         XCTAssertFalse(settings.cachedRows.projects.isEmpty, "precondition: cache written")
@@ -74,8 +72,7 @@ final class AccountRemovalCacheTests: XCTestCase {
         let (accounts2, settings2) = makeStores(suite: suite)
         let store2 = DeploymentStore(
             accountStore: accounts2, settings: settings2,
-            makeClient: { _, _ in StubClient(projs: []) },
-            reloadToken: { nil }, authRetryBackoff: .zero)
+            makeClient: { _, _ in StubClient(projs: []) }, authRetryBackoff: .zero)
         XCTAssertTrue(store2.sourcedProjects.isEmpty,
                       "a removed account's projects must not come back after relaunch")
     }
@@ -92,8 +89,7 @@ final class AccountRemovalCacheTests: XCTestCase {
                 StubClient(projs: account.id == keep.id
                            ? [Project(id: "keep", name: "keeper")]
                            : [Project(id: "drop", name: "dropper")])
-            },
-            reloadToken: { nil }, authRetryBackoff: .zero)
+            }, authRetryBackoff: .zero)
 
         await store.poll()
         accountStore.removeAccount(drop)

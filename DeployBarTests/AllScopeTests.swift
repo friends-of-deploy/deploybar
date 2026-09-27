@@ -42,8 +42,7 @@ final class AllScopeTests: XCTestCase {
                 // One deployment per scope, named after the team it came from.
                 let key = teamId ?? "personal"
                 return StubClient(deps: [Self.deployment(uid: "d_\(key)", name: "web")], projs: [])
-            },
-            reloadToken: { "tok" }, authRetryBackoff: .zero)
+            }, authRetryBackoff: .zero)
         store.setOrganizations(teams, for: cli.id)
         return (store, cli)
     }
@@ -96,8 +95,7 @@ final class AllScopeTests: XCTestCase {
         let store = DeploymentStore(
             accountStore: accountStore, settings: settings,
             // Every scope returns the SAME deployment uid.
-            makeClient: { _, _ in StubClient(deps: [Self.deployment(uid: "same", name: "web")], projs: []) },
-            reloadToken: { "tok" }, authRetryBackoff: .zero)
+            makeClient: { _, _ in StubClient(deps: [Self.deployment(uid: "same", name: "web")], projs: []) }, authRetryBackoff: .zero)
         store.setOrganizations([Self.team(id: "t1", slug: "alpha"), Self.team(id: "t2", slug: "beta")],
                                for: accountStore.cliAccount!.id)
 
@@ -137,8 +135,7 @@ final class AllScopeTests: XCTestCase {
             makeClient: { _, teamId in
                 let key = teamId ?? "account"
                 return StubClient(deps: [Self.deployment(uid: "d_\(key)", name: "repo")], projs: [])
-            },
-            reloadToken: { nil }, authRetryBackoff: .zero)
+            }, authRetryBackoff: .zero)
         return (store, github, settings)
     }
 
@@ -207,7 +204,7 @@ final class AllScopeTests: XCTestCase {
                 return StubClient(deps: [Self.deployment(uid: "d_\(key)", name: "repo")],
                                   projs: [Self.project(id: "p_\(key)", name: "repo")])
             },
-            now: now, reloadToken: { nil }, authRetryBackoff: .zero)
+            now: now, authRetryBackoff: .zero)
         return (store, github, settings)
     }
 

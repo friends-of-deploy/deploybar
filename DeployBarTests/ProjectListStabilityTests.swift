@@ -47,7 +47,6 @@ final class ProjectListStabilityTests: XCTestCase {
                 return SlowStub(projs: [Project(id: "a", name: "alpha")],
                                 delay: .milliseconds(40))
             },
-            reloadToken: { nil },
             authRetryBackoff: .zero)
 
         await store.poll()
@@ -81,7 +80,6 @@ final class ProjectListStabilityTests: XCTestCase {
                                    Project(id: "z", name: "zulu")],
                                 delay: slow ? .milliseconds(40) : .zero)
             },
-            reloadToken: { nil },
             authRetryBackoff: .zero)
 
         await store.poll()

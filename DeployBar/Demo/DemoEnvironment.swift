@@ -12,11 +12,8 @@ enum DemoEnvironment {
     struct Built {
         let settings: SettingsStore
         let accountStore: AccountStore
-        let makeClient: ClientFactory
-        /// Assigned to `DeploymentStore.teams` by the caller so the scope picker
-        /// shows team scopes. `availableScopes` expands teams only for a
-        /// `.vercelCLI` account with a non-empty list.
-        let teams: [Team]
+        /// Demo integrations for every live provider, playing the scenario.
+        let registry: ProviderRegistry
     }
 
     // MARK: - Environment flags
@@ -72,12 +69,12 @@ enum DemoEnvironment {
         let accountStore = AccountStore(defaults: defaults,
                                         credentials: InMemoryCredentialStore(),
                                         detectCLI: { false },
-                                        reloadCLIToken: { nil },
+                                        reloadCLIToken: { "demo-token" },
                                         detectGitHubCLI: { false },
-                                        reloadGitHubToken: { nil })
+                                        reloadGitHubToken: { "demo-token" })
 
         // Seed one account per scenario account, remembering which fixture key
-        // each minted UUID came from so the factory can route by scope.
+        // each minted UUID came from so the demo integrations can route by scope.
         var keyForAccountId: [UUID: String] = [:]
         for fixture in scenario.accounts {
             let account: Account
@@ -108,19 +105,11 @@ enum DemoEnvironment {
                                  project.followed)
         }
 
-        let teams = scenario.accounts
-            .first { $0.sourceKind == .vercelCLI }?
-            .teams
-            .map { Team(id: $0.id, slug: $0.slug, name: $0.name) } ?? []
+        let registry = ProviderRegistry(ProviderRegistry.live().all.map {
+            DemoIntegration(base: $0, scenario: scenario, clock: clock, keyForAccountId: keyForAccountId)
+        })
 
-        let makeClient: ClientFactory = { account, teamId in
-            guard let key = keyForAccountId[account.id] else { return nil }
-            return DemoProviderClient(scenario: scenario, accountKey: key,
-                                      teamId: teamId, clock: clock)
-        }
-
-        return Built(settings: settings, accountStore: accountStore,
-                     makeClient: makeClient, teams: teams)
+        return Built(settings: settings, accountStore: accountStore, registry: registry)
     }
 
     // MARK: - Housekeeping

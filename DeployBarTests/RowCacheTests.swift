@@ -49,8 +49,7 @@ final class RowCacheTests: XCTestCase {
             accountStore: accounts1, settings: settings1,
             makeClient: { _, _ in
                 StubClient(deps: [Self.deployment(uid: "d1", name: "web")], projs: [], error: nil)
-            },
-            reloadToken: { "tok" }, authRetryBackoff: .zero)
+            }, authRetryBackoff: .zero)
         await store1.poll()
         XCTAssertEqual(store1.sourcedDeployments.map(\.deployment.uid), ["d1"])
 
@@ -58,8 +57,7 @@ final class RowCacheTests: XCTestCase {
         let (accounts2, settings2) = makeStores(suite: suite)
         let store2 = DeploymentStore(
             accountStore: accounts2, settings: settings2,
-            makeClient: { _, _ in StubClient(deps: [], projs: [], error: nil) },
-            reloadToken: { "tok" }, authRetryBackoff: .zero)
+            makeClient: { _, _ in StubClient(deps: [], projs: [], error: nil) }, authRetryBackoff: .zero)
 
         XCTAssertEqual(store2.sourcedDeployments.map(\.deployment.uid), ["d1"],
                        "cached rows should paint immediately on launch")
@@ -75,8 +73,7 @@ final class RowCacheTests: XCTestCase {
             accountStore: accounts1, settings: settings1,
             makeClient: { _, _ in
                 StubClient(deps: [Self.deployment(uid: "d1", name: "web")], projs: [], error: nil)
-            },
-            reloadToken: { "tok" }, authRetryBackoff: .zero)
+            }, authRetryBackoff: .zero)
         await store1.poll()
 
         // Every scope now fails.
@@ -85,8 +82,7 @@ final class RowCacheTests: XCTestCase {
             accountStore: accounts2, settings: settings2,
             makeClient: { _, _ in
                 StubClient(deps: [], projs: [], error: URLError(.notConnectedToInternet))
-            },
-            reloadToken: { "tok" }, authRetryBackoff: .zero)
+            }, authRetryBackoff: .zero)
         await store2.poll()
 
         XCTAssertFalse(settings2.cachedRows.deployments.isEmpty,
@@ -100,8 +96,7 @@ final class RowCacheTests: XCTestCase {
             accountStore: accounts1, settings: settings1,
             makeClient: { _, _ in
                 StubClient(deps: [Self.deployment(uid: "d1", name: "web")], projs: [], error: nil)
-            },
-            reloadToken: { "tok" }, authRetryBackoff: .zero)
+            }, authRetryBackoff: .zero)
         await store1.poll()
 
         // Backdate the snapshot past the freshness window.
@@ -112,8 +107,7 @@ final class RowCacheTests: XCTestCase {
         let (accounts2, settings2) = makeStores(suite: suite)
         let store2 = DeploymentStore(
             accountStore: accounts2, settings: settings2,
-            makeClient: { _, _ in StubClient(deps: [], projs: [], error: nil) },
-            reloadToken: { "tok" }, authRetryBackoff: .zero)
+            makeClient: { _, _ in StubClient(deps: [], projs: [], error: nil) }, authRetryBackoff: .zero)
 
         XCTAssertTrue(store2.sourcedDeployments.isEmpty, "a day-old snapshot is too stale to show")
         XCTAssertTrue(store2.isLoadingInitial)
@@ -129,8 +123,7 @@ final class RowCacheTests: XCTestCase {
         let (accounts2, settings2) = makeStores(suite: suite)
         let store = DeploymentStore(
             accountStore: accounts2, settings: settings2,
-            makeClient: { _, _ in StubClient(deps: [], projs: [], error: nil) },
-            reloadToken: { "tok" }, authRetryBackoff: .zero)
+            makeClient: { _, _ in StubClient(deps: [], projs: [], error: nil) }, authRetryBackoff: .zero)
 
         // Name is known before /v2/teams has been called at all.
         XCTAssertEqual(store.rowScopeLabel(accountId: accounts2.cliAccount!.id, teamId: "t1"), "alpha")
@@ -141,8 +134,7 @@ final class RowCacheTests: XCTestCase {
         let (accounts, settings) = makeStores(suite: UUID().uuidString)
         let store = DeploymentStore(
             accountStore: accounts, settings: settings,
-            makeClient: { _, _ in StubClient(deps: [], projs: [], error: nil) },
-            reloadToken: { "tok" }, authRetryBackoff: .zero)
+            makeClient: { _, _ in StubClient(deps: [], projs: [], error: nil) }, authRetryBackoff: .zero)
 
         XCTAssertNil(store.rowScopeLabel(accountId: accounts.cliAccount!.id,
                                          teamId: "team_xasdfknasd"))
@@ -158,8 +150,7 @@ final class RowCacheTests: XCTestCase {
             accountStore: accounts1, settings: settings1,
             makeClient: { _, _ in
                 StubClient(deps: [Self.deployment(uid: "d1", name: "web")], projs: [], error: nil)
-            },
-            reloadToken: { "tok" }, authRetryBackoff: .zero)
+            }, authRetryBackoff: .zero)
         await store1.poll()
 
         let (accounts2, settings2) = makeStores(suite: suite)
@@ -167,8 +158,7 @@ final class RowCacheTests: XCTestCase {
             accountStore: accounts2, settings: settings2,
             makeClient: { _, _ in
                 StubClient(deps: [Self.deployment(uid: "d1", name: "web")], projs: [], error: nil)
-            },
-            reloadToken: { "tok" }, authRetryBackoff: .zero)
+            }, authRetryBackoff: .zero)
         // Same deployment comes back on the first poll after restore. With the
         // baseline seeded from cache this is a no-op rather than a "ready" event.
         await store2.poll()

@@ -115,8 +115,7 @@ final class NotificationGatingTests: XCTestCase {
                 let key = teamId ?? "account"
                 return StubClient(deps: [Self.deployment(uid: "d_\(key)", name: "repo")],
                                   projs: [Self.project(id: "p_\(key)", name: "repo")])
-            },
-            reloadToken: { nil }, authRetryBackoff: .zero)
+            }, authRetryBackoff: .zero)
         return (store, settings)
     }
 

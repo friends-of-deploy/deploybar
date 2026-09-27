@@ -91,12 +91,12 @@ final class CredentialStrategyTests: XCTestCase {
     }
 
     /// A transient nil read from `reloadCLIToken` must not silently drop a CLI
-    /// account to plain `URLSession`: `vercelFetch(for:)` has to keep routing by
-    /// the account's source, not by whether a token could be read just now.
+    /// account to plain `URLSession`: the CLI strategy's transport has to stay the
+    /// renewing session, whether or not a token could be read just now.
     /// Before the fix this asserted "Bearer cli-token" but got no Authorization
     /// header at all, because `resolve(account)?.transport` was nil and the
     /// shim fell back to `URLSession.shared`.
-    func test_vercelFetchKeepsTheCLISessionEvenWhenTheTokenReadFails() async throws {
+    func test_vercelCLITransportIsTheSessionEvenWhenTheTokenReadFails() async throws {
         let dir = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
         addTeardownBlock { try? FileManager.default.removeItem(at: dir) }
@@ -115,17 +115,8 @@ final class CredentialStrategyTests: XCTestCase {
                                  detectCLI: { true }, reloadCLIToken: { nil },
                                  detectGitHubCLI: { false }, vercelCLISession: session)
         let cli = try XCTUnwrap(store.cliAccount)
-        _ = try await store.vercelFetch(for: cli)(URLRequest(url: URL(string: "https://api.vercel.com/v2/user")!))
+        _ = try await (store.strategy(for: cli) as! VercelCLICredential).transport(URLRequest(url: URL(string: "https://api.vercel.com/v2/user")!))
         let authorization = await seen.authorization
         XCTAssertEqual(authorization, "Bearer cli-token")
-    }
-
-    /// A keychain account must never be routed through the Vercel CLI session.
-    func test_vercelFetchDoesNotRouteKeychainAccountsThroughTheCLISession() {
-        let store = AccountStore(defaults: UserDefaults(suiteName: UUID().uuidString)!,
-                                 credentials: InMemoryCredentialStore(),
-                                 detectCLI: { false }, detectGitHubCLI: { false })
-        let acct = store.addKeychainAccount(provider: .vercel, label: "bob", token: "tok")
-        XCTAssertFalse(store.strategy(for: acct) is VercelCLICredential)
     }
 }

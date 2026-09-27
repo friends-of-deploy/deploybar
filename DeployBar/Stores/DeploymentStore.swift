@@ -6,10 +6,6 @@ import os
 /// What the menu bar glyph shows, including unacknowledged deploy outcomes.
 enum IconState: Equatable { case building, success, failure, loggedOut, idle }
 
-/// Factory that builds a per-scope provider client for an account+team, pulling
-/// the token via the AccountStore. Returns nil for unimplemented providers (skipped).
-typealias ClientFactory = @MainActor (Account, _ teamId: String?) -> DeploymentProviderClient?
-
 @MainActor
 @Observable
 final class DeploymentStore {
@@ -48,20 +44,6 @@ final class DeploymentStore {
     /// the single global team list, which could only ever describe one account.
     private(set) var orgsByAccount: [UUID: [Team]] = [:]
 
-    /// The CLI account's organizations, under the old name. Kept settable so the
-    /// existing tests that seed a team list keep working; both paths funnel
-    /// through `orgsByAccount`, so there is still one source of truth.
-    var teams: [Team] {
-        get {
-            guard let cli = accountStore.cliAccount else { return [] }
-            return orgsByAccount[cli.id] ?? []
-        }
-        set {
-            guard let cli = accountStore.cliAccount else { return }
-            setOrganizations(newValue, for: cli.id)
-        }
-    }
-
     /// Organizations known for a given account, or empty until fetched/cached.
     func organizations(for account: Account) -> [Team] {
         orgsByAccount[account.id] ?? []
@@ -76,7 +58,6 @@ final class DeploymentStore {
         settings.cachedOrgs = cache
     }
 
-    var user: VercelUser?
     var lastUpdated: Date?
     var scopeName: String
 
@@ -92,10 +73,12 @@ final class DeploymentStore {
     @ObservationIgnored private let accountStore: AccountStore
     @ObservationIgnored private let settings: SettingsStore
     @ObservationIgnored private let notifier: NotificationManager
-    @ObservationIgnored private let organizationFetch: GitHubClient.Fetch?
-    /// Organization scopes share one repository listing per tick; `runPoll`
-    /// starts each tick with a fresh one.
-    @ObservationIgnored private let gitHubRepositoryListing: GitHubRepositoryListing
+    /// Which providers this store can talk to, and how.
+    @ObservationIgnored let registry: ProviderRegistry
+
+    /// Who each account is signed in as, once asked. Feeds owner labels.
+    private(set) var identities: [UUID: AccountIdentity] = [:]
+
     @ObservationIgnored private let now: () -> Date
     @ObservationIgnored private var accountPollTimes: [UUID: Date] = [:]
     /// Where each account's rotation resumes: the first scope the last tick left out.
@@ -107,7 +90,6 @@ final class DeploymentStore {
     @ObservationIgnored private var inProgressRefreshAllowance: [UUID: Int] = [:]
     @ObservationIgnored private var scopeGenerations: [ScopeRef: Int] = [:]
     @ObservationIgnored private var knownAccountIds: Set<UUID>
-    @ObservationIgnored private var makeClient: ClientFactory = { _, _ in nil }
 
     // MARK: Notification baseline (one list across all sources, keyed by uid)
     @ObservationIgnored private var previousSnapshots: [DeploymentSnapshot]?
@@ -134,22 +116,11 @@ final class DeploymentStore {
     /// threshold and never reported itself.
     @ObservationIgnored private var consecutiveAuthFailures: [ScopeRef: Int] = [:]
 
-    /// Re-reads the CLI token from disk (rotated periodically by the Vercel CLI).
-    @ObservationIgnored private let reloadToken: () -> String?
-    /// Last CLI token we built clients around — to detect rotation.
-    @ObservationIgnored private var cliBaseToken: String?
     /// Backoff before the in-poll auth retry. Production 0.8s; tests pass 0.
     @ObservationIgnored private let authRetryBackoff: Duration
 
     // MARK: Legacy single-scope team switching (CLI/first account only)
     @ObservationIgnored private(set) var currentTeamId: String?
-    @ObservationIgnored private var teamsClient: TeamsClient?
-    @ObservationIgnored private var userClient: UserClient?
-
-    // Legacy single-scope context (nil in pure aggregator mode).
-    @ObservationIgnored private var legacyAccount: Account?
-    @ObservationIgnored private var legacyClientFactory: ((VercelCredentials) -> VercelClient)?
-    @ObservationIgnored private var legacyCredentials: VercelCredentials?
 
     // Unfiltered merge, kept so `setFilter` can re-derive the display slice
     // without re-polling.
@@ -168,48 +139,20 @@ final class DeploymentStore {
 
     init(accountStore: AccountStore,
          settings: SettingsStore,
-         makeClient: ClientFactory? = nil,
-         organizationFetch: GitHubClient.Fetch? = nil,
-         gitHubFetch: GitHubClient.Fetch? = nil,
+         registry: ProviderRegistry,
          now: @escaping () -> Date = Date.init,
-         reloadToken: @escaping () -> String? = { try? TokenProvider().credentials().token },
          authRetryBackoff: Duration = .milliseconds(800)) {
         self.knownAccountIds = Set(accountStore.accounts.map(\.id))
         self.now = now
-        self.organizationFetch = organizationFetch
-        let gitHubListing = GitHubRepositoryListing()
-        self.gitHubRepositoryListing = gitHubListing
         self.accountStore = accountStore
         self.settings = settings
+        self.registry = registry
         self.notifier = NotificationManager(settings: settings)
-        self.reloadToken = reloadToken
         self.authRetryBackoff = authRetryBackoff
         self.scopeName = "all"
 
-        // Default factory: build a real VercelClient for .vercel accounts using
-        // the token from this store's AccountStore; nil for other providers.
-        self.makeClient = makeClient ?? { [accountStore] account, teamId in
-            guard let token = accountStore.token(for: account) else { return nil }
-            switch account.provider {
-            case .vercel:
-                return VercelClient(credentials: VercelCredentials(token: token, teamId: teamId),
-                                    fetch: accountStore.vercelFetch(for: account))
-            case .github:
-                return GitHubClient(token: token, org: teamId, listing: gitHubListing,
-                                    fetch: gitHubFetch ?? { try await URLSession.shared.data(for: $0) })
-            case .azureDevOps:
-                return nil        // unimplemented provider → skipped silently
-            }
-        }
-
-        // Seed CLI-scope team/user clients + token baseline when a CLI account exists.
         if let cli = accountStore.cliAccount {
             self.currentTeamId = settings.selectedTeamId == "__personal__" ? nil : settings.selectedTeamId
-            if let token = accountStore.token(for: cli) {
-                self.teamsClient = TeamsClient(token: token, fetch: accountStore.vercelFetch(for: cli))
-                self.userClient = UserClient(token: token, fetch: accountStore.vercelFetch(for: cli))
-                self.cliBaseToken = token
-            }
             // Start from the cached org/team lists so the very first poll already
             // covers known scopes and rows carry real names; account discovery
             // refreshes these lists after startup.
@@ -261,51 +204,6 @@ final class DeploymentStore {
 
     /// Beyond this, a cached snapshot is treated as too stale to show.
     private static let rowCacheMaxAge: TimeInterval = 24 * 60 * 60
-
-    // MARK: - Legacy (single-scope) init — kept for the not-yet-rewired app + tests
-
-    /// Wraps a single Vercel scope (CLI or explicit credentials) into the
-    /// aggregator. Used by `DeployBarApp` and the legacy test suites until Task 11
-    /// rewires the app onto the multi-account path.
-    convenience init(client: VercelClient,
-                     settings: SettingsStore,
-                     scopeName: String,
-                     makeClient: @escaping (VercelCredentials) -> VercelClient = { VercelClient(credentials: $0) },
-                     teamsClient: TeamsClient? = nil,
-                     userClient: UserClient? = nil,
-                     reloadToken: @escaping () -> String? = { try? TokenProvider().credentials().token },
-                     authRetryBackoff: Duration = .milliseconds(800)) {
-        // A single in-memory CLI account stands in for the legacy single scope.
-        let creds = client.credentials
-        let legacyStore = AccountStore(defaults: UserDefaults(suiteName: "legacy-\(UUID().uuidString)")!,
-                                       credentials: InMemoryCredentialStore(),
-                                       detectCLI: { true },
-                                       reloadCLIToken: { reloadToken() ?? creds.token },
-                                       detectGitHubCLI: { false })
-        let legacyAccount = legacyStore.cliAccount!
-
-        self.init(accountStore: legacyStore,
-                  settings: settings,
-                  makeClient: { account, teamId in
-                      guard account.id == legacyAccount.id else { return nil }
-                      let token = reloadToken() ?? creds.token
-                      // Reuse the original client (and its injected transport) while
-                      // the token is unchanged; rebuild via `makeClient` only after a
-                      // rotation, where the test transport is re-captured by `makeClient`.
-                      if token == creds.token && teamId == creds.teamId { return client }
-                      return makeClient(VercelCredentials(token: token, teamId: teamId))
-                  },
-                  reloadToken: reloadToken,
-                  authRetryBackoff: authRetryBackoff)
-        self.scopeName = scopeName
-        self.currentTeamId = creds.teamId
-        self.legacyAccount = legacyAccount
-        self.legacyClientFactory = makeClient
-        self.legacyCredentials = creds
-        self.teamsClient = teamsClient ?? TeamsClient(token: creds.token)
-        self.userClient = userClient ?? UserClient(token: creds.token)
-        self.cliBaseToken = creds.token
-    }
 
     // MARK: - Scopes
 
@@ -459,15 +357,13 @@ final class DeploymentStore {
     /// Distinct from `rowScopeLabelIgnoringFilter`: for the *personal* scope that
     /// returns the account's label ("Vercel CLI"), which is this app's name for
     /// the credential, not an org. Vercel itself scopes personal projects under
-    /// the user's own username, so use that — giving "konrad-8lines/social"
-    /// rather than "Vercel CLI/social".
+    /// the user's own username — taken from the account's identity — giving
+    /// "konrad-8lines/social" rather than "Vercel CLI/social". The provider's
+    /// presentation decides; GitHub repos already carry their owner.
     func projectOwnerLabel(accountId: UUID, teamId: String?) -> String? {
         if let teamId { return teamDisplayName(teamId, accountId: accountId) }
         guard let acct = account(accountId) else { return nil }
-        // GitHub repos already carry their owner in the project name, so only
-        // Vercel's personal scope needs the username substituted in.
-        guard acct.provider == .vercel else { return nil }
-        return user?.username ?? nil
+        return registry.integration(for: acct.provider)?.presentation.ownerLabel(identities[accountId])
     }
 
     /// Like `rowScopeLabel` but independent of the active filter — for the scope
@@ -525,71 +421,29 @@ final class DeploymentStore {
     }
 
     /// Fetch the failed deployment's / run's log and copy a context-rich error
-    /// report to the clipboard. Works for Vercel deployments and GitHub Actions runs.
+    /// report to the clipboard.
     @discardableResult
     func copyBuildError(for deployment: Deployment) async -> Bool {
-        if let sourced = sourced(forDeploymentUid: deployment.uid),
-           let token = accountStore.token(for: sourced.account) {
-            let account = sourced.account
-            switch account.provider {
-            case .vercel:
-                // Use the team the deployment was FETCHED from — in "All" that is
-                // not necessarily the currently selected one, and a mismatched
-                // teamId makes the build-log request 404.
-                let client = VercelClient(credentials: VercelCredentials(token: token, teamId: sourced.teamId),
-                                          fetch: accountStore.vercelFetch(for: account))
-                guard let events = try? await client.buildEvents(deploymentId: deployment.uid) else { return false }
-                Pasteboard.copy(BuildErrorReport.make(for: deployment, events: events))
-                return true
-            case .github:
-                let client = GitHubClient(token: token)
-                guard let report = try? await client.failureReport(for: deployment) else { return false }
-                Pasteboard.copy(report)
-                return true
-            case .azureDevOps:
-                return false
-            }
-        }
-        return await legacyCopyBuildError(for: deployment)
-    }
-
-    /// Legacy single-scope path, retained for the convenience-init test suites
-    /// where the client's transport is injected via `legacyClientFactory`.
-    private func legacyCopyBuildError(for deployment: Deployment) async -> Bool {
-        guard let creds = legacyCredentials,
-              let factory = legacyClientFactory else { return false }
-        let client = factory(VercelCredentials(token: cliBaseToken ?? creds.token, teamId: currentTeamId))
-        guard let events = try? await client.buildEvents(deploymentId: deployment.uid) else {
-            return false
-        }
-        Pasteboard.copy(BuildErrorReport.make(for: deployment, events: events))
+        guard let sourced = sourced(forDeploymentUid: deployment.uid),
+              let integration = registry.integration(for: sourced.account.provider),
+              let credential = accountStore.resolve(sourced.account),
+              // The team the row was FETCHED from: in "All" that is not
+              // necessarily the selected one, and a mismatched team 404s.
+              let report = try? await integration.failureReport(for: deployment, teamId: sourced.teamId,
+                                                                using: credential)
+        else { return false }
+        Pasteboard.copy(report)
         return true
     }
 
     // MARK: - Account organization discovery
 
     /// The same account-specific discovery path serves startup and account-add.
-    /// Injected legacy CLI clients retain their transport and refresh behavior.
     func loadOrganizations(for account: Account) async {
-        guard let token = accountStore.token(for: account) else { return }
+        guard let integration = registry.integration(for: account.provider),
+              let credential = accountStore.resolve(account) else { return }
         do {
-            let fetched: [Team]
-            switch account.provider {
-            case .github:
-                if let organizationFetch {
-                    fetched = try await GitHubOrgsClient(token: token, fetch: organizationFetch).organizations()
-                } else {
-                    fetched = try await GitHubOrgsClient(token: token).organizations()
-                }
-            case .vercel:
-                if account.source == .vercelCLI, let teamsClient {
-                    fetched = try await teamsClient.teams()
-                } else {
-                    fetched = try await TeamsClient(token: token,
-                        fetch: organizationFetch ?? accountStore.vercelFetch(for: account)).teams()
-                }
-            case .azureDevOps: return
-            }
+            let fetched = try await integration.organizations(for: account, using: credential)
             guard accountStore.accounts.contains(where: { $0.id == account.id }) else { return }
             let changed = fetched.map(\.id) != organizations(for: account).map(\.id)
             setOrganizations(fetched, for: account.id)
@@ -604,21 +458,25 @@ final class DeploymentStore {
         for account in accountStore.accounts { await loadOrganizations(for: account) }
     }
 
-    func loadTeams() async {
-        for account in accountStore.accounts where account.provider == .vercel {
-            await loadOrganizations(for: account)
-        }
+    /// Asks every account who it is signed in as. One request per account.
+    func loadIdentities() async {
+        for account in accountStore.accounts { await loadIdentity(for: account) }
     }
 
-    func loadGitHubOrganizations() async {
-        for account in accountStore.accounts where account.provider == .github {
-            await loadOrganizations(for: account)
-        }
+    func loadIdentity(for account: Account) async {
+        guard let integration = registry.integration(for: account.provider),
+              let credential = accountStore.resolve(account),
+              let identity = try? await integration.identity(using: credential),
+              accountStore.accounts.contains(where: { $0.id == account.id }) else { return }
+        identities[account.id] = identity
     }
 
-    func loadUser() async {
-        guard let userClient else { return }
-        if let u = try? await userClient.user() { self.user = u }
+    func identity(for account: Account) -> AccountIdentity? {
+        identities[account.id]
+    }
+
+    func setIdentity(_ identity: AccountIdentity?, for accountId: UUID) {
+        identities[accountId] = identity
     }
 
     // MARK: - Scope selection (dropdown)
@@ -695,7 +553,7 @@ final class DeploymentStore {
         // Discovery joins new organizations into the same budgeted rotation.
         Task { await poll() }
         Task { await loadOrganizations() }
-        Task { await loadUser() }
+        Task { await loadIdentities() }
         scheduleTimer()
         observeWake()
     }
@@ -964,8 +822,7 @@ final class DeploymentStore {
         }
 
         let scopes = scopesToPollThisTick()
-        // A new tick lists repositories afresh, once for every organization.
-        await gitHubRepositoryListing.reset()
+        for integration in registry.all { await integration.beginTick() }
         let generations = scopeGenerations
         var firstSuccessScopes = Set<ScopeRef>()
 
@@ -1168,7 +1025,7 @@ final class DeploymentStore {
                   !fresh.contains(ref),
                   let live = lastGood[ref]?.deployments.filter({ $0.state.isInProgress }),
                   !live.isEmpty,
-                  let client = makeClient(scope.account, scope.teamId) else { continue }
+                  let client = makeClient(for: scope) else { continue }
             let rows = Array(live.prefix(min(remaining, accountAllowance)))
             remaining -= rows.count
             allowance[ref.accountId] = accountAllowance - rows.count
@@ -1215,6 +1072,7 @@ final class DeploymentStore {
         lastGood = lastGood.filter { live.contains($0.key.accountId) }
         consecutiveAuthFailures = consecutiveAuthFailures.filter { live.contains($0.key.accountId) }
         scopeErrors = scopeErrors.filter { live.contains($0.key.accountId) }
+        identities = identities.filter { live.contains($0.key) }
         unfilteredDeployments.removeAll { !live.contains($0.account.id) }
         unfilteredProjects.removeAll { !live.contains($0.account.id) }
         // Rewrite the snapshot now rather than waiting for a successful poll,
@@ -1225,6 +1083,7 @@ final class DeploymentStore {
         applyDisplayFilter()
         for account in accountStore.accounts where added.contains(account.id) {
             await loadOrganizations(for: account)
+            await loadIdentity(for: account)
         }
         await poll()
     }
@@ -1297,21 +1156,31 @@ final class DeploymentStore {
 
     // MARK: - Per-scope fetch + auth handling
 
+    /// A client for one scope, or nil when its provider has no integration or
+    /// its account has no usable credential. Both are skipped silently.
+    private func makeClient(for scope: Scope) -> DeploymentProviderClient? {
+        guard let integration = registry.integration(for: scope.account.provider),
+              let credential = accountStore.resolve(scope.account) else { return nil }
+        return integration.client(for: scope, using: credential)
+    }
+
     private func fetch(for scope: Scope) async throws -> ([Deployment], [Project]) {
-        guard let client = makeClient(scope.account, scope.teamId) else {
-            return ([], [])          // unimplemented provider → skip silently
+        guard let client = makeClient(for: scope) else {
+            return ([], [])          // no integration or no credential → skip silently
         }
         do {
             async let deps = client.deployments(limit: 100)
             async let projs = client.projects()
             return try await (deps, projs)
-        } catch VercelClientError.unauthorized {
-            // CLI scope: a 401 is most often a rotated token — reload + retry.
-            // Other accounts: short backoff then a single retry.
+        } catch ProviderClientError.unauthorized {
+            // One retry. A source that has rotated its token since this client
+            // was built (the Vercel CLI) gets a fresh client at once; anything
+            // else waits out a transient blip and tries the same client again.
             let retryClient: DeploymentProviderClient
-            if scope.account.source == .vercelCLI, refreshCLITokenIfChanged() {
-                retryClient = makeClient(scope.account, scope.teamId) ?? client
-            } else {
+            switch accountStore.recoverFromUnauthorized(scope.account) {
+            case .retryWithFreshClient:
+                retryClient = makeClient(for: scope) ?? client
+            case .retryAfterBackoff:
                 try? await Task.sleep(for: authRetryBackoff)
                 retryClient = client
             }
@@ -1319,21 +1188,6 @@ final class DeploymentStore {
             async let projs = retryClient.projects()
             return try await (deps, projs)
         }
-    }
-
-    /// Pull a fresh CLI token from disk; if it changed, rebuild the team/user
-    /// clients around it and report true so the caller retries the failed fetch.
-    private func refreshCLITokenIfChanged() -> Bool {
-        guard let fresh = reloadToken(), !fresh.isEmpty, fresh != cliBaseToken else { return false }
-        cliBaseToken = fresh
-        if legacyAccount == nil, let cli = accountStore.cliAccount {
-            teamsClient = TeamsClient(token: fresh, fetch: accountStore.vercelFetch(for: cli))
-            userClient = UserClient(token: fresh, fetch: accountStore.vercelFetch(for: cli))
-        } else {
-            teamsClient = TeamsClient(token: fresh)
-            userClient = UserClient(token: fresh)
-        }
-        return true
     }
 
     private func record(error: Error, for scope: Scope, ref: ScopeRef,
