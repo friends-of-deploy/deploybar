@@ -45,7 +45,7 @@ final class ScopeHealthTests: XCTestCase {
             reloadToken: { "tok" },
             authRetryBackoff: .zero
         )
-        store.teams = teams
+        store.setOrganizations(teams, for: accountStore.cliAccount!.id)
         store.setFilter(.all)
         return store
     }

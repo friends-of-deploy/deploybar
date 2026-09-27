@@ -4,15 +4,27 @@ import XCTest
 @MainActor
 final class DeploymentStoreTests: XCTestCase {
 
-    private func makeStore(deploymentsData: Data, projectsData: Data = Data(#"{"projects":[]}"#.utf8)) -> DeploymentStore {
-        let creds = VercelCredentials(token: "x", teamId: nil)
-        let client = VercelClient(credentials: creds) { req in
-            let isDeployments = req.url!.path.contains("deployments")
-            let data = isDeployments ? deploymentsData : projectsData
+    /// One token-added Vercel account whose client is served by `fetch`.
+    private func makeStore(fetch: @escaping VercelClient.Fetch) -> DeploymentStore {
+        let accounts = AccountStore(defaults: UserDefaults(suiteName: UUID().uuidString)!,
+                                    credentials: InMemoryCredentialStore(),
+                                    detectCLI: { false }, detectGitHubCLI: { false })
+        _ = accounts.addKeychainAccount(provider: .vercel, label: "test", token: "x")
+        return DeploymentStore(
+            accountStore: accounts,
+            settings: SettingsStore(defaults: UserDefaults(suiteName: UUID().uuidString)!),
+            makeClient: { _, teamId in
+                VercelClient(credentials: VercelCredentials(token: "x", teamId: teamId), fetch: fetch)
+            },
+            reloadToken: { nil }, authRetryBackoff: .zero)
+    }
+
+    private func makeStore(deploymentsData: Data,
+                           projectsData: Data = Data(#"{"projects":[]}"#.utf8)) -> DeploymentStore {
+        makeStore { req in
+            let data = req.url!.path.contains("deployments") ? deploymentsData : projectsData
             return (data, HTTPURLResponse(url: req.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!)
         }
-        let settings = SettingsStore(defaults: UserDefaults(suiteName: UUID().uuidString)!)
-        return DeploymentStore(client: client, settings: settings, scopeName: "test", reloadToken: { nil })
     }
 
     private func fixture(_ name: String) throws -> Data {
@@ -53,12 +65,9 @@ final class DeploymentStoreTests: XCTestCase {
     }
 
     private func alwaysUnauthorizedStore() -> DeploymentStore {
-        let creds = VercelCredentials(token: "bad", teamId: nil)
-        let client = VercelClient(credentials: creds) { req in
+        makeStore { req in
             (Data("{}".utf8), HTTPURLResponse(url: req.url!, statusCode: 401, httpVersion: nil, headerFields: nil)!)
         }
-        return DeploymentStore(client: client, settings: SettingsStore(defaults: UserDefaults(suiteName: UUID().uuidString)!),
-                               scopeName: "test", reloadToken: { nil }, authRetryBackoff: .zero)
     }
 
     func test_singleUnauthorizedDoesNotShowLoggedOut() async {
@@ -79,73 +88,98 @@ final class DeploymentStoreTests: XCTestCase {
     }
 
     func test_networkErrorKeepsLastDataAndSetsStale() async throws {
-        // First, a good poll.
         var failNow = false
-        let creds = VercelCredentials(token: "x", teamId: nil)
         let depData = try fixture("deployments")
-        let client = VercelClient(credentials: creds) { req in
+        let store = makeStore { req in
             if failNow { throw URLError(.notConnectedToInternet) }
-            let isDeployments = req.url!.path.contains("deployments")
-            let data = isDeployments ? depData : Data(#"{"projects":[]}"#.utf8)
+            let data = req.url!.path.contains("deployments") ? depData : Data(#"{"projects":[]}"#.utf8)
             return (data, HTTPURLResponse(url: req.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!)
         }
-        let store = DeploymentStore(client: client, settings: SettingsStore(defaults: UserDefaults(suiteName: UUID().uuidString)!), scopeName: "test", reloadToken: { nil })
         await store.poll()
         let countAfterGood = store.deployments.count
         XCTAssertGreaterThan(countAfterGood, 0)
-        // Now fail.
         failNow = true
         await store.poll()
         XCTAssertEqual(store.deployments.count, countAfterGood, "keeps last-known data")
         XCTAssertFalse(store.healthIssues.isEmpty, "shows stale indicator")
     }
 
-    func test_rotatedTokenRecoversWithoutLoggedOut() async throws {
-        // The CLI rotated its token: the cached "stale" token 401s, but a fresh
-        // token on disk authorizes. The store must reload it and recover in-poll —
-        // no banner, no loggedOut icon, even though auth.json "changed".
-        let depData = try fixture("deployments")
-        let staleToken = "stale", freshToken = "fresh"
-        // The stubbed transport authorizes only the rotated token. Shared by the
-        // initial client and any client `refreshTokenIfChanged` rebuilds, so the
-        // injected transport survives a token swap.
-        let fetch: VercelClient.Fetch = { req in
-            let authorized = req.value(forHTTPHeaderField: "Authorization") == "Bearer \(freshToken)"
-            guard authorized else {
-                return (Data("{}".utf8), HTTPURLResponse(url: req.url!, statusCode: 401, httpVersion: nil, headerFields: nil)!)
+    // MARK: - Vercel CLI token rotation
+
+    /// Stands in for `auth.json`: the Vercel CLI rewrites it between requests.
+    private final class Disk: @unchecked Sendable {
+        var token: String
+        init(_ token: String) { self.token = token }
+    }
+
+    private final class Counter: @unchecked Sendable {
+        var clientsBuilt = 0
+        var deploymentCalls = 0
+    }
+
+    /// Authorizes only the "fresh" token. When `rotatesOnFailure`, a rejected
+    /// request makes the CLI rotate its token on disk, as a real expiry does.
+    private struct TokenClient: DeploymentProviderClient {
+        let token: String
+        let key: String
+        let disk: Disk
+        let counter: Counter
+        let rotatesOnFailure: Bool
+        func deployments(limit: Int) async throws -> [Deployment] {
+            counter.deploymentCalls += 1
+            guard token == "fresh" else {
+                if rotatesOnFailure { disk.token = "fresh" }
+                throw ProviderClientError.unauthorized
             }
-            let isDeployments = req.url!.path.contains("deployments")
-            let data = isDeployments ? depData : Data(#"{"projects":[]}"#.utf8)
-            return (data, HTTPURLResponse(url: req.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!)
+            return [Deployment(uid: "d_\(key)", name: "web", stateRaw: "READY",
+                               url: "web.vercel.app", createdAt: 1)]
         }
-        let store = DeploymentStore(
-            client: VercelClient(credentials: VercelCredentials(token: staleToken, teamId: nil), fetch: fetch),
+        func projects() async throws -> [Project] { [] }
+    }
+
+    private func makeCLIStore(disk: Disk, counter: Counter, rotatesOnFailure: Bool) -> DeploymentStore {
+        let accounts = AccountStore(defaults: UserDefaults(suiteName: UUID().uuidString)!,
+                                    credentials: InMemoryCredentialStore(),
+                                    detectCLI: { true }, reloadCLIToken: { disk.token },
+                                    detectGitHubCLI: { false })
+        return DeploymentStore(
+            accountStore: accounts,
             settings: SettingsStore(defaults: UserDefaults(suiteName: UUID().uuidString)!),
-            scopeName: "test",
-            makeClient: { VercelClient(credentials: $0, fetch: fetch) },
-            reloadToken: { freshToken },          // disk now holds the rotated token
-            authRetryBackoff: .zero
-        )
+            makeClient: { account, teamId in
+                counter.clientsBuilt += 1
+                return TokenClient(token: accounts.token(for: account) ?? "", key: teamId ?? "personal",
+                                   disk: disk, counter: counter, rotatesOnFailure: rotatesOnFailure)
+            },
+            reloadToken: { disk.token }, authRetryBackoff: .zero)
+    }
+
+    func test_rotatedCLITokenRebuildsTheClientAndRecovers() async {
+        let disk = Disk("stale"), counter = Counter()
+        let store = makeCLIStore(disk: disk, counter: counter, rotatesOnFailure: true)
         await store.poll()
-        XCTAssertFalse(store.deployments.isEmpty, "recovers using the rotated token")
+        XCTAssertEqual(store.deployments.map(\.uid), ["d_personal"], "recovers using the rotated token")
         XCTAssertTrue(store.healthIssues.isEmpty)
         XCTAssertNotEqual(store.iconState, .loggedOut)
+        XCTAssertEqual(counter.clientsBuilt, 2, "a rotated token gets a fresh client")
+    }
+
+    func test_unchangedCLITokenRetriesTheSameClientOnce() async {
+        let disk = Disk("stale"), counter = Counter()
+        let store = makeCLIStore(disk: disk, counter: counter, rotatesOnFailure: false)
+        await store.poll()
+        XCTAssertTrue(store.deployments.isEmpty)
+        XCTAssertEqual(counter.clientsBuilt, 1, "no rotation: the same client is retried")
+        XCTAssertEqual(counter.deploymentCalls, 2, "exactly one retry")
     }
 
     func test_successfulPollClearsLoggedOutIcon() async throws {
-        // Start with persistent auth failures (until the threshold trips loggedOut),
-        // then recover — a good poll must clear the banner and the loggedOut icon.
         var authed = false
-        let creds = VercelCredentials(token: "x", teamId: nil)
         let depData = try fixture("deployments")
-        let client = VercelClient(credentials: creds) { req in
+        let store = makeStore { req in
             if !authed { return (Data("{}".utf8), HTTPURLResponse(url: req.url!, statusCode: 401, httpVersion: nil, headerFields: nil)!) }
-            let isDeployments = req.url!.path.contains("deployments")
-            let data = isDeployments ? depData : Data(#"{"projects":[]}"#.utf8)
+            let data = req.url!.path.contains("deployments") ? depData : Data(#"{"projects":[]}"#.utf8)
             return (data, HTTPURLResponse(url: req.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!)
         }
-        let store = DeploymentStore(client: client, settings: SettingsStore(defaults: UserDefaults(suiteName: UUID().uuidString)!),
-                                    scopeName: "test", reloadToken: { nil }, authRetryBackoff: .zero)
         for _ in 0..<5 { await store.poll() }
         XCTAssertEqual(store.iconState, .loggedOut)
         authed = true
@@ -170,25 +204,15 @@ final class DeploymentStoreTests: XCTestCase {
     }
 
     func test_healthIssuesReportStaleSource() async throws {
-        // Same shape as the stale-data test: a good poll, then a network failure.
         var failNow = false
-        let creds = VercelCredentials(token: "x", teamId: nil)
         let depData = try fixture("deployments")
-        let client = VercelClient(credentials: creds) { req in
+        let store = makeStore { req in
             if failNow { throw URLError(.notConnectedToInternet) }
-            let isDeployments = req.url!.path.contains("deployments")
-            return (isDeployments ? depData : Data(#"{"projects":[]}"#.utf8),
+            return (req.url!.path.contains("deployments") ? depData : Data(#"{"projects":[]}"#.utf8),
                     HTTPURLResponse(url: req.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!)
         }
-        let store = DeploymentStore(
-            client: client,
-            settings: SettingsStore(defaults: UserDefaults(suiteName: UUID().uuidString)!),
-            scopeName: "test",
-            reloadToken: { nil }
-        )
         await store.poll()
         XCTAssertTrue(store.healthIssues.isEmpty)
-
         failNow = true
         await store.poll()
         XCTAssertFalse(store.healthIssues.isEmpty, "a failed source is listed on the dot")
@@ -198,20 +222,12 @@ final class DeploymentStoreTests: XCTestCase {
     /// old status bar could only show the first.
     func test_healthIssuesAreStableAcrossPolls() async throws {
         var failNow = false
-        let creds = VercelCredentials(token: "x", teamId: nil)
         let depData = try fixture("deployments")
-        let client = VercelClient(credentials: creds) { req in
+        let store = makeStore { req in
             if failNow { throw URLError(.notConnectedToInternet) }
-            let isDeployments = req.url!.path.contains("deployments")
-            return (isDeployments ? depData : Data(#"{"projects":[]}"#.utf8),
+            return (req.url!.path.contains("deployments") ? depData : Data(#"{"projects":[]}"#.utf8),
                     HTTPURLResponse(url: req.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!)
         }
-        let store = DeploymentStore(
-            client: client,
-            settings: SettingsStore(defaults: UserDefaults(suiteName: UUID().uuidString)!),
-            scopeName: "test",
-            reloadToken: { nil }
-        )
         await store.poll()
         failNow = true
         await store.poll()

@@ -26,7 +26,7 @@ final class ProjectOwnerLabelTests: XCTestCase {
     /// A team scope is a real org — its slug is exactly what should prefix the name.
     func test_usesTheTeamSlugForATeamScope() {
         let (store, cli) = makeStore()
-        store.teams = [Team(id: "team_1", slug: "foka-ventures", name: "Foka Ventures")]
+        store.setOrganizations([Team(id: "team_1", slug: "foka-ventures", name: "Foka Ventures")], for: cli.id)
         XCTAssertEqual(store.projectOwnerLabel(accountId: cli.id, teamId: "team_1"),
                        "foka-ventures")
     }
@@ -52,7 +52,7 @@ final class ProjectOwnerLabelTests: XCTestCase {
     /// A team whose name hasn't loaded yet is nil rather than a raw "team_…" id.
     func test_noOwnerForAnUnknownTeam() {
         let (store, cli) = makeStore()
-        store.teams = []
+        store.setOrganizations([], for: cli.id)
         XCTAssertNil(store.projectOwnerLabel(accountId: cli.id, teamId: "team_missing"))
     }
 

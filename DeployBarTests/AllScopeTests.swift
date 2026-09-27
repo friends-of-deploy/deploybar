@@ -44,7 +44,7 @@ final class AllScopeTests: XCTestCase {
                 return StubClient(deps: [Self.deployment(uid: "d_\(key)", name: "web")], projs: [])
             },
             reloadToken: { "tok" }, authRetryBackoff: .zero)
-        store.teams = teams
+        store.setOrganizations(teams, for: cli.id)
         return (store, cli)
     }
 
@@ -98,7 +98,8 @@ final class AllScopeTests: XCTestCase {
             // Every scope returns the SAME deployment uid.
             makeClient: { _, _ in StubClient(deps: [Self.deployment(uid: "same", name: "web")], projs: []) },
             reloadToken: { "tok" }, authRetryBackoff: .zero)
-        store.teams = [Self.team(id: "t1", slug: "alpha"), Self.team(id: "t2", slug: "beta")]
+        store.setOrganizations([Self.team(id: "t1", slug: "alpha"), Self.team(id: "t2", slug: "beta")],
+                               for: accountStore.cliAccount!.id)
 
         await store.poll()
 
