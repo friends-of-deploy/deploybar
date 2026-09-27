@@ -139,6 +139,7 @@
 		D1A9FF9FFF609666896FF5D9 /* ScopeResolver.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4EC059A6A8C152E20A42C7D7 /* ScopeResolver.swift */; };
 		D1EC28F9F946031F12E50E3A /* ScopeColorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1049A05673BFAD96CAD2455D /* ScopeColorTests.swift */; };
 		D28A2FA36668065AAAB17B77 /* Scope.swift in Sources */ = {isa = PBXBuildFile; fileRef = 08B3FD0A4A7D2B851A5D900F /* Scope.swift */; };
+		D338CE5D61A79CCA654619CE /* SharedRepositoryListingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A0EEAEC4D2B65B7CA7DBD4D /* SharedRepositoryListingTests.swift */; };
 		D409A6EB4214C25CE3BDBC4A /* ProjectFollow.swift in Sources */ = {isa = PBXBuildFile; fileRef = D78795B350B4D163F3559D6B /* ProjectFollow.swift */; };
 		D77515F55B120238786C7C6C /* SentryCrashReportingClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1EB964A9968C157AA37E7ACC /* SentryCrashReportingClient.swift */; };
 		D8BCD1DBDCBEFD7B4537C984 /* onboarding.json in Resources */ = {isa = PBXBuildFile; fileRef = 4ED71D7592F3FB48AFBFDB4F /* onboarding.json */; };
@@ -197,6 +198,7 @@
 		176FE250E8C527CAFCF05603 /* NotificationSettingsTab.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationSettingsTab.swift; sourceTree = "<group>"; };
 		17D5256FFF08D03F61CE96D8 /* CrashReportingPreference.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CrashReportingPreference.swift; sourceTree = "<group>"; };
 		1976D9F9B157C4C976137E6E /* PollCoalescingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PollCoalescingTests.swift; sourceTree = "<group>"; };
+		1A0EEAEC4D2B65B7CA7DBD4D /* SharedRepositoryListingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedRepositoryListingTests.swift; sourceTree = "<group>"; };
 		1AA2C69EAB8096E637822571 /* UpdaterControllerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UpdaterControllerTests.swift; sourceTree = "<group>"; };
 		1B8BEBE2545535F8401D31AC /* ProjectListStabilityTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProjectListStabilityTests.swift; sourceTree = "<group>"; };
 		1EB964A9968C157AA37E7ACC /* SentryCrashReportingClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SentryCrashReportingClient.swift; sourceTree = "<group>"; };
@@ -474,6 +476,7 @@
 				DA457F0018F99555F5527030 /* ScopeSwitchTests.swift */,
 				689898515F337BEFDB922498 /* SettingsStoreTests.swift */,
 				F0D039D3EA4243F487405EC3 /* SettingsTabTests.swift */,
+				1A0EEAEC4D2B65B7CA7DBD4D /* SharedRepositoryListingTests.swift */,
 				8D71FD5826F1C8DD39989B40 /* TeamModelTests.swift */,
 				6DBD9CAD49574C68D9EED507 /* TeamsClientTests.swift */,
 				228B4A2687511C4A259DA822 /* TeamsLoadingTests.swift */,
@@ -898,6 +901,7 @@
 				BE88C871EB226F45DD933E1F /* ScopeSwitchTests.swift in Sources */,
 				5843D7D1B8267565C73B5872 /* SettingsStoreTests.swift in Sources */,
 				B8FBB667064DA6505FBFD3D7 /* SettingsTabTests.swift in Sources */,
+				D338CE5D61A79CCA654619CE /* SharedRepositoryListingTests.swift in Sources */,
 				C2C378D2F50372AC87C13686 /* TeamModelTests.swift in Sources */,
 				BE5B14760244B9228E6D8E20 /* TeamsClientTests.swift in Sources */,
 				C51A1FA71CCAFBEFA0EEB1DF /* TeamsLoadingTests.swift in Sources */,

@@ -93,6 +93,9 @@ final class DeploymentStore {
     @ObservationIgnored private let settings: SettingsStore
     @ObservationIgnored private let notifier: NotificationManager
     @ObservationIgnored private let organizationFetch: GitHubClient.Fetch?
+    /// Organization scopes share one repository listing per tick; `runPoll`
+    /// starts each tick with a fresh one.
+    @ObservationIgnored private let gitHubRepositoryListing: GitHubRepositoryListing
     @ObservationIgnored private let now: () -> Date
     @ObservationIgnored private var accountPollTimes: [UUID: Date] = [:]
     @ObservationIgnored private var accountPollTicks: [UUID: Int] = [:]
@@ -161,12 +164,15 @@ final class DeploymentStore {
          settings: SettingsStore,
          makeClient: ClientFactory? = nil,
          organizationFetch: GitHubClient.Fetch? = nil,
+         gitHubFetch: GitHubClient.Fetch? = nil,
          now: @escaping () -> Date = Date.init,
          reloadToken: @escaping () -> String? = { try? TokenProvider().credentials().token },
          authRetryBackoff: Duration = .milliseconds(800)) {
         self.knownAccountIds = Set(accountStore.accounts.map(\.id))
         self.now = now
         self.organizationFetch = organizationFetch
+        let gitHubListing = GitHubRepositoryListing()
+        self.gitHubRepositoryListing = gitHubListing
         self.accountStore = accountStore
         self.settings = settings
         self.notifier = NotificationManager(settings: settings)
@@ -183,7 +189,8 @@ final class DeploymentStore {
                 return VercelClient(credentials: VercelCredentials(token: token, teamId: teamId),
                                     fetch: accountStore.vercelFetch(for: account))
             case .github:
-                return GitHubClient(token: token, org: teamId)
+                return GitHubClient(token: token, org: teamId, listing: gitHubListing,
+                                    fetch: gitHubFetch ?? { try await URLSession.shared.data(for: $0) })
             case .azureDevOps:
                 return nil        // unimplemented provider → skipped silently
             }
@@ -878,6 +885,8 @@ final class DeploymentStore {
         }
 
         let scopes = scopesToPollThisTick()
+        // A new tick lists repositories afresh, once for every organization.
+        await gitHubRepositoryListing.reset()
         let generations = scopeGenerations
         var firstSuccessScopes = Set<ScopeRef>()
 
