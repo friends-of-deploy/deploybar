@@ -88,6 +88,28 @@ struct GitHubClient: Sendable {
         return Array(merged.0.sorted { $0.createdAt > $1.createdAt }.prefix(limit))
     }
 
+    /// Re-reads each run by id: one request per run, no repository listing.
+    /// A run that can't be read is left out, so its row keeps its last state.
+    func refreshed(_ deployments: [Deployment]) async throws -> [Deployment] {
+        await withTaskGroup(of: Deployment?.self) { group in
+            for stale in deployments {
+                group.addTask {
+                    do {
+                        let data = try await self.get(path: "/repos/\(stale.name)/actions/runs/\(stale.uid)",
+                                                      query: [])
+                        let run = try Self.decoder.decode(GHRun.self, from: data)
+                        return Self.deployment(from: run, repoFullName: stale.name,
+                                               owner: stale.commitOrg, repoName: stale.commitRepo)
+                    } catch {
+                        os_log("github run refresh failed: %{public}@", error.localizedDescription)
+                        return nil
+                    }
+                }
+            }
+            return await group.reduce(into: [Deployment]()) { if let d = $1 { $0.append(d) } }
+        }
+    }
+
     /// Confirms the token belongs to a GitHub account without loading repositories.
     func authenticatedLogin() async throws -> String {
         struct Identity: Decodable { let login: String }
@@ -196,9 +218,16 @@ struct GitHubClient: Sendable {
     }
 
     static func deployment(from run: GHRun, repo: GHRepo) -> Deployment {
+        deployment(from: run, repoFullName: repo.fullName, owner: repo.owner.login, repoName: repo.name)
+    }
+
+    /// Repository identity passed apart from `GHRepo`, so a run re-read by id
+    /// (with no repository listing to hand) maps exactly as a listed one.
+    static func deployment(from run: GHRun, repoFullName: String,
+                           owner: String?, repoName: String?) -> Deployment {
         Deployment(
             uid: String(run.id),
-            name: repo.fullName,
+            name: repoFullName,
             stateRaw: githubState(status: run.status, conclusion: run.conclusion),
             target: run.headBranch,
             url: "",                                   // GitHub uses webURL, not a bare host
@@ -207,8 +236,8 @@ struct GitHubClient: Sendable {
             buildingAt: epochMs(run.runStartedAt ?? run.createdAt),
             ready: run.status == "completed" ? epochMs(run.updatedAt ?? run.createdAt) : nil,
             creatorUsername: run.actor?.login,
-            commitOrg: repo.owner.login,
-            commitRepo: repo.name,
+            commitOrg: owner,
+            commitRepo: repoName,
             commitSha: run.headSHA,
             commitRef: run.headBranch,
             commitMessage: run.displayTitle ?? run.headCommit?.message ?? run.name,

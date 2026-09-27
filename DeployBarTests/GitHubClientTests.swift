@@ -119,6 +119,44 @@ final class GitHubClientTests: XCTestCase {
         XCTAssertTrue(deployments.isEmpty)
     }
 
+    // MARK: - refreshed(_:)
+
+    /// A run is re-read by id — one request, no repository listing — and keeps
+    /// its repository identity while its state moves on.
+    func test_refreshed_rereadsRunsById() async throws {
+        let client = makeClient { req in
+            XCTAssertEqual(req.url!.path, "/repos/acme/web/actions/runs/99")
+            return (200, """
+            {"id":99,"name":"CI","display_title":"Earlier run","head_branch":"main","head_sha":"def456",
+             "status":"completed","conclusion":"success","html_url":"https://github.com/acme/web/actions/runs/99",
+             "created_at":"2024-01-01T00:00:00Z","updated_at":"2024-01-01T00:03:00Z",
+             "run_started_at":"2024-01-01T00:00:05Z","actor":{"login":"octocat","avatar_url":null},
+             "head_commit":{"message":"m"}}
+            """)
+        }
+        let stale = Deployment(uid: "99", name: "acme/web", stateRaw: "BUILDING", url: "",
+                               createdAt: 1_704_067_200_000, commitOrg: "acme", commitRepo: "web")
+
+        let fresh = try await client.refreshed([stale])
+
+        XCTAssertEqual(fresh.map(\.uid), ["99"])
+        XCTAssertEqual(fresh[0].state, .ready)
+        XCTAssertEqual(fresh[0].name, "acme/web")
+        XCTAssertEqual(fresh[0].commitOrg, "acme")
+        XCTAssertEqual(fresh[0].commitRepo, "web")
+        XCTAssertNotNil(fresh[0].ready)
+    }
+
+    /// One unreadable run is skipped, not fatal — its row keeps its last state.
+    func test_refreshed_skipsRunsThatFail() async throws {
+        let client = makeClient { _ in (404, "{}") }
+        let stale = Deployment(uid: "1", name: "acme/web", stateRaw: "BUILDING", url: "", createdAt: 1)
+
+        let fresh = try await client.refreshed([stale])
+
+        XCTAssertTrue(fresh.isEmpty)
+    }
+
     // MARK: - Failure report (copy error)
 
     func test_failureReport_summarizesFailedJobsAndLogTail() async throws {

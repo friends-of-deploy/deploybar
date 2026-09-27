@@ -298,7 +298,7 @@ final class AllScopeTests: XCTestCase {
     }
 
     /// A poll that mixes freshly-fetched scopes with replayed ones must not
-    /// show any deployment or project twice — the failure mode the `polled`
+    /// show any deployment or project twice — the failure mode the `freshScopes`
     /// guard in `runPoll()` exists to prevent.
     func test_noDuplicateRowsWhenReplayingDeferredScopes() async {
         let recorder = FetchRecorder()

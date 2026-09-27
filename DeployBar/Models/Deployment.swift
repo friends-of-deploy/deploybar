@@ -14,6 +14,10 @@ enum DeploymentState: String, Sendable {
         }
     }
 
+    /// Still running on the provider — the states that put the menu bar icon
+    /// into "deploying".
+    var isInProgress: Bool { self == .building || self == .queued }
+
     /// Human-readable, localized label for badges and status text.
     var label: String {
         switch self {

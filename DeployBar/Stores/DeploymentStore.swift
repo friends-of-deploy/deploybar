@@ -490,7 +490,7 @@ final class DeploymentStore {
 
     /// Pure derivation (no acknowledgment): running > failure > success > idle.
     static func baseState(for states: [DeploymentState]) -> IconState {
-        if states.contains(where: { $0 == .building || $0 == .queued }) { return .building }
+        if states.contains(where: \.isInProgress) { return .building }
         if states.contains(.error) { return .failure }
         if states.contains(.ready) { return .success }
         return .idle
@@ -864,6 +864,7 @@ final class DeploymentStore {
         var merged: [ScopeResult] = []
         var errors: [ScopeRef: String] = [:]
         var freshSuccessCount = 0
+        var freshScopes = Set<ScopeRef>()
 
         // Fan out one fetch per scope, capped to at most maxConcurrentFetches in
         // flight at once. withTaskGroup keeps per-source isolation: one source
@@ -900,20 +901,25 @@ final class DeploymentStore {
                                           deployments: deps, projects: projs)
                     if lastGood[ref] == nil { firstSuccessScopes.insert(ref) }
                     lastGood[ref] = res
+                    freshScopes.insert(ref)
                     merged.append(res)
                 case .failure(let error):
+                    // The last-known rows are replayed below, like a deferred
+                    // scope's, so a transient failure doesn't blank the menu.
                     record(error: error, for: scope, ref: ref, into: &errors)
-                    // Keep this source's last-known rows so a transient failure
-                    // doesn't blank the menu (mirrors the old "stale" behavior).
-                    if let prev = lastGood[ref] { merged.append(prev) }
                 }
             }
         }
 
-        // Scopes deferred to a later tick keep their last-known rows, so
-        // rotation never blanks a source that is merely waiting its turn.
-        let polled = Set(scopes.map { ScopeRef(accountId: $0.account.id, teamId: $0.teamId) })
-        for (ref, previous) in lastGood where !polled.contains(ref) {
+        // Replayed rows are only as fresh as their scope's last turn — up to
+        // ~15 minutes with 30 GitHub organizations. A run captured mid-build
+        // would hold the menu bar on "deploying" all that time, so re-read the
+        // in-progress ones before replaying.
+        await refreshInProgressRows(skipping: freshScopes, generations: generations)
+
+        // Scopes deferred to a later tick, or failing this one, keep their
+        // last-known rows, so rotation never blanks a source waiting its turn.
+        for (ref, previous) in lastGood where !freshScopes.contains(ref) {
             guard availableScopes.contains(where: {
                 ScopeRef(accountId: $0.account.id, teamId: $0.teamId) == ref
             }) else { continue }
@@ -1016,7 +1022,7 @@ final class DeploymentStore {
         // Filtering against `availableScopes` is safe for scopes merely
         // deferred to a later tick by the poll budget: the replay loop above
         // already established that a deferred scope is still present in
-        // `availableScopes` (only `polled`, the per-tick subset, excludes it),
+        // `availableScopes` (only `freshScopes`, the per-tick subset, excludes it),
         // so this prune cannot evict a scope that still needs its `lastGood`
         // replayed next tick.
         let liveScopes = Set(availableScopes.map { ScopeRef(accountId: $0.account.id, teamId: $0.teamId) })
@@ -1024,6 +1030,54 @@ final class DeploymentStore {
         consecutiveAuthFailures = consecutiveAuthFailures.filter { liveIds.contains($0.key.accountId) }
         accountPollTimes = accountPollTimes.filter { liveIds.contains($0.key) }
         accountPollTicks = accountPollTicks.filter { liveIds.contains($0.key) }
+    }
+
+    /// Upper bound on by-id re-reads per tick. Each costs one request, so a
+    /// burst of parallel CI runs can't blow through the provider's budget; any
+    /// beyond the cap still refresh when their scope comes round.
+    private static let maxInProgressRefreshesPerTick = 10
+
+    /// Re-reads, by id, the in-progress rows of every scope with no fresh
+    /// result this tick, and patches `lastGood` so the replay shows real state.
+    /// Best-effort: a failed re-read keeps the last-known row.
+    private func refreshInProgressRows(skipping fresh: Set<ScopeRef>,
+                                       generations: [ScopeRef: Int]) async {
+        var remaining = Self.maxInProgressRefreshesPerTick
+        var work: [(ref: ScopeRef, client: DeploymentProviderClient, rows: [Deployment])] = []
+        for scope in availableScopes where remaining > 0 {
+            let ref = ScopeRef(accountId: scope.account.id, teamId: scope.teamId)
+            guard !fresh.contains(ref),
+                  let live = lastGood[ref]?.deployments.filter({ $0.state.isInProgress }),
+                  !live.isEmpty,
+                  let client = makeClient(scope.account, scope.teamId) else { continue }
+            let rows = Array(live.prefix(remaining))
+            remaining -= rows.count
+            work.append((ref, client, rows))
+        }
+        guard !work.isEmpty else { return }
+
+        let results = await withTaskGroup(of: (ScopeRef, [Deployment]).self) { group in
+            for item in work {
+                group.addTask {
+                    do { return (item.ref, try await item.client.refreshed(item.rows)) }
+                    catch {
+                        os_log("in-progress refresh failed: %{public}@", error.localizedDescription)
+                        return (item.ref, [])
+                    }
+                }
+            }
+            return await group.reduce(into: [(ScopeRef, [Deployment])]()) { $0.append($1) }
+        }
+
+        for (ref, updates) in results where !updates.isEmpty {
+            // The scope may have been disabled or re-enabled while we awaited.
+            guard scopeGenerations[ref, default: 0] == generations[ref, default: 0],
+                  let previous = lastGood[ref] else { continue }
+            let byUid = Dictionary(updates.map { ($0.uid, $0) }, uniquingKeysWith: { first, _ in first })
+            lastGood[ref] = ScopeResult(account: previous.account, teamId: previous.teamId,
+                                        deployments: previous.deployments.map { byUid[$0.uid] ?? $0 },
+                                        projects: previous.projects)
+        }
     }
 
     /// Drop every trace of accounts that are no longer connected, then re-poll.
