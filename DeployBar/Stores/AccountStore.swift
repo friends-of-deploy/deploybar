@@ -9,51 +9,41 @@ final class AccountStore {
 
     @ObservationIgnored private let defaults: UserDefaults
     @ObservationIgnored private let credentials: CredentialStore
-    @ObservationIgnored private let reloadCLIToken: () -> String?
-    @ObservationIgnored private let reloadGitHubToken: @Sendable () -> String?
-    @ObservationIgnored private let vercelCLISession: VercelCLISession
-    @ObservationIgnored private let now: () -> Date
-
-    /// The last `gh auth token` result and when it was read. `nil` read time
-    /// means `gh` has not been asked yet this launch.
-    @ObservationIgnored private var gitHubCLIToken: String?
-    @ObservationIgnored private var gitHubCLITokenReadAt: Date?
-    /// The in-flight background re-read, so stale callers share one `gh` run.
-    @ObservationIgnored private(set) var gitHubCLITokenRefresh: Task<Void, Never>?
-
-    /// How long a `gh` token is served before it is re-read in the background.
-    /// Long enough that a poll tick reuses one read across all its scopes;
-    /// short enough that `gh auth refresh` or a new login is picked up soon.
-    static let gitHubCLITokenFreshness: TimeInterval = 60
+    /// One per credential source, in detection order.
+    @ObservationIgnored let strategies: [CredentialStrategy]
 
     private enum Keys { static let accounts = "connectedAccounts" }
 
-    init(defaults: UserDefaults = .standard,
-         credentials: CredentialStore = KeychainCredentialStore(),
-         detectCLI: () -> Bool = { (try? TokenProvider().credentials()) != nil },
-         reloadCLIToken: @escaping () -> String? = { try? TokenProvider().credentials().token },
-         detectGitHubCLI: () -> Bool = { GitHubTokenProvider().token() != nil },
-         reloadGitHubToken: @escaping @Sendable () -> String? = { GitHubTokenProvider().token() },
-         vercelCLISession: VercelCLISession = .shared,
-         now: @escaping () -> Date = Date.init) {
+    /// Production and most tests: the three real sources, configured by closure.
+    convenience init(defaults: UserDefaults = .standard,
+                     credentials: CredentialStore = KeychainCredentialStore(),
+                     detectCLI: @escaping () -> Bool = { (try? TokenProvider().credentials()) != nil },
+                     reloadCLIToken: @escaping () -> String? = { try? TokenProvider().credentials().token },
+                     detectGitHubCLI: @escaping () -> Bool = { GitHubTokenProvider().token() != nil },
+                     reloadGitHubToken: @escaping @Sendable () -> String? = { GitHubTokenProvider().token() },
+                     vercelCLISession: VercelCLISession = .shared,
+                     now: @escaping () -> Date = Date.init) {
+        self.init(defaults: defaults, credentials: credentials, strategies: [
+            VercelCLICredential(detect: detectCLI, reload: reloadCLIToken, session: vercelCLISession),
+            GitHubCLICredential(detect: detectGitHubCLI, reload: reloadGitHubToken, now: now),
+            KeychainCredential(store: credentials),
+        ])
+    }
+
+    init(defaults: UserDefaults, credentials: CredentialStore, strategies: [CredentialStrategy]) {
         self.defaults = defaults
         self.credentials = credentials
-        self.reloadCLIToken = reloadCLIToken
-        self.reloadGitHubToken = reloadGitHubToken
-        self.vercelCLISession = vercelCLISession
-        self.now = now
+        self.strategies = strategies
         let savedAccounts = Self.load(defaults)
         self.accounts = savedAccounts
         self.hadPersistedAccounts = !savedAccounts.isEmpty
 
-        if detectCLI(), cliAccount == nil {
-            let cli = Account.vercelCLI(id: UUID(), label: "Vercel CLI")
-            accounts.insert(cli, at: 0)
-            persist()
-        }
-        if detectGitHubCLI(), githubCLIAccount == nil {
-            let gh = Account.githubCLI(id: UUID(), label: "GitHub CLI")
-            accounts.append(gh)
+        for strategy in strategies where !accounts.contains(where: { strategy.handles($0.source) }) {
+            guard let detected = strategy.detectAccount() else { continue }
+            switch detected.placement {
+            case .first: accounts.insert(detected.account, at: 0)
+            case .last:  accounts.append(detected.account)
+            }
             persist()
         }
     }
@@ -63,48 +53,34 @@ final class AccountStore {
     /// The detected GitHub CLI (`gh`) account, if present.
     var githubCLIAccount: Account? { accounts.first { $0.source == .githubCLI } }
 
-    func token(for account: Account) -> String? {
-        switch account.source {
-        case .vercelCLI:            return reloadCLIToken()
-        case .githubCLI:            return cachedGitHubCLIToken()
-        case .keychain(let name):   return credentials.token(for: name)
-        }
+    func strategy(for account: Account) -> CredentialStrategy? {
+        strategies.first { $0.handles(account.source) }
     }
 
-    /// `gh auth token` spawns a process and waits for it. This store is on the
-    /// main actor and the poll builds a client per scope, so reading it on
-    /// every call froze the popover — scrolling and buttons included — for as
-    /// long as a tick's worth of `gh` runs took. Only the first read of a
-    /// launch waits; after that a stale token is served while one background
-    /// re-read replaces it.
-    private func cachedGitHubCLIToken() -> String? {
-        guard let readAt = gitHubCLITokenReadAt else {
-            gitHubCLIToken = reloadGitHubToken()
-            gitHubCLITokenReadAt = now()
-            return gitHubCLIToken
-        }
-        if now().timeIntervalSince(readAt) >= Self.gitHubCLITokenFreshness,
-           gitHubCLITokenRefresh == nil {
-            let read = reloadGitHubToken
-            gitHubCLITokenRefresh = Task { [weak self] in
-                let token = await Task.detached(priority: .utility) { read() }.value
-                guard let self else { return }
-                self.gitHubCLIToken = token
-                self.gitHubCLITokenReadAt = self.now()
-                self.gitHubCLITokenRefresh = nil
-            }
-        }
-        return gitHubCLIToken
+    func resolve(_ account: Account) -> ResolvedCredential? {
+        strategy(for: account)?.resolve(account)
     }
+
+    func token(for account: Account) -> String? {
+        resolve(account)?.token
+    }
+
+    func recoverFromUnauthorized(_ account: Account) -> AuthRecovery {
+        strategy(for: account)?.recoverFromUnauthorized(account) ?? .retryAfterBackoff
+    }
+
+    /// Test hook: the in-flight background `gh` re-read.
+    var gitHubCLITokenRefresh: Task<Void, Never>? {
+        strategies.lazy.compactMap { $0 as? GitHubCLICredential }.first?.refresh
+    }
+
+    static let gitHubCLITokenFreshness = GitHubCLICredential.freshness
 
     /// Only CLI accounts share the renewable CLI session. Explicit API tokens
     /// must keep using the credentials selected for that account.
+    /// Removed in Task 4, once `DeploymentStore` resolves credentials itself.
     func vercelFetch(for account: Account) -> VercelClient.Fetch {
-        guard account.source == .vercelCLI else {
-            return { try await URLSession.shared.data(for: $0) }
-        }
-        let session = vercelCLISession
-        return { try await session.data(for: $0) }
+        resolve(account)?.transport ?? { try await URLSession.shared.data(for: $0) }
     }
 
     @discardableResult

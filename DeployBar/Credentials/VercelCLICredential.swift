@@ -1,0 +1,53 @@
+import Foundation
+
+/// The Vercel CLI's own login (`vercel login`), read from disk and renewed by
+/// `VercelCLISession`. The CLI rotates the token, so a 401 is often just a
+/// token we read before the rotation.
+@MainActor
+final class VercelCLICredential: CredentialStrategy {
+    private let detect: () -> Bool
+    private let reload: () -> String?
+    private let session: VercelCLISession
+    /// The token the most recent client was built with.
+    private var lastResolvedToken: String?
+
+    init(detect: @escaping () -> Bool = { (try? TokenProvider().credentials()) != nil },
+         reload: @escaping () -> String? = { try? TokenProvider().credentials().token },
+         session: VercelCLISession = .shared) {
+        self.detect = detect
+        self.reload = reload
+        self.session = session
+    }
+
+    var detectedProvider: Provider? { .vercel }
+    var caption: String { String(localized: "From Vercel CLI", comment: "CLI account source caption") }
+    var signInHint: LocalizedStringResource? { "Sign in with vercel login, then restart DeployBar." }
+    var loggedOutHint: String? {
+        String(localized: "Not logged in — run `vercel login`",
+               comment: "Health issue: the Vercel CLI has no session")
+    }
+
+    func handles(_ source: CredentialSource) -> Bool { source == .vercelCLI }
+
+    func detectAccount() -> DetectedAccount? {
+        guard detect() else { return nil }
+        return DetectedAccount(account: .vercelCLI(id: UUID(), label: "Vercel CLI"), placement: .first)
+    }
+
+    func resolve(_ account: Account) -> ResolvedCredential? {
+        guard let token = reload() else { return nil }
+        lastResolvedToken = token
+        let session = self.session
+        return ResolvedCredential(token: token, transport: { try await session.data(for: $0) })
+    }
+
+    func recoverFromUnauthorized(_ account: Account) -> AuthRecovery {
+        guard let fresh = reload(), !fresh.isEmpty, fresh != lastResolvedToken else { return .retryAfterBackoff }
+        return .retryWithFreshClient
+    }
+
+    /// Mutes from before follow keys used project ids were stored by name.
+    func legacyFollowKey(for account: Account, projectName: String) -> ProjectKey? {
+        ProjectKey(provider: .vercel, accountId: account.id, projectId: projectName)
+    }
+}
