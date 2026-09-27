@@ -147,4 +147,44 @@ final class InProgressRefreshTests: XCTestCase {
         XCTAssertEqual(busy.effectiveRefreshInterval(for: busy.connectedAccounts[0]), 90,
                        "ten runs re-read every tick leave room for fewer scope fetches")
     }
+
+    /// Two one-repository organizations, `org0` and `org1`, each mid-run when
+    /// the app last cached its rows.
+    private func makeTwoOrgStore(world: World) -> DeploymentStore {
+        let accounts = AccountStore(defaults: UserDefaults(suiteName: UUID().uuidString)!,
+                                    credentials: InMemoryCredentialStore(),
+                                    detectCLI: { false }, reloadCLIToken: { nil },
+                                    detectGitHubCLI: { true }, reloadGitHubToken: { "tok" })
+        let account = accounts.githubCLIAccount!
+        let settings = SettingsStore(defaults: UserDefaults(suiteName: UUID().uuidString)!)
+        settings.cachedOrgs = [account.id: ["org0", "org1"].map(Self.team)]
+        settings.cachedRows = RowCache(
+            deployments: ["org0", "org1"].map { org in
+                SourcedDeployment(deployment: StubClient.deployment(uid: "d_\(org)", state: "BUILDING"),
+                                  account: account, teamId: org)
+            },
+            projects: [], savedAt: Date())
+        return DeploymentStore(accountStore: accounts, settings: settings,
+                               makeClient: { _, teamId in StubClient(world: world, key: teamId ?? "account") },
+                               reloadToken: { nil }, authRetryBackoff: .zero)
+    }
+
+    /// A tick spent entirely on the account scope (40 of its 41-request share)
+    /// leaves room for only one by-id re-read, even though both organizations
+    /// still have an in-progress run waiting to be re-read.
+    func test_aTickSpentOnTheAccountScopeReReadsOnlyWhatItsShareLeaves() async {
+        let world = World()
+        world.states["d_org0"] = "BUILDING"
+        world.states["d_org1"] = "BUILDING"
+        let store = makeTwoOrgStore(world: world)
+
+        await store.poll()   // tick 1: fetches org0, re-reads d_org1
+        await store.poll()   // tick 2: fetches org1, re-reads d_org0
+
+        world.refreshedUids = []
+        await store.poll()   // tick 3: fetches the account scope alone (40 of 41)
+
+        XCTAssertEqual(world.refreshedUids.count, 1,
+                       "only one re-read fits the account scope's remaining share, not both")
+    }
 }

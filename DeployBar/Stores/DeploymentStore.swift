@@ -100,6 +100,11 @@ final class DeploymentStore {
     @ObservationIgnored private var accountPollTimes: [UUID: Date] = [:]
     /// Where each account's rotation resumes: the first scope the last tick left out.
     @ObservationIgnored private var accountRotationCursors: [UUID: Int] = [:]
+    /// How many by-id in-progress re-reads each account's tick can still afford,
+    /// after its chosen scopes' fetches (and, for GitHub, the shared listing).
+    /// Rebuilt every tick in `scopesToPollThisTick`; an account gated this tick
+    /// has no entry, so it re-reads nothing until its next eligible tick.
+    @ObservationIgnored private var inProgressRefreshAllowance: [UUID: Int] = [:]
     @ObservationIgnored private var scopeGenerations: [ScopeRef: Int] = [:]
     @ObservationIgnored private var knownAccountIds: Set<UUID>
     @ObservationIgnored private var makeClient: ClientFactory = { _, _ in nil }
@@ -795,22 +800,37 @@ final class DeploymentStore {
                                 : GitHubClient.maxRunRequestsPerScope
     }
 
+    /// This account's share of the hourly limit for one tick, before any
+    /// reserve is taken out of it.
+    private func tickShare(for account: Account, interval: Int) -> Int {
+        ScopePollBudget.tickRequestBudget(pollIntervalSeconds: interval,
+                                          hourlyLimit: hourlyLimit(for: account))
+    }
+
+    /// The shared GitHub repository listing this tick reserves, given the
+    /// scopes it is choosing among (or, for the allowance, the scopes it chose).
+    private func listingReserve(for account: Account, scopes: [Scope]) -> Int {
+        guard account.provider == .github, scopes.contains(where: { $0.teamId != nil }) else { return 0 }
+        return GitHubClient.maxRepoListingRequests
+    }
+
     /// Requests a tick leaves for the account's scope fetches: its share of the
     /// hourly limit, less what the tick spends besides — the shared GitHub
-    /// repository listing and the by-id re-reads of in-progress runs.
+    /// repository listing and the by-id re-reads of in-progress runs. Packing
+    /// still reserves the in-progress re-reads so normal ticks leave them room;
+    /// `scopesToPollThisTick` computes the real, post-packing allowance below.
     private func requestBudget(for account: Account, scopes: [Scope], interval: Int) -> Int {
-        let tick = ScopePollBudget.tickRequestBudget(pollIntervalSeconds: interval,
-                                                     hourlyLimit: hourlyLimit(for: account))
+        let tick = tickShare(for: account, interval: interval)
         guard account.provider == .github else { return tick }
-        let listing = scopes.contains { $0.teamId != nil } ? GitHubClient.maxRepoListingRequests : 0
         let inProgress = lastGood.filter { $0.key.accountId == account.id }.values
             .reduce(0) { $0 + $1.deployments.filter(\.state.isInProgress).count }
-        return tick - listing - min(inProgress, Self.maxInProgressRefreshesPerTick)
+        return tick - listingReserve(for: account, scopes: scopes) - min(inProgress, Self.maxInProgressRefreshesPerTick)
     }
 
     /// Only advance an account's rotation when it can actually afford a fetch.
     /// A tick then takes as many scopes, in rotation order, as its budget covers.
     private func scopesToPollThisTick() -> [Scope] {
+        inProgressRefreshAllowance = [:]
         let byAccount = Dictionary(grouping: availableScopes, by: { $0.account.id })
         return byAccount.flatMap { accountId, scopes -> [Scope] in
             guard let account = account(accountId) else { return [] }
@@ -823,12 +843,20 @@ final class DeploymentStore {
             // The first tick starts one past the account scope, where the
             // tick-indexed rotation this replaced began.
             let start = accountRotationCursors[accountId, default: 1] % scopes.count
+            let costs = scopes.map(estimatedCost(of:))
             let count = ScopePollBudget.packedCount(
-                costs: scopes.map(estimatedCost(of:)), start: start,
+                costs: costs, start: start,
                 budget: requestBudget(for: account, scopes: scopes, interval: interval))
             accountRotationCursors[accountId] = (start + count) % scopes.count
-            if count == scopes.count { return scopes }
-            return (0..<count).map { scopes[(start + $0) % scopes.count] }
+            let chosen = count == scopes.count ? scopes
+                                                : (0..<count).map { scopes[(start + $0) % scopes.count] }
+            // What this tick actually spent on fetches (plus the listing, if an
+            // organization is among them) is fixed now; whatever remains of the
+            // account's share is what the in-progress re-reads may spend.
+            let spent = listingReserve(for: account, scopes: chosen)
+                + (0..<count).reduce(0) { $0 + costs[(start + $1) % scopes.count] }
+            inProgressRefreshAllowance[accountId] = max(0, tickShare(for: account, interval: interval) - spent)
+            return chosen
         }
     }
 
@@ -1085,6 +1113,7 @@ final class DeploymentStore {
         consecutiveAuthFailures = consecutiveAuthFailures.filter { liveIds.contains($0.key.accountId) }
         accountPollTimes = accountPollTimes.filter { liveIds.contains($0.key) }
         accountRotationCursors = accountRotationCursors.filter { liveIds.contains($0.key) }
+        inProgressRefreshAllowance = inProgressRefreshAllowance.filter { liveIds.contains($0.key) }
     }
 
     /// Upper bound on by-id re-reads per tick. Each costs one request, so a
@@ -1095,18 +1124,29 @@ final class DeploymentStore {
     /// Re-reads, by id, the in-progress rows of every scope with no fresh
     /// result this tick, and patches `lastGood` so the replay shows real state.
     /// Best-effort: a failed re-read keeps the last-known row.
+    ///
+    /// Bounded twice over: the global cap guards against a burst of parallel
+    /// CI runs blowing through the provider's budget regardless of account,
+    /// and each account's `inProgressRefreshAllowance` — what its own tick's
+    /// share has left after its chosen scopes' fetches — keeps a tick that
+    /// spent most of its share on one costly scope (the personal scope, say)
+    /// from adding unbudgeted re-reads on top.
     private func refreshInProgressRows(skipping fresh: Set<ScopeRef>,
                                        generations: [ScopeRef: Int]) async {
         var remaining = Self.maxInProgressRefreshesPerTick
+        var allowance = inProgressRefreshAllowance
         var work: [(ref: ScopeRef, client: DeploymentProviderClient, rows: [Deployment])] = []
         for scope in availableScopes where remaining > 0 {
             let ref = ScopeRef(accountId: scope.account.id, teamId: scope.teamId)
-            guard !fresh.contains(ref),
+            let accountAllowance = allowance[ref.accountId] ?? 0
+            guard accountAllowance > 0,
+                  !fresh.contains(ref),
                   let live = lastGood[ref]?.deployments.filter({ $0.state.isInProgress }),
                   !live.isEmpty,
                   let client = makeClient(scope.account, scope.teamId) else { continue }
-            let rows = Array(live.prefix(remaining))
+            let rows = Array(live.prefix(min(remaining, accountAllowance)))
             remaining -= rows.count
+            allowance[ref.accountId] = accountAllowance - rows.count
             work.append((ref, client, rows))
         }
         guard !work.isEmpty else { return }
