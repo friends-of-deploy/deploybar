@@ -63,6 +63,7 @@ struct DeployBarApp: App {
     var body: some Scene {
         MenuBarExtra {
             MenuBarContentView(store: store, openOnboarding: { onboarding.present() })
+                .environment(\.providerRegistry, store.registry)
                 .task {
                     store.start()
                 }
@@ -73,6 +74,7 @@ struct DeployBarApp: App {
 
         Settings {
             SettingsView(settings: settings, store: store, accountStore: accountStore, updater: updater, openOnboarding: { onboarding.present() })
+                .environment(\.providerRegistry, store.registry)
         }
     }
 }

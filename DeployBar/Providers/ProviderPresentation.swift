@@ -1,7 +1,7 @@
 import Foundation
 
 /// How a provider's rows talk about a run: a deploy is "deployed", a CI run "passed".
-enum RunVocabulary: Sendable {
+enum RunVocabulary: Sendable, Equatable {
     case deployments
     case ciRuns
 }

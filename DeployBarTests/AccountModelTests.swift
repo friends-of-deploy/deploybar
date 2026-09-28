@@ -2,10 +2,11 @@ import XCTest
 @testable import DeployBar
 
 final class AccountModelTests: XCTestCase {
-    func test_provider_implementedProviders() {
-        XCTAssertTrue(Provider.vercel.isImplemented)
-        XCTAssertTrue(Provider.github.isImplemented)
-        XCTAssertFalse(Provider.azureDevOps.isImplemented)
+    func test_registryDecidesWhichProvidersAreAvailable() {
+        let registry = ProviderRegistry.live()
+        XCTAssertTrue(registry.isAvailable(.vercel))
+        XCTAssertTrue(registry.isAvailable(.github))
+        XCTAssertFalse(registry.isAvailable(.azureDevOps))
     }
 
     func test_provider_displayNames() {

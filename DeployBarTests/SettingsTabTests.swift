@@ -57,11 +57,14 @@ final class AccountDetailTabTests: XCTestCase {
 final class AccountSourceCaptionTests: XCTestCase {
     @MainActor
     func test_everySourceHasItsOwnCaption() {
+        let accounts = AccountStore(defaults: UserDefaults(suiteName: UUID().uuidString)!,
+                                    credentials: InMemoryCredentialStore(),
+                                    detectCLI: { false }, detectGitHubCLI: { false })
         let captions = [
             Account.vercelCLI(id: UUID(), label: "V"),
             Account.githubCLI(id: UUID(), label: "G"),
             Account(id: UUID(), provider: .vercel, label: "T", source: .keychain(account: "k")),
-        ].map(AccountsSettingsTab.sourceCaption)
+        ].map { AccountsSettingsTab.sourceCaption(for: $0, in: accounts) }
 
         XCTAssertEqual(Set(captions).count, captions.count, "sources must not share a caption")
         XCTAssertFalse(captions.contains(where: \.isEmpty))

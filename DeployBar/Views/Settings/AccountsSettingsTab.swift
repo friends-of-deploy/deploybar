@@ -112,7 +112,7 @@ struct AccountsSettingsTab: View {
                     .lineLimit(1)
                     .truncationMode(.tail)
                 Text(projects.isEmpty
-                     ? Self.sourceCaption(for: account)
+                     ? Self.sourceCaption(for: account, in: accountStore)
                      : String(localized: "\(followed) of \(projects.count) followed",
                               comment: "Accounts sidebar follow count"))
                     .font(.caption)
@@ -140,7 +140,7 @@ struct AccountsSettingsTab: View {
             if let account = selectedAccount {
                 // `.id` re-creates the detail (and its @State segment and
                 // filter) when the selection moves to another account.
-                AccountDetailView(settings: settings, store: store, account: account) { name in
+                AccountDetailView(settings: settings, store: store, account: account, accountStore: accountStore) { name in
                     accountStore.renameAccount(account, label: name)
                 }
                 .id(account.id)
@@ -173,12 +173,8 @@ struct AccountsSettingsTab: View {
         Task { await store.accountsChanged() }
     }
 
-    static func sourceCaption(for account: Account) -> String {
-        switch account.source {
-        case .vercelCLI: return String(localized: "From Vercel CLI", comment: "CLI account source caption")
-        case .githubCLI: return String(localized: "From GitHub CLI", comment: "CLI account source caption")
-        case .keychain:  return String(localized: "Token", comment: "Keychain account source caption")
-        }
+    static func sourceCaption(for account: Account, in accounts: AccountStore) -> String {
+        accounts.strategy(for: account)?.caption ?? ""
     }
 }
 
@@ -190,13 +186,14 @@ private struct AddAccountForm: View {
     @State private var connection = AccountConnectionStore()
     @State private var connectionTask: Task<Void, Never>?
     @State private var label = ""
+    @Environment(\.providerRegistry) private var registry
 
     var body: some View {
         Form {
             Section {
                 Picker(String(localized: "Provider", comment: "Add account provider picker"),
                        selection: $connection.provider) {
-                    ForEach(Provider.allCases.filter(\.isImplemented), id: \.self) { provider in
+                    ForEach(Provider.allCases.filter(registry.isAvailable), id: \.self) { provider in
                         Label(provider.displayName, image: provider.iconAssetName).tag(provider)
                     }
                 }
@@ -209,12 +206,10 @@ private struct AddAccountForm: View {
                 Text(String(localized: "Add account", comment: "Accounts tab add-account section header"))
             } footer: {
                 VStack(alignment: .leading, spacing: 8) {
-                    Link("Create a token ↗", destination: URL(string: connection.provider == .github
-                         ? "https://github.com/settings/personal-access-tokens/new"
-                         : "https://vercel.com/account/settings/tokens")!)
-                    Text(connection.provider == .github
-                         ? "For GitHub, allow read access to your repositories and Actions."
-                         : "Use a Vercel token with access to the projects you want to follow.")
+                    if let presentation = registry.integration(for: connection.provider)?.presentation {
+                        Link("Create a token ↗", destination: presentation.tokenCreationURL)
+                        Text(presentation.tokenHint)
+                    }
                     Label("Stored in macOS Keychain", systemImage: "lock.shield")
                 }
                 .foregroundStyle(.secondary)

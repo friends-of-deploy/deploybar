@@ -9,6 +9,7 @@ struct OnboardingView: View {
     let dismiss: () -> Void
     @State private var movingForward = true
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.providerRegistry) private var registry
 
     private var motion: Animation? {
         reduceMotion ? nil : .spring(response: 0.42, dampingFraction: 0.9)
@@ -88,7 +89,7 @@ struct OnboardingView: View {
                     ? "DeployBar looks for your Vercel and GitHub CLI logins when it starts."
                     : "We found your accounts. You’re ready to follow their deployments.")
             VStack(spacing: 12) {
-                ForEach(Provider.allCases.filter(\.isImplemented), id: \.self) { provider in
+                ForEach(Provider.allCases.filter(registry.isAvailable), id: \.self) { provider in
                     providerCard(provider)
                 }
             }
@@ -119,10 +120,11 @@ struct OnboardingView: View {
             VStack(alignment: .leading, spacing: 5) {
                 Text(provider.displayName).font(.system(size: 14, weight: .semibold))
                 if detected.isEmpty {
-                    Text(provider == .vercel ? "Sign in with vercel login, then restart DeployBar."
-                         : "Sign in with gh auth login, then restart DeployBar.")
-                        .font(.system(size: 11)).foregroundStyle(.secondary)
-                        .fixedSize(horizontal: false, vertical: true)
+                    if let hint = accounts.strategies.first(where: { $0.detectedProvider == provider })?.signInHint {
+                        Text(hint)
+                            .font(.system(size: 11)).foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
                 } else if detected.count == 1 {
                     Text(detected[0].label).font(.system(size: 12)).foregroundStyle(.secondary)
                         .lineLimit(1).help(detected[0].label)

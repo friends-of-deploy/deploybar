@@ -27,6 +27,7 @@ struct AccountDetailView: View {
     let settings: SettingsStore
     let store: DeploymentStore
     let account: Account
+    let accountStore: AccountStore
     let onRename: (String) -> Void
 
     @State private var tab: AccountDetailTab = .information
@@ -81,7 +82,7 @@ struct AccountDetailView: View {
                 LabeledContent(String(localized: "Provider", comment: "Account detail label"),
                                value: account.provider.displayName)
                 LabeledContent(String(localized: "Credential", comment: "Account detail label"),
-                               value: AccountsSettingsTab.sourceCaption(for: account))
+                               value: AccountsSettingsTab.sourceCaption(for: account, in: accountStore))
             } footer: {
                 Text(account.isReadOnly
                      ? String(localized: "Detected from your CLI login. Sign out in Terminal to disconnect it.",

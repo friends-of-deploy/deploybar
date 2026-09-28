@@ -22,6 +22,11 @@ struct ProjectRow: View {
     var ownerLabel: String? = nil
     @State private var hovering = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.providerRegistry) private var registry
+
+    private var presentation: ProviderPresentation? {
+        registry.integration(for: provider)?.presentation
+    }
 
     var body: some View {
         HStack(spacing: 12) {
@@ -145,7 +150,7 @@ struct ProjectRow: View {
     }
 
     private var lastDeployText: String? {
-        let isCI = provider == .github
+        let isCI = presentation?.vocabulary == .ciRuns
         switch displayState {
         case .building, .queued:
             return isCI
@@ -182,11 +187,15 @@ struct ProjectRow: View {
                     .transition(reduceMotion ? .opacity : .move(edge: .trailing).combined(with: .opacity))
             }
 
-            // Overflow menu holds provider-specific deep links.
-            switch provider {
-            case .vercel:      vercelOverflowMenu
-            case .github:      githubOverflowMenu
-            case .azureDevOps: EmptyView()
+            // Overflow menu holds the provider's deep links.
+            if let presentation {
+                overflowMenu {
+                    ForEach(presentation.projectMenuLinks(project, scopeName), id: \.url) { link in
+                        Link(destination: link.url) {
+                            Label { Text(link.title) } icon: { Image(systemName: link.systemImage) }
+                        }
+                    }
+                }
             }
         }
         .foregroundStyle(.secondary)
@@ -213,52 +222,6 @@ struct ProjectRow: View {
                 url: repo,
                 help: String(localized: "Open repository", comment: "Action tooltip")
             )
-        }
-    }
-
-    @ViewBuilder private var githubOverflowMenu: some View {
-        overflowMenu {
-            if let pulls = LinkBuilder.githubPulls(org: project.repoOrg, repo: project.repoName) {
-                Link(destination: pulls) {
-                    Label("Pull requests", systemImage: "arrow.triangle.merge")
-                }
-            }
-            if let issues = LinkBuilder.githubIssues(org: project.repoOrg, repo: project.repoName) {
-                Link(destination: issues) {
-                    Label("Issues", systemImage: "exclamationmark.circle")
-                }
-            }
-            if let settings = LinkBuilder.githubRepoSettings(org: project.repoOrg, repo: project.repoName) {
-                Link(destination: settings) {
-                    Label("Repository settings", systemImage: "gearshape")
-                }
-            }
-        }
-    }
-
-    @ViewBuilder private var vercelOverflowMenu: some View {
-        overflowMenu {
-            if let env = LinkBuilder.projectEnv(scope: scopeName, project: project.name) {
-                Link(destination: env) {
-                    Label("Environment variables", systemImage: "key.fill")
-                }
-            }
-            if project.hasAnalytics,
-               let analytics = LinkBuilder.projectAnalytics(scope: scopeName, project: project.name) {
-                Link(destination: analytics) {
-                    Label("Analytics", systemImage: "chart.bar.xaxis")
-                }
-            }
-            if let settings = LinkBuilder.projectSettings(scope: scopeName, project: project.name) {
-                Link(destination: settings) {
-                    Label("Project settings", systemImage: "gearshape")
-                }
-            }
-            if let dash = LinkBuilder.projectDashboard(scope: scopeName, project: project.name) {
-                Link(destination: dash) {
-                    Label("Vercel dashboard", systemImage: "square.grid.2x2")
-                }
-            }
         }
     }
 

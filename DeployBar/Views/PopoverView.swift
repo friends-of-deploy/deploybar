@@ -189,6 +189,7 @@ enum PopoverMotion {
 private struct TopBar: View {
     @Bindable var store: DeploymentStore
     let openSettings: () -> Void
+    @Environment(\.providerRegistry) private var registry
 
     var body: some View {
         HStack(spacing: 8) {
@@ -274,7 +275,7 @@ private struct TopBar: View {
 
             // Providers with no client yet, named once at the end rather than
             // as an empty section between real accounts.
-            ForEach(Provider.allCases.filter { !$0.isImplemented }, id: \.self) { provider in
+            ForEach(Provider.allCases.filter { !registry.isAvailable($0) }, id: \.self) { provider in
                 Button {} label: {
                     Label(String(localized: "\(provider.displayName) — coming soon",
                                  comment: "Placeholder for unimplemented provider"),
