@@ -132,4 +132,63 @@ final class ScopeSwitchTests: XCTestCase {
         XCTAssertEqual(Set(PopoverView.menuAccounts(store: store).map(\.id)),
                        Set([vercel.id, github.id]))
     }
+
+    // MARK: - Accounts without an account-level scope (Azure DevOps)
+
+    /// A GitHub CLI account plus an Azure DevOps token account following one
+    /// organization, in that connection order — the order that made Azure's
+    /// organization read as one more GitHub organization.
+    private func makeGitHubAndAzureStore() -> (DeploymentStore, Account, Account) {
+        let accountStore = AccountStore(defaults: UserDefaults(suiteName: UUID().uuidString)!,
+                                        credentials: InMemoryCredentialStore(),
+                                        detectCLI: { false }, reloadCLIToken: { nil },
+                                        detectGitHubCLI: { true }, reloadGitHubToken: { "tok" })
+        let github = accountStore.githubCLIAccount!
+        let azure = accountStore.addKeychainAccount(provider: .azureDevOps, label: "Azure DevOps",
+                                                    token: "pat", organization: "pfron-dev")
+        let settings = SettingsStore(defaults: UserDefaults(suiteName: UUID().uuidString)!)
+        let store = DeploymentStore(
+            accountStore: accountStore, settings: settings,
+            makeClient: { _, _ in StubClient() }, authRetryBackoff: .zero)
+        store.setOrganizations([Self.team(id: "8lines", slug: "8lines")], for: github.id)
+        store.setOrganizations([Self.team(id: "pfron-dev", slug: "pfron-dev")], for: azure.id)
+        return (store, github, azure)
+    }
+
+    /// Every account opens with its own header row — the one carrying the
+    /// provider glyph — even when the provider has no account-level scope, so
+    /// its organizations never sit under the previous account's header.
+    func test_accountWithoutAccountScopeStillGetsAHeaderRow() {
+        let (store, _, azure) = makeGitHubAndAzureStore()
+
+        let rows = PopoverView.menuRows(for: azure, store: store)
+
+        XCTAssertEqual(rows.map(\.name), ["Azure DevOps", "pfron-dev"])
+        XCTAssertEqual(rows.map(\.isHeader), [true, false])
+        XCTAssertEqual(rows.map(\.filter), [.account(azure.id),
+                                            .scope(accountId: azure.id, teamId: "pfron-dev")])
+    }
+
+    /// Accounts with an account-level scope keep selecting that scope from
+    /// their header, as before.
+    func test_accountWithAccountScopeHeaderSelectsItsOwnScope() {
+        let (store, github, _) = makeGitHubAndAzureStore()
+
+        let rows = PopoverView.menuRows(for: github, store: store)
+
+        XCTAssertEqual(rows.map(\.isHeader), [true, false])
+        XCTAssertEqual(rows.map(\.filter), [.scope(accountId: github.id, teamId: nil),
+                                            .scope(accountId: github.id, teamId: "8lines")])
+    }
+
+    /// Choosing an organization-only account's header shows all of that
+    /// account's organizations and names the account in the top bar.
+    func test_selectingAnAccountFiltersToItAndNamesIt() {
+        let (store, _, azure) = makeGitHubAndAzureStore()
+
+        store.setFilter(.account(azure.id))
+
+        XCTAssertEqual(store.filter, .account(azure.id))
+        XCTAssertEqual(PopoverView.filterTitle(store: store), "Azure DevOps")
+    }
 }

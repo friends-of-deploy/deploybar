@@ -136,6 +136,54 @@ struct PopoverView: View {
             store.isScopeEnabled(ScopeRef(accountId: account.id, teamId: scope.teamId))
         }
     }
+
+    /// One account's rows in the source menu. Every account opens with a
+    /// header row — the one carrying the provider glyph. A provider without an
+    /// account-level scope (Azure DevOps) has no scope for that row, so its
+    /// header selects all of the account's organizations; without it, those
+    /// organizations sat under the previous account's header and read as its own.
+    static func menuRows(for account: Account, store: DeploymentStore) -> [ScopeMenuRow] {
+        let scopes = menuScopes(for: account, store: store)
+        var rows: [ScopeMenuRow] = []
+        if !scopes.contains(where: { $0.teamId == nil }) {
+            rows.append(ScopeMenuRow(id: "account", name: account.label, isHeader: true,
+                                     filter: .account(account.id)))
+        }
+        for scope in scopes {
+            // Prefer the team's own display name; never fall back to a raw
+            // "team_…" id in the menu.
+            let name = scope.teamName
+                ?? store.rowScopeLabelIgnoringFilter(accountId: account.id, teamId: scope.teamId)
+                ?? account.label
+            rows.append(ScopeMenuRow(id: scope.teamId.map { "scope|\($0)" } ?? "scope",
+                                     name: name, isHeader: scope.teamId == nil,
+                                     filter: .scope(accountId: account.id, teamId: scope.teamId)))
+        }
+        return rows
+    }
+
+    /// The source menu's title: the selected account or scope, else "All sources".
+    static func filterTitle(store: DeploymentStore) -> String {
+        switch store.filter {
+        case .scope(let accountId, let teamId):
+            if let name = store.rowScopeLabelIgnoringFilter(accountId: accountId, teamId: teamId) {
+                return name
+            }
+        case .account(let accountId):
+            if let account = store.account(accountId) { return account.label }
+        case .all, .provider:
+            break
+        }
+        return String(localized: "All sources", comment: "Filter: show every provider and team")
+    }
+}
+
+/// A selectable row of the source menu: an account header or an organization.
+struct ScopeMenuRow: Identifiable {
+    let id: String
+    let name: String
+    let isHeader: Bool
+    let filter: ScopeFilter
 }
 
 enum PopoverTab: CaseIterable {
@@ -220,13 +268,9 @@ private struct TopBar: View {
         .background(.quaternary.opacity(0.4))
     }
 
-    /// Label reflects the selected scope (account + team).
+    /// Label reflects the selected account or scope (account + team).
     private var filterLabel: String {
-        if case .scope(let accountId, let teamId) = store.filter,
-           let name = store.rowScopeLabelIgnoringFilter(accountId: accountId, teamId: teamId) {
-            return name
-        }
-        return String(localized: "All sources", comment: "Filter: show every provider and team")
+        PopoverView.filterTitle(store: store)
     }
 
     private var filterMenu: some View {
@@ -249,25 +293,21 @@ private struct TopBar: View {
             Divider()
 
             ForEach(PopoverView.menuAccounts(store: store)) { account in
-                ForEach(PopoverView.menuScopes(for: account, store: store)) { scope in
-                    let isActive = store.filter == .scope(accountId: account.id,
-                                                          teamId: scope.teamId)
+                ForEach(PopoverView.menuRows(for: account, store: store)) { row in
                     Button {
-                        Task { await store.select(accountId: account.id, teamId: scope.teamId) }
-                    } label: {
-                        // Prefer the team's own display name; never fall
-                        // back to a raw "team_…" id in the menu.
-                        let name = scope.teamName
-                            ?? store.rowScopeLabelIgnoringFilter(accountId: account.id,
-                                                                 teamId: scope.teamId)
-                            ?? account.label
-                        let indented = ScopeMenuLabel.text(name, isTeam: scope.teamId != nil)
-                        if isActive {
-                            Label(indented, systemImage: "checkmark")
-                        } else if scope.teamId == nil {
-                            Label(indented, image: account.provider.iconAssetName)
+                        if case .scope(let accountId, let teamId) = row.filter {
+                            Task { await store.select(accountId: accountId, teamId: teamId) }
                         } else {
-                            Text(indented)
+                            store.setFilter(row.filter)
+                        }
+                    } label: {
+                        let text = ScopeMenuLabel.text(row.name, isTeam: !row.isHeader)
+                        if store.filter == row.filter {
+                            Label(text, systemImage: "checkmark")
+                        } else if row.isHeader {
+                            Label(text, image: account.provider.iconAssetName)
+                        } else {
+                            Text(text)
                         }
                     }
                 }
