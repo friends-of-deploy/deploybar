@@ -28,7 +28,7 @@ final class WidgetPublisherTests: XCTestCase {
                 WidgetDeployment(id: "d", stateRaw: state, target: nil, branch: nil, shortSha: nil,
                                  message: nil, author: nil,
                                  createdAt: Date(timeIntervalSince1970: 1_700_000_000), buildingAt: nil,
-                                 readyAt: nil, url: nil)])
+                                 readyAt: nil, url: nil)], updatedAt: date)
         ])
     }
 

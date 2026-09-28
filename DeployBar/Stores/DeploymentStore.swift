@@ -155,6 +155,15 @@ final class DeploymentStore {
     /// is published until a real fetch lands.
     @ObservationIgnored private var lastFreshPollAt: Date?
 
+    /// When each scope last fetched successfully — a project's widget
+    /// `updatedAt` comes from here rather than the shared `generatedAt`, so one
+    /// scope's success can't make another scope's replayed (or still-failing)
+    /// rows read as fresh. Pruned alongside `lastGood`.
+    @ObservationIgnored private var scopeFetchedAt: [ScopeRef: Date] = [:]
+    /// When the launch cache used to seed `restoreCachedRows()` was saved —
+    /// the `updatedAt` fallback for a scope not yet polled after launch.
+    @ObservationIgnored private var restoredRowsSavedAt: Date?
+
     /// Number of consecutive auth failures before we declare an account logged out.
     private static let authFailureThreshold = 3
 
@@ -204,6 +213,7 @@ final class DeploymentStore {
             .compactMap { $0.restore(accounts: byId) }
             .sorted(by: SourcedProject.displayOrder)
         guard !unfilteredDeployments.isEmpty || !unfilteredProjects.isEmpty else { return }
+        restoredRowsSavedAt = cache.savedAt
 
         // Seed the replay store as well as the notification baseline: the first
         // budgeted tick may not fetch most of the restored scopes.
@@ -666,6 +676,7 @@ final class DeploymentStore {
         let ref = ScopeRef(accountId: accountId, teamId: teamId)
         scopeGenerations[ref, default: 0] += 1
         lastGood.removeValue(forKey: ref)
+        scopeFetchedAt.removeValue(forKey: ref)
         unfilteredDeployments.removeAll { $0.scope == ref }
         unfilteredProjects.removeAll { $0.scope == ref }
         scopeErrors.removeValue(forKey: ref)
@@ -785,6 +796,7 @@ final class DeploymentStore {
                 case .success(let (deps, projs)):
                     consecutiveAuthFailures[ref] = 0
                     freshSuccessCount += 1
+                    scopeFetchedAt[ref] = now()
                     let res = ScopeResult(account: scope.account, teamId: scope.teamId,
                                           deployments: deps, projects: projs)
                     if lastGood[ref] == nil { firstSuccessScopes.insert(ref) }
@@ -918,6 +930,7 @@ final class DeploymentStore {
         // replayed next tick.
         let liveScopes = Set(availableScopes.map { ScopeRef(accountId: $0.account.id, teamId: $0.teamId) })
         lastGood = lastGood.filter { liveIds.contains($0.key.accountId) && liveScopes.contains($0.key) }
+        scopeFetchedAt = scopeFetchedAt.filter { liveIds.contains($0.key.accountId) && liveScopes.contains($0.key) }
         consecutiveAuthFailures = consecutiveAuthFailures.filter { liveIds.contains($0.key.accountId) }
         planner.prune(keeping: liveIds)
     }
@@ -1040,7 +1053,10 @@ final class DeploymentStore {
         let projects = unfilteredProjects.filter { isScopeEnabled($0.scope) && isFollowed($0) }
         widgetPublisher.publish(WidgetSnapshotBuilder.build(
             projects: projects, deployments: unfilteredDeployments,
-            dashboardURL: { projectPageURL(for: $0) }, generatedAt: asOf))
+            dashboardURL: { projectPageURL(for: $0) }, generatedAt: asOf,
+            updatedAt: { [scopeFetchedAt, restoredRowsSavedAt] sp in
+                scopeFetchedAt[sp.scope] ?? restoredRowsSavedAt ?? .distantPast
+            }))
     }
 
     /// The provider's page for a project. The owner label (e.g. a Vercel

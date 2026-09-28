@@ -12,9 +12,11 @@ final class WidgetSelectionTests: XCTestCase {
                          buildingAt: nil, readyAt: nil, url: url.flatMap(URL.init(string:)))
     }
 
-    private func project(_ key: String, _ deps: [WidgetDeployment], dashboard: String? = nil) -> WidgetProject {
+    private func project(_ key: String, _ deps: [WidgetDeployment], dashboard: String? = nil,
+                         updatedAt: Date? = nil) -> WidgetProject {
         WidgetProject(key: key, name: key, provider: .vercel,
-                      dashboardURL: dashboard.flatMap(URL.init(string:)), deployments: deps)
+                      dashboardURL: dashboard.flatMap(URL.init(string:)), deployments: deps,
+                      updatedAt: updatedAt ?? t0)
     }
 
     // MARK: Staleness
@@ -102,5 +104,20 @@ final class WidgetSelectionTests: XCTestCase {
         ])
         let keys = WidgetSelection.projects(chosenKeys: [], in: snap, limit: 2).map(\.key)
         XCTAssertEqual(keys, ["new", "old"])
+    }
+
+    // MARK: dataAsOf
+
+    func test_dataAsOf_returnsOldestUpdatedAt() {
+        let projects = [
+            project("a", [], updatedAt: t0.addingTimeInterval(100)),
+            project("b", [], updatedAt: t0),
+            project("c", [], updatedAt: t0.addingTimeInterval(50)),
+        ]
+        XCTAssertEqual(WidgetSelection.dataAsOf(projects), t0)
+    }
+
+    func test_dataAsOf_emptyIsNil() {
+        XCTAssertNil(WidgetSelection.dataAsOf([]))
     }
 }

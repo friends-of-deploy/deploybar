@@ -56,8 +56,11 @@ struct ProjectsProvider: AppIntentTimelineProvider {
         } else {
             content = chosen.isEmpty ? .noProjects : .missing
         }
-        return WidgetSelection.timelineMarks(generatedAt: snapshot.generatedAt, now: now).map {
-            ProjectsEntry(date: $0.date, content: content, generatedAt: snapshot.generatedAt, isStale: $0.isStale)
+        guard let asOf = WidgetSelection.dataAsOf(projects) else {
+            return [ProjectsEntry(date: now, content: content, generatedAt: nil, isStale: false)]
+        }
+        return WidgetSelection.timelineMarks(generatedAt: asOf, now: now).map {
+            ProjectsEntry(date: $0.date, content: content, generatedAt: asOf, isStale: $0.isStale)
         }
     }
 }

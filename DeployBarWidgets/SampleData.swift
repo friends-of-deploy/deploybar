@@ -19,16 +19,16 @@ extension WidgetSnapshot {
                 dep("c3d4e5f6", "READY", 180, "chore: bump dependencies", branch: "deps", target: "preview"),
                 dep("d4e5f6a7", "ERROR", 300, "feat: try edge caching", branch: "exp/edge", target: "preview"),
                 dep("e5f6a7b8", "READY", 1500, "docs: update README"),
-            ]),
+            ], updatedAt: now),
             WidgetProject(key: "sample|api", name: "api", provider: .github,
                           dashboardURL: URL(string: "https://example.com/api"), deployments: [
-                dep("f6a7b8c9", "READY", 70, "fix: paginate order export")]),
+                dep("f6a7b8c9", "READY", 70, "fix: paginate order export")], updatedAt: now),
             WidgetProject(key: "sample|docs", name: "docs", provider: .vercel,
                           dashboardURL: nil, deployments: [
-                dep("a7b8c9d0", "ERROR", 200, "chore: migrate search index")]),
+                dep("a7b8c9d0", "ERROR", 200, "chore: migrate search index")], updatedAt: now),
             WidgetProject(key: "sample|marketing", name: "marketing", provider: .vercel,
                           dashboardURL: nil, deployments: [
-                dep("b8c9d0e1", "READY", 2900, "feat: autumn campaign")]),
+                dep("b8c9d0e1", "READY", 2900, "feat: autumn campaign")], updatedAt: now),
         ])
     }
 }

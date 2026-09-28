@@ -6,11 +6,15 @@ enum WidgetSnapshotBuilder {
 
     /// - Parameter projects: already narrowed to followed projects of enabled
     ///   scopes — the builder publishes whatever it's given.
-    /// - Parameter generatedAt: when the data was fetched, not "now".
+    /// - Parameter generatedAt: when the snapshot was built/published, not
+    ///   when any particular project's scope was last fetched.
+    /// - Parameter updatedAt: when a project's own scope was last fetched
+    ///   successfully — each project's per-scope freshness clock.
     static func build(projects: [SourcedProject],
                       deployments: [SourcedDeployment],
                       dashboardURL: (SourcedProject) -> URL?,
-                      generatedAt: Date) -> WidgetSnapshot {
+                      generatedAt: Date,
+                      updatedAt: (SourcedProject) -> Date) -> WidgetSnapshot {
         let items = projects.deduplicated(by: \.key).map { sp in
             // Same association as `DeploymentStore.latestDeployment(for:)`.
             let deps = deployments
@@ -21,7 +25,8 @@ enum WidgetSnapshotBuilder {
                 .map(widgetDeployment)
             return WidgetProject(key: sp.key.storageString, name: sp.project.name,
                                  provider: sp.account.provider,
-                                 dashboardURL: dashboardURL(sp), deployments: deps)
+                                 dashboardURL: dashboardURL(sp), deployments: deps,
+                                 updatedAt: updatedAt(sp))
         }
         return WidgetSnapshot(generatedAt: generatedAt, projects: items)
     }

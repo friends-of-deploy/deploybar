@@ -11,12 +11,13 @@ final class WidgetSnapshotTests: XCTestCase {
                          url: URL(string: "https://vercel.com/acme/web/abc"))
     }
 
-    private func snapshot(at date: Date, state: String = "READY") -> WidgetSnapshot {
+    private func snapshot(at date: Date, state: String = "READY", updatedAt: Date? = nil) -> WidgetSnapshot {
         WidgetSnapshot(generatedAt: date, projects: [
             WidgetProject(key: "vercel|\(UUID(uuidString: "00000000-0000-0000-0000-000000000001")!.uuidString)|prj_1",
                           name: "web", provider: .vercel,
                           dashboardURL: URL(string: "https://vercel.com/acme/web"),
-                          deployments: [deployment("d1", state: state)])
+                          deployments: [deployment("d1", state: state)],
+                          updatedAt: updatedAt ?? date)
         ])
     }
 
@@ -42,6 +43,14 @@ final class WidgetSnapshotTests: XCTestCase {
         let b = snapshot(at: Date(timeIntervalSince1970: 2))
         XCTAssertTrue(a.hasSameContent(as: b))
         XCTAssertFalse(a.hasSameContent(as: snapshot(at: Date(timeIntervalSince1970: 1), state: "ERROR")))
+    }
+
+    /// A project's `updatedAt` moving (a fresh poll for its scope) must not by
+    /// itself count as a content change, or every poll would trigger a reload.
+    func test_sameContentIgnoresProjectUpdatedAt() {
+        let a = snapshot(at: Date(timeIntervalSince1970: 1), updatedAt: Date(timeIntervalSince1970: 100))
+        let b = snapshot(at: Date(timeIntervalSince1970: 1), updatedAt: Date(timeIntervalSince1970: 200))
+        XCTAssertTrue(a.hasSameContent(as: b))
     }
 
     func test_deploymentStateComesFromRaw() {

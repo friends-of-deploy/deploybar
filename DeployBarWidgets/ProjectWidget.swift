@@ -39,13 +39,17 @@ struct ProjectProvider: AppIntentTimelineProvider {
         }
         let key = configuration.project?.id
         let content: ProjectEntry.Content
-        if let project = WidgetSelection.project(forKey: key, in: snapshot) {
+        let project = WidgetSelection.project(forKey: key, in: snapshot)
+        if let project {
             content = .project(project)
         } else {
             content = key == nil ? .noProjects : .missing
         }
-        return WidgetSelection.timelineMarks(generatedAt: snapshot.generatedAt, now: now).map {
-            ProjectEntry(date: $0.date, content: content, generatedAt: snapshot.generatedAt, isStale: $0.isStale)
+        guard let asOf = project?.updatedAt else {
+            return [ProjectEntry(date: now, content: content, generatedAt: nil, isStale: false)]
+        }
+        return WidgetSelection.timelineMarks(generatedAt: asOf, now: now).map {
+            ProjectEntry(date: $0.date, content: content, generatedAt: asOf, isStale: $0.isStale)
         }
     }
 }

@@ -21,9 +21,13 @@ struct WidgetSnapshot: Codable, Equatable, Sendable {
         self.projects = projects
     }
 
-    /// Equal apart from `generatedAt`: the publisher's "did anything change" test.
+    /// Equal apart from `generatedAt` and each project's `updatedAt`: the
+    /// publisher's "did anything change" test. A project's `updatedAt` moves on
+    /// every successful poll of its scope even when nothing else about it
+    /// changed, so counting it as content would trigger a reload every tick.
     func hasSameContent(as other: WidgetSnapshot) -> Bool {
-        version == other.version && projects == other.projects
+        version == other.version
+            && projects.map(\.withoutUpdatedAt) == other.projects.map(\.withoutUpdatedAt)
     }
 
     static func decode(_ data: Data) -> WidgetSnapshot? {
@@ -45,8 +49,19 @@ struct WidgetProject: Codable, Equatable, Sendable, Identifiable {
     var dashboardURL: URL?
     /// Newest first.
     var deployments: [WidgetDeployment]
+    /// When this project's scope was last fetched successfully — the widgets'
+    /// per-project staleness clock, distinct from the snapshot-wide
+    /// `generatedAt` (which one scope's success can bump for every project,
+    /// including a different scope's replayed rows).
+    var updatedAt: Date
 
     var id: String { key }
+
+    fileprivate var withoutUpdatedAt: WidgetProject {
+        var copy = self
+        copy.updatedAt = .distantPast
+        return copy
+    }
 }
 
 struct WidgetDeployment: Codable, Equatable, Sendable, Identifiable {

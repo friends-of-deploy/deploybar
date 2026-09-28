@@ -104,6 +104,49 @@ final class WidgetPublishingTests: XCTestCase {
         XCTAssertTrue(r.written.isEmpty, "an offline tick must not replace good data or refresh generatedAt")
     }
 
+    /// Account A stays healthy across two polls; account B's client fails on
+    /// the second. A's project must show the second poll's time while B's
+    /// project keeps the first poll's time — a global `generatedAt` would
+    /// wrongly present B's replayed rows as just-fetched.
+    func test_perProjectUpdatedAtTracksItsOwnScopesLastSuccess() async throws {
+        let (accounts, settings) = makeStores()
+        let accountA = accounts.addKeychainAccount(provider: .vercel, label: "A", token: "ta")
+        let accountB = accounts.addKeychainAccount(provider: .vercel, label: "B", token: "tb")
+        let r = Recorder()
+        var clock = Date(timeIntervalSince1970: 1_700_000_000)
+        var bShouldFail = false
+        // A's deployment set changes between polls so the second poll's
+        // snapshot is a genuine content change — WidgetPublisher itself skips
+        // rewriting an unchanged snapshot inside the heartbeat window, which is
+        // orthogonal to what this test checks (per-project `updatedAt`).
+        let secondBuilding = Deployment(uid: "d2", name: "web", stateRaw: "READY",
+                                        url: "web-2.vercel.app", createdAt: 2_000)
+        var aHasNewDeploy = false
+        let store = DeploymentStore(
+            accountStore: accounts, settings: settings,
+            makeClient: { account, _ in
+                if account.id == accountA.id {
+                    return StubClient(deps: aHasNewDeploy ? [secondBuilding] : [], projs: [web])
+                }
+                return StubClient(projs: [api], fail: bShouldFail)
+            },
+            now: { clock }, authRetryBackoff: .zero, widgetPublisher: publisher(r))
+
+        await store.poll()
+        let firstPollTime = clock
+        clock += 60
+        bShouldFail = true
+        aHasNewDeploy = true
+        await store.poll()
+
+        let projects = try XCTUnwrap(r.written.last?.projects)
+        let webProject = try XCTUnwrap(projects.first { $0.name == "web" })
+        let apiProject = try XCTUnwrap(projects.first { $0.name == "api" })
+        XCTAssertEqual(webProject.updatedAt, clock, "A's scope was fetched successfully this tick")
+        XCTAssertEqual(apiProject.updatedAt, firstPollTime,
+                       "B's scope failed this tick — its rows are replayed from the first poll")
+    }
+
     func test_restoredCacheAloneDoesNotPublish() async {
         let suite = UUID().uuidString
         let (accounts, settings) = makeStores(suite: suite)

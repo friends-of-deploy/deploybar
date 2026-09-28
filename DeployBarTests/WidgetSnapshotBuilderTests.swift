@@ -20,10 +20,11 @@ final class WidgetSnapshotBuilderTests: XCTestCase {
         SourcedProject(project: Project(id: id, name: name), account: account)
     }
 
-    private func build(_ projects: [SourcedProject], _ deployments: [SourcedDeployment]) -> WidgetSnapshot {
+    private func build(_ projects: [SourcedProject], _ deployments: [SourcedDeployment],
+                      updatedAt: ((SourcedProject) -> Date)? = nil) -> WidgetSnapshot {
         WidgetSnapshotBuilder.build(projects: projects, deployments: deployments,
                                     dashboardURL: { URL(string: "https://dash/\($0.project.name)") },
-                                    generatedAt: asOf)
+                                    generatedAt: asOf, updatedAt: updatedAt ?? { _ in self.asOf })
     }
 
     func test_mapsProjectAndDeploymentFields() throws {
@@ -71,6 +72,13 @@ final class WidgetSnapshotBuilderTests: XCTestCase {
     /// GitHub/Azure DevOps put the branch name into `target`; only Vercel's
     /// "production"/"preview" are meaningful to `targetText`. Anything else
     /// (a branch name) must publish as nil, not be shown as "Preview".
+    func test_projectUpdatedAtComesFromTheUpdatedAtParameter() {
+        let perProjectTime = Date(timeIntervalSince1970: 1_650_000_000)
+        let snap = build([sp(vercel, id: "p", name: "web")], [], updatedAt: { _ in perProjectTime })
+        XCTAssertEqual(snap.projects.first?.updatedAt, perProjectTime)
+        XCTAssertEqual(snap.generatedAt, asOf, "generatedAt stays the snapshot's build/publish time")
+    }
+
     func test_targetIsPublishedOnlyForKnownValues() {
         let branchDeployment = Deployment(uid: "d1", name: "web", stateRaw: "READY", target: "main",
                                           url: "d1.vercel.app", createdAt: 1)

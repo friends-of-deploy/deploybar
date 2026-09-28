@@ -19,6 +19,13 @@ enum WidgetSelection {
         now.timeIntervalSince(generatedAt) >= staleAfter
     }
 
+    /// A widget's staleness clock covers several projects at once (the Projects
+    /// widget's grid), so it uses the oldest of their `updatedAt` — the one
+    /// most likely to be showing replayed data.
+    static func dataAsOf(_ projects: [WidgetProject]) -> Date? {
+        projects.map(\.updatedAt).min()
+    }
+
     /// A fresh entry now plus a pre-scheduled stale one, so a widget whose app
     /// has quit turns stale on its own without spending a reload.
     static func timelineMarks(generatedAt: Date, now: Date) -> [WidgetTimelineMark] {
