@@ -2,7 +2,7 @@
   "sourceLanguage" : "en",
   "strings" : {
     "%@" : { "shouldTranslate" : false },
-    "%@ (last known)" : { "comment" : "Widget: a state reported before DeployBar stopped updating, e.g. 'Building (last known)'", "localizations" : { "pl" : { "stringUnit" : { "state" : "translated", "value" : "%@ (ostatnio znany)" } } } },
+    "%@ (last known)" : { "comment" : "Widget: a state reported before DeployBar stopped updating, e.g. 'Building (last known)'", "localizations" : { "pl" : { "stringUnit" : { "state" : "translated", "value" : "%@ (ostatni znany stan)" } } } },
     "Building" : { "comment" : "Deployment state badge", "localizations" : { "pl" : { "stringUnit" : { "state" : "translated", "value" : "Budowanie" } } } },
     "Canceled" : { "comment" : "Deployment state badge", "localizations" : { "pl" : { "stringUnit" : { "state" : "translated", "value" : "Anulowano" } } } },
     "Error" : { "comment" : "Deployment state badge", "localizations" : { "pl" : { "stringUnit" : { "state" : "translated", "value" : "Błąd" } } } },
