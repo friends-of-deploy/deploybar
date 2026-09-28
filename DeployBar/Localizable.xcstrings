@@ -1392,6 +1392,17 @@
         }
       }
     },
+    "Organization (optional)" : {
+      "comment" : "Add account organization field",
+      "localizations" : {
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Organizacja (opcjonalnie)"
+          }
+        }
+      }
+    },
     "Personal" : {
       "comment" : "Personal (non-team) scope",
       "localizations" : {
@@ -1552,6 +1563,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Zespół"
+          }
+        }
+      }
+    },
+    "This token only works inside one organization. Enter its name above." : {
+      "comment" : "Add account error: the token is limited to one organization",
+      "localizations" : {
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ten token działa tylko w jednej organizacji. Wpisz jej nazwę powyżej."
           }
         }
       }

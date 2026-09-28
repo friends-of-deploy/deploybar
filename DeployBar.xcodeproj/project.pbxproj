@@ -102,6 +102,7 @@
 		8238C467492181FA51A58319 /* AccountOrganizationsForm.swift in Sources */ = {isa = PBXBuildFile; fileRef = 83A3B2C618AC1E0F26C73B7F /* AccountOrganizationsForm.swift */; };
 		8287B79E9666CA42E33C5850 /* DeploymentStore+Testing.swift in Sources */ = {isa = PBXBuildFile; fileRef = D287D50C4E8F76345539F508 /* DeploymentStore+Testing.swift */; };
 		82905EAD561366D3A23C86D3 /* ProviderRegistry+Environment.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60AD7DBED4A73A32D9D9FFCC /* ProviderRegistry+Environment.swift */; };
+		85D3D4AF7045176ABE650A12 /* AccountConnectionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E76EB637D7C7206C8F20C12B /* AccountConnectionTests.swift */; };
 		8704B12027E7B7EA157C0915 /* ProviderPresentation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 071F0B108FE7804DDDDE9C7E /* ProviderPresentation.swift */; };
 		875C4378FE25F1739A58AD42 /* Provider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 08CB8CC4D570FB5256D83340 /* Provider.swift */; };
 		88ACCA45695CE12422DFB8B2 /* IconActionButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = 521936E65E32DAABFE8B7FAC /* IconActionButton.swift */; };
@@ -378,6 +379,7 @@
 		DD43A2A6C53DEA9D5514D087 /* DeployBar.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = DeployBar.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		E40F36E39BA8022AA11834F2 /* UpdatesSettingsTab.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UpdatesSettingsTab.swift; sourceTree = "<group>"; };
 		E5D884F439BE54EF96C14DB8 /* InProgressRefreshTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InProgressRefreshTests.swift; sourceTree = "<group>"; };
+		E76EB637D7C7206C8F20C12B /* AccountConnectionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountConnectionTests.swift; sourceTree = "<group>"; };
 		E87C0A46EA1C79D07E3FBC9C /* PopoverPanelStyler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PopoverPanelStyler.swift; sourceTree = "<group>"; };
 		EA73E687687856CF1DD1B94D /* VercelCLICredential.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VercelCLICredential.swift; sourceTree = "<group>"; };
 		ECB5A270A7B7428A8E5C8A40 /* StatusDot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatusDot.swift; sourceTree = "<group>"; };
@@ -491,6 +493,7 @@
 		4A1AD695F4A839C696A25102 /* DeployBarTests */ = {
 			isa = PBXGroup;
 			children = (
+				E76EB637D7C7206C8F20C12B /* AccountConnectionTests.swift */,
 				C3572794A64768D07CE7BA51 /* AccountModelTests.swift */,
 				B01AF41FD9513EF103ADFE16 /* AccountRemovalCacheTests.swift */,
 				8744201D53B972B1BBA7A89E /* AccountStoreTests.swift */,
@@ -983,6 +986,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				85D3D4AF7045176ABE650A12 /* AccountConnectionTests.swift in Sources */,
 				163121D8D43345AC9382E75C /* AccountModelTests.swift in Sources */,
 				69C57998E8C14E6B83A40D5D /* AccountRemovalCacheTests.swift in Sources */,
 				EBA4F1EB81E14AFD31D10F50 /* AccountStoreTests.swift in Sources */,

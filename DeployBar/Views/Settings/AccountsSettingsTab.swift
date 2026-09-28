@@ -9,6 +9,8 @@ struct AccountsSettingsTab: View {
     let store: DeploymentStore
     let accountStore: AccountStore
 
+    @Environment(\.providerRegistry) private var registry
+
     /// What the right pane shows. A pending "add" is a selection state of its
     /// own so the form can replace the detail without a sheet.
     private enum Selection: Hashable {
@@ -130,7 +132,7 @@ struct AccountsSettingsTab: View {
     private var detail: some View {
         switch resolvedSelection {
         case .newAccount:
-            AddAccountForm(accountStore: accountStore) { added in
+            AddAccountForm(accountStore: accountStore, registry: registry) { added in
                 selection = .account(added.id)
                 Task {
                     await store.accountsChanged()
@@ -183,10 +185,16 @@ private struct AddAccountForm: View {
     let accountStore: AccountStore
     let onAdded: (Account) -> Void
 
-    @State private var connection = AccountConnectionStore()
+    @State private var connection: AccountConnectionStore
     @State private var connectionTask: Task<Void, Never>?
     @State private var label = ""
     @Environment(\.providerRegistry) private var registry
+
+    init(accountStore: AccountStore, registry: ProviderRegistry, onAdded: @escaping (Account) -> Void) {
+        self.accountStore = accountStore
+        self.onAdded = onAdded
+        _connection = State(initialValue: AccountConnectionStore(registry: registry))
+    }
 
     var body: some View {
         Form {
@@ -200,6 +208,11 @@ private struct AddAccountForm: View {
                 TextField(String(localized: "Label (optional)", comment: "Add account label field"),
                           text: $label,
                           prompt: Text(connection.provider.displayName))
+                if registry.integration(for: connection.provider)?.presentation.accountFields.contains(.organization) == true {
+                    TextField(String(localized: "Organization (optional)", comment: "Add account organization field"),
+                              text: $connection.organization,
+                              prompt: Text(verbatim: "my-organization"))
+                }
                 SecureField(String(localized: "Token", comment: "Add account token field"),
                             text: $connection.token)
             } header: {

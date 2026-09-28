@@ -49,8 +49,8 @@ final class OnboardingTests: XCTestCase {
 
     func test_verifiedTokenIsTrimmedAndSavedWithAccountIdentity() async {
         let accounts = makeAccounts()
-        let connection = AccountConnectionStore { provider, token in
-            XCTAssertEqual(provider, .github)
+        let connection = AccountConnectionStore { account, token in
+            XCTAssertEqual(account.provider, .github)
             XCTAssertEqual(token, "test-token")
             return "fixture-user"
         }

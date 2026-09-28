@@ -6,16 +6,31 @@ import Observation
 @MainActor
 @Observable
 final class AccountConnectionStore {
-    typealias Validate = (Provider, String) async throws -> String
+    /// Names the account a credential belongs to. `account` is provisional:
+    /// provider and, when entered, organization.
+    typealias Validate = (Account, String) async throws -> String
 
-    var provider: Provider = .vercel { didSet { errorMessage = nil } }
+    var provider: Provider = .vercel {
+        didSet {
+            errorMessage = nil
+            // An organization typed for one provider must never reach another's validation.
+            organization = ""
+        }
+    }
     var token = ""
+    /// Optional organization, for providers that declare `.organization`.
+    var organization = ""
     private(set) var isConnecting = false
     private(set) var errorMessage: String?
     @ObservationIgnored private let validate: Validate
 
-    init(validate: @escaping Validate = AccountConnectionStore.validateToken) {
-        self.validate = validate
+    init(registry: ProviderRegistry = .live(), validate: Validate? = nil) {
+        self.validate = validate ?? { account, token in
+            guard let integration = registry.integration(for: account.provider) else {
+                throw URLError(.unsupportedURL)
+            }
+            return try await integration.identity(for: account, using: .plain(token)).username
+        }
     }
 
     var canConnect: Bool { !isConnecting && !token.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
@@ -25,37 +40,36 @@ final class AccountConnectionStore {
         isConnecting = true
         errorMessage = nil
         defer { isConnecting = false }
-        let selectedProvider = provider
         let credential = token.trimmingCharacters(in: .whitespacesAndNewlines)
+        let enteredOrganization = organization.trimmingCharacters(in: .whitespacesAndNewlines)
+        let draft = Account(id: UUID(), provider: provider, label: "", source: .keychain(account: ""),
+                            organization: enteredOrganization.isEmpty ? nil : enteredOrganization)
         do {
-            let name = try await validate(selectedProvider, credential)
+            let name = try await validate(draft, credential)
             try Task.checkCancellation()
             let customLabel = label.trimmingCharacters(in: .whitespacesAndNewlines)
-            let account = accounts.addKeychainAccount(provider: selectedProvider,
+            let account = accounts.addKeychainAccount(provider: draft.provider,
                                                       label: customLabel.isEmpty ? name : customLabel,
-                                                      token: credential)
+                                                      token: credential,
+                                                      organization: draft.organization)
             guard accounts.token(for: account) == credential else {
                 accounts.removeAccount(account)
                 errorMessage = String(localized: "Your token couldn’t be saved in Keychain. Unlock your Mac and try again.")
                 return nil
             }
             token = ""
+            organization = ""
             return account
         } catch is CancellationError {
+            return nil
+        } catch AccountValidationError.organizationRequired {
+            errorMessage = String(localized: "This token only works inside one organization. Enter its name above.",
+                                  comment: "Add account error: the token is limited to one organization")
             return nil
         } catch {
             // Never surface raw network diagnostics that might contain credentials.
             errorMessage = String(localized: "Couldn’t connect. Check your token, its permissions, and your internet connection, then try again.")
             return nil
         }
-    }
-
-    private static func validateToken(provider: Provider, token: String) async throws -> String {
-        guard let integration = ProviderRegistry.live().integration(for: provider) else {
-            throw URLError(.unsupportedURL)
-        }
-        return try await integration.identity(
-            for: Account(id: UUID(), provider: provider, label: "", source: .keychain(account: "")),
-            using: .plain(token)).username
     }
 }

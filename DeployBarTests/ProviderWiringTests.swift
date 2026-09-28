@@ -126,7 +126,7 @@ final class ProviderWiringTests: XCTestCase {
         let accounts = AccountStore(defaults: UserDefaults(suiteName: UUID().uuidString)!,
                                     credentials: InMemoryCredentialStore(),
                                     detectCLI: { false }, detectGitHubCLI: { false })
-        let connection = AccountConnectionStore()
+        let connection = AccountConnectionStore(registry: ProviderRegistry([VercelIntegration(), GitHubIntegration()]))
         connection.provider = .azureDevOps
         connection.token = "pat"
 
