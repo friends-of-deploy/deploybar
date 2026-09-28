@@ -3,6 +3,21 @@
 Release notes for DeployBar. Earlier releases are available on
 [GitHub Releases](https://github.com/friends-of-deploy/deploybar/releases).
 
+## [1.3.0-beta.2] - 2026-09-28
+
+DeployBar 1.3 beta 2 fixes where Azure DevOps organizations appear in the
+source menu.
+
+### Source menu
+
+- An Azure DevOps account now has its own row with the Azure DevOps icon, and
+  its organizations are listed beneath it. They used to appear under the
+  account above, so they looked like GitHub organizations.
+- Choosing the Azure DevOps account row shows all of that account's
+  organizations at once; the top bar then names the account.
+
+[Full changes since 1.3.0-beta.1](https://github.com/friends-of-deploy/deploybar/compare/v1.3.0-beta.1...v1.3.0-beta.2)
+
 ## [1.3.0-beta.1] - 2026-09-28
 
 DeployBar 1.3 beta 1 puts your deploys on the desktop and in Notification
