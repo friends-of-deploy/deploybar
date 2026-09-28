@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		016AFD377DEC5B02FD4A996F /* FaviconURLTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A565EC3685728189B46842D /* FaviconURLTests.swift */; };
+		0279B683D5E27A6BD0ECDDF0 /* ProjectsWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0C7D86261032CCE4CCABF9E /* ProjectsWidget.swift */; };
 		05C5DC3821F44316BEF1AB6F /* RowCacheTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD8C9B80B12960AB8FDE3310 /* RowCacheTests.swift */; };
 		060F0A6D2739EAD215446EB4 /* PopoverPanelStyler.swift in Sources */ = {isa = PBXBuildFile; fileRef = E87C0A46EA1C79D07E3FBC9C /* PopoverPanelStyler.swift */; };
 		06669CBFDC5DAD1DA32D1CD9 /* KeychainCredential.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1E04DC5DFFBFC25AEBFE2B76 /* KeychainCredential.swift */; };
@@ -415,6 +416,7 @@
 		AD8C9B80B12960AB8FDE3310 /* RowCacheTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RowCacheTests.swift; sourceTree = "<group>"; };
 		B015CC4FB573440F0554E492 /* LinkBuilder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LinkBuilder.swift; sourceTree = "<group>"; };
 		B01AF41FD9513EF103ADFE16 /* AccountRemovalCacheTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountRemovalCacheTests.swift; sourceTree = "<group>"; };
+		B0C7D86261032CCE4CCABF9E /* ProjectsWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProjectsWidget.swift; sourceTree = "<group>"; };
 		B1206DC41804427440745479 /* AccountsSettingsTab.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountsSettingsTab.swift; sourceTree = "<group>"; };
 		B1A6AE0A8C490973F9783E13 /* AccountConnectionStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountConnectionStore.swift; sourceTree = "<group>"; };
 		B57F9E97129C129C7E64B1A6 /* ProjectDecodingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProjectDecodingTests.swift; sourceTree = "<group>"; };
@@ -551,6 +553,7 @@
 				E17D9CE6E0862388EF48DACF /* Intents.swift */,
 				C4A0A749EECBA6D46E92B53C /* Localizable.xcstrings */,
 				767425FDBF3FBD365210669B /* ProjectEntity.swift */,
+				B0C7D86261032CCE4CCABF9E /* ProjectsWidget.swift */,
 				3E195684AE87799BCC2784AF /* ProjectWidget.swift */,
 				B7B23152A07634AB2D80B815 /* SampleData.swift */,
 				E45F2288290FCA197D7B5D85 /* SharedViews.swift */,
@@ -1167,6 +1170,7 @@
 				8AD22B1757EE38B4F0745B51 /* Intents.swift in Sources */,
 				BEDDB1E5A0301F1DB1094563 /* ProjectEntity.swift in Sources */,
 				84B3B7F222738890498DBBA2 /* ProjectWidget.swift in Sources */,
+				0279B683D5E27A6BD0ECDDF0 /* ProjectsWidget.swift in Sources */,
 				53647A317A76844B3DC10BE2 /* Provider.swift in Sources */,
 				AECB58E08DD87C0AF2728DEC /* SampleData.swift in Sources */,
 				2E051B7C1765186E36DDD612 /* SharedViews.swift in Sources */,

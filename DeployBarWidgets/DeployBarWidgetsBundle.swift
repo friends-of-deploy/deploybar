@@ -5,5 +5,6 @@ import WidgetKit
 struct DeployBarWidgetsBundle: WidgetBundle {
     var body: some Widget {
         ProjectWidget()
+        ProjectsWidget()
     }
 }
