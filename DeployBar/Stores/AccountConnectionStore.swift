@@ -63,7 +63,7 @@ final class AccountConnectionStore {
         } catch is CancellationError {
             return nil
         } catch AccountValidationError.organizationRequired {
-            errorMessage = String(localized: "This token only works inside one organization. Enter its name above.",
+            errorMessage = String(localized: "This token can’t list your organizations. Enter the organization name above.",
                                   comment: "Add account error: the token is limited to one organization")
             return nil
         } catch {

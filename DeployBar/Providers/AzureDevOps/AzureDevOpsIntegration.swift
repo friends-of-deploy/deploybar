@@ -22,7 +22,7 @@ struct AzureDevOpsIntegration: ProviderIntegration {
     let presentation = ProviderPresentation(
         vocabulary: .ciRuns,
         tokenCreationURL: URL(string: "https://learn.microsoft.com/azure/devops/organizations/accounts/use-personal-access-tokens-to-authenticate")!,
-        tokenHint: "Allow Build (Read) and Code (Read).",
+        tokenHint: "Allow Build (Read), Code (Read) and Project and Team (Read). To follow every organization, also allow User Profile (Read).",
         projectMenuLinks: { project, organization in
             // Project rows are named "<ADO project>/<repository>".
             let adoProject = project.name.split(separator: "/", maxSplits: 1).first.map(String.init) ?? ""

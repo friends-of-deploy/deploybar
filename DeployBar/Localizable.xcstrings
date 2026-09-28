@@ -983,6 +983,17 @@
         }
       }
     },
+    "Allow Build (Read), Code (Read) and Project and Team (Read). To follow every organization, also allow User Profile (Read)." : {
+      "comment" : "Azure DevOps token hint",
+      "localizations" : {
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nadaj uprawnienia Build (Read), Code (Read) i Project and Team (Read). Aby śledzić wszystkie organizacje, dodaj też User Profile (Read)."
+          }
+        }
+      }
+    },
     "Analytics" : {
       "localizations" : {
         "pl" : {
@@ -1637,6 +1648,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Zespół"
+          }
+        }
+      }
+    },
+    "This token can’t list your organizations. Enter the organization name above." : {
+      "comment" : "Add account error: the token is limited to one organization",
+      "localizations" : {
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ten token nie może wyświetlić Twoich organizacji. Wpisz nazwę organizacji powyżej."
           }
         }
       }

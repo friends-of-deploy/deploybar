@@ -35,11 +35,11 @@ final class LocalizationTests: XCTestCase {
         let strings = try XCTUnwrap(try loadCatalog()["strings"] as? [String: Any])
         let keys = [
             "Organization (optional)",
-            "This token only works inside one organization. Enter its name above.",
+            "This token can’t list your organizations. Enter the organization name above.",
             "%@: couldn’t load organizations — retrying",
             "%@: this token can’t see any organization",
             "Pipelines",
-            "Allow Build (Read) and Code (Read).",
+            "Allow Build (Read), Code (Read) and Project and Team (Read). To follow every organization, also allow User Profile (Read).",
             "DeployBar looks for your CLI logins when it starts.",
             "Add it in Settings with a personal access token.",
             "Connect an account to keep your builds a glance away.",

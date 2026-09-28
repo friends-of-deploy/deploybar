@@ -1,8 +1,8 @@
 import XCTest
 @testable import DeployBar
 
-/// `AzureDevOpsClient` against an injected transport. JSON keys mirror the
-/// live `pfron-dev` responses recorded in the design spec.
+/// `AzureDevOpsClient` against an injected transport. JSON keys mirror a
+/// live organization's responses recorded in the design spec.
 final class AzureDevOpsClientTests: XCTestCase {
 
     /// Records requests; answers by path.

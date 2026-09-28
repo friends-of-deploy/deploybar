@@ -8,7 +8,8 @@ Release notes for DeployBar. Earlier releases are available on
 ### Azure DevOps
 
 - Add an Azure DevOps account in Settings with a personal access token
-  (Build: Read, Code: Read). Pipeline runs show up alongside your Vercel
+  (Build, Code and Project and Team: Read; add User Profile: Read to follow
+  every organization). Pipeline runs show up alongside your Vercel
   deployments and GitHub Actions runs, with notifications and a copyable
   error report for failed runs.
 - Leave the organization empty to follow every organization the token can

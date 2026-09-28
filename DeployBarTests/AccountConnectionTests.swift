@@ -45,7 +45,7 @@ final class AccountConnectionTests: XCTestCase {
         let account = await connection.connect(to: accounts)
         XCTAssertNil(account)
         XCTAssertEqual(connection.errorMessage,
-                       "This token only works inside one organization. Enter its name above.")
+                       "This token can’t list your organizations. Enter the organization name above.")
         XCTAssertTrue(accounts.accounts.isEmpty)
     }
 

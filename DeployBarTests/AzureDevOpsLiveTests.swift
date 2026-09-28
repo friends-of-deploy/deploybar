@@ -22,8 +22,9 @@ final class AzureDevOpsLiveTests: XCTestCase {
 
     override func setUpWithError() throws {
         let env = ProcessInfo.processInfo.environment
-        try XCTSkipUnless(env["DEPLOYBAR_ADO_PAT"] != nil && env["DEPLOYBAR_ADO_ORG"] != nil,
-                          "live Azure DevOps credentials not provided")
+        let hasPAT = env["DEPLOYBAR_ADO_PAT"].flatMap { $0.isEmpty ? nil : $0 } != nil
+        let hasOrg = env["DEPLOYBAR_ADO_ORG"].flatMap { $0.isEmpty ? nil : $0 } != nil
+        try XCTSkipUnless(hasPAT && hasOrg, "live Azure DevOps credentials not provided")
     }
 
     func test_realOrganizationEndToEnd() async throws {

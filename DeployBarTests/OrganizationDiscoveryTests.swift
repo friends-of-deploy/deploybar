@@ -102,6 +102,25 @@ final class OrganizationDiscoveryTests: XCTestCase {
         XCTAssertTrue(store.healthIssues.isEmpty)
     }
 
+    /// A token that first sees no organization at all must recover once the
+    /// organization becomes visible: the "can't see any organization" issue
+    /// clears and its deployment joins the rotation on the next retry.
+    func test_tokenThatLaterSeesAnOrganizationRecovers() async {
+        let discovery = Discovery()
+        discovery.answer = .success([])
+        let (store, accounts) = makeStore(discovery)
+        await store.poll()
+        XCTAssertEqual(store.healthIssues, ["ADO: this token can’t see any organization"])
+
+        discovery.answer = .success([Team(id: "contoso", slug: "contoso", name: "contoso")])
+        clock.addTimeInterval(DeploymentStore.discoveryRetryInterval + 1)
+        await store.poll()
+
+        XCTAssertTrue(store.healthIssues.isEmpty)
+        XCTAssertEqual(store.scopes(for: accounts.accounts[0]).map(\.teamId), ["contoso"])
+        XCTAssertEqual(store.deployments.map(\.uid), ["d_contoso"])
+    }
+
     /// A waiting account's discovery issue must not read as a whole-app logout.
     func test_waitingAccountDoesNotLogOutOthers() async {
         let discovery = Discovery()
