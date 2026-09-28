@@ -86,7 +86,7 @@ struct OnboardingView: View {
     private var connect: some View {
         VStack(alignment: .leading, spacing: 24) {
             heading("Your tools, together.", subtitle: accounts.accounts.isEmpty
-                    ? "DeployBar looks for your Vercel and GitHub CLI logins when it starts."
+                    ? "DeployBar looks for your CLI logins when it starts."
                     : "We found your accounts. You’re ready to follow their deployments.")
             VStack(spacing: 12) {
                 ForEach(Provider.allCases.filter(registry.isAvailable), id: \.self) { provider in
@@ -122,6 +122,11 @@ struct OnboardingView: View {
                 if detected.isEmpty {
                     if let hint = accounts.strategies.first(where: { $0.detectedProvider == provider })?.signInHint {
                         Text(hint)
+                            .font(.system(size: 11)).foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    } else {
+                        // Providers without a CLI login are added with a token.
+                        Text("Add it in Settings with a personal access token.")
                             .font(.system(size: 11)).foregroundStyle(.secondary)
                             .fixedSize(horizontal: false, vertical: true)
                     }

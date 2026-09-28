@@ -30,6 +30,27 @@ final class LocalizationTests: XCTestCase {
         )
     }
 
+    /// Every string the Azure DevOps provider added has a Polish translation.
+    func test_azureDevOpsStringsAreTranslated() throws {
+        let strings = try XCTUnwrap(try loadCatalog()["strings"] as? [String: Any])
+        let keys = [
+            "Organization (optional)",
+            "This token only works inside one organization. Enter its name above.",
+            "%@: couldn’t load organizations — retrying",
+            "%@: this token can’t see any organization",
+            "Pipelines",
+            "Allow Build (Read) and Code (Read).",
+            "DeployBar looks for your CLI logins when it starts.",
+            "Add it in Settings with a personal access token.",
+            "Connect an account to keep your builds a glance away.",
+        ]
+        for key in keys {
+            let entry = try XCTUnwrap(strings[key] as? [String: Any], "missing key: \(key)")
+            let localizations = entry["localizations"] as? [String: Any] ?? [:]
+            XCTAssertTrue(hasNonEmptyPolish(localizations), "no Polish for: \(key)")
+        }
+    }
+
     // MARK: - Runtime label localization
 
     func test_deploymentStateLabelsAreNonEmpty() {

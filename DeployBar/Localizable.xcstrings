@@ -151,6 +151,16 @@
         }
       }
     },
+    "DeployBar looks for your CLI logins when it starts." : {
+      "localizations" : {
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "DeployBar wykrywa konta zalogowane w CLI podczas uruchamiania."
+          }
+        }
+      }
+    },
     "We found your accounts. You’re ready to follow their deployments." : {
       "localizations" : {
         "pl" : {
@@ -481,6 +491,16 @@
         }
       }
     },
+    "Add it in Settings with a personal access token." : {
+      "localizations" : {
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dodaj je w Ustawieniach za pomocą osobistego tokenu dostępu."
+          }
+        }
+      }
+    },
     "Already use the Vercel or GitHub CLI? DeployBar detects your login when it starts." : {
       "localizations" : {
         "pl" : {
@@ -747,6 +767,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Połącz Vercela lub GitHuba i miej swoje buildy zawsze pod ręką."
+          }
+        }
+      }
+    },
+    "Connect an account to keep your builds a glance away." : {
+      "localizations" : {
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Połącz konto i miej swoje buildy zawsze pod ręką."
           }
         }
       }

@@ -12,7 +12,7 @@ struct OnboardingEmptyState: View {
                 Text("Your next deployment, right here.")
                     .font(.system(size: 18, weight: .semibold)).tracking(-0.4)
                     .multilineTextAlignment(.center)
-                Text("Connect Vercel or GitHub to keep your builds a glance away.")
+                Text("Connect an account to keep your builds a glance away.")
                     .font(.system(size: 12)).foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
                     .fixedSize(horizontal: false, vertical: true)
