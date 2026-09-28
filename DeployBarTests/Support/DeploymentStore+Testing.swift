@@ -68,10 +68,11 @@ extension DeploymentStore {
                      organizationFetch: HTTPFetch? = nil,
                      gitHubFetch: HTTPFetch? = nil,
                      now: @escaping () -> Date = Date.init,
-                     authRetryBackoff: Duration = .milliseconds(800)) {
+                     authRetryBackoff: Duration = .milliseconds(800),
+                     widgetPublisher: WidgetPublisher? = nil) {
         self.init(accountStore: accountStore, settings: settings,
                   registry: .testing(makeClient: makeClient, organizationFetch: organizationFetch,
                                      gitHubFetch: gitHubFetch),
-                  now: now, authRetryBackoff: authRetryBackoff)
+                  now: now, authRetryBackoff: authRetryBackoff, widgetPublisher: widgetPublisher)
     }
 }

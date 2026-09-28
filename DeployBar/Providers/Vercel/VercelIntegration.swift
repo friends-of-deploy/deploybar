@@ -37,6 +37,7 @@ struct VercelIntegration: ProviderIntegration {
             }
             return links
         },
+        projectPageURL: { project, scope in LinkBuilder.projectDashboard(scope: scope, project: project.name) },
         // Vercel scopes personal projects under the username, not the account label.
         ownerLabel: { $0?.username })
 

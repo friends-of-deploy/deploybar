@@ -25,6 +25,8 @@ struct ProviderPresentation: Sendable {
     let tokenCreationURL: URL
     let tokenHint: LocalizedStringResource
     let projectMenuLinks: @Sendable (_ project: Project, _ scopeName: String) -> [ProjectLink]
+    /// The page a project as a whole opens on (the widgets' project link).
+    let projectPageURL: @Sendable (_ project: Project, _ scopeName: String) -> URL?
     /// The owner shown before a project name in the account's own scope.
     let ownerLabel: @Sendable (_ identity: AccountIdentity?) -> String?
     /// Extra fields the add-account form shows for this provider.

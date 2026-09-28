@@ -41,7 +41,8 @@ struct DeployBarApp: App {
         if let cli = accountStore.cliAccount {
             settings.migrateLegacyFollowData(cliAccountId: cli.id)
         }
-        let store = DeploymentStore(accountStore: accountStore, settings: settings, registry: .live())
+        let store = DeploymentStore(accountStore: accountStore, settings: settings, registry: .live(),
+                                    widgetPublisher: WidgetPublisher())
         _settings = State(initialValue: settings)
         _accountStore = State(initialValue: accountStore)
         _store = State(initialValue: store)

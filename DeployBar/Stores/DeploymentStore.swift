@@ -147,6 +147,14 @@ final class DeploymentStore {
     /// rather than account because "All" polls several teams of the same account.
     @ObservationIgnored private var lastGood: [ScopeRef: ScopeResult] = [:]
 
+    /// Publishes the widget snapshot; nil in demo mode and in tests that don't
+    /// care, so neither ever touches the real App Group file.
+    @ObservationIgnored private let widgetPublisher: WidgetPublisher?
+    /// When a poll last fetched fresh data. The widget snapshot's `generatedAt`:
+    /// rows restored from the launch cache are older than they look, so nothing
+    /// is published until a real fetch lands.
+    @ObservationIgnored private var lastFreshPollAt: Date?
+
     /// Number of consecutive auth failures before we declare an account logged out.
     private static let authFailureThreshold = 3
 
@@ -156,7 +164,8 @@ final class DeploymentStore {
          settings: SettingsStore,
          registry: ProviderRegistry,
          now: @escaping () -> Date = Date.init,
-         authRetryBackoff: Duration = .milliseconds(800)) {
+         authRetryBackoff: Duration = .milliseconds(800),
+         widgetPublisher: WidgetPublisher? = nil) {
         self.knownAccountIds = Set(accountStore.accounts.map(\.id))
         self.now = now
         self.accountStore = accountStore
@@ -164,6 +173,7 @@ final class DeploymentStore {
         self.registry = registry
         self.notifier = NotificationManager(settings: settings)
         self.authRetryBackoff = authRetryBackoff
+        self.widgetPublisher = widgetPublisher
         self.scopeName = "all"
 
         if let cli = accountStore.cliAccount {
@@ -660,6 +670,7 @@ final class DeploymentStore {
         unfilteredProjects.removeAll { $0.scope == ref }
         scopeErrors.removeValue(forKey: ref)
         applyDisplayFilter()
+        publishWidgetSnapshot()
     }
 
     private struct ScopeResult {
@@ -873,6 +884,8 @@ final class DeploymentStore {
             settings.cachedRows = RowCache(deployments: unfilteredDeployments,
                                            projects: unfilteredProjects,
                                            savedAt: Date())
+            lastFreshPollAt = now()
+            publishWidgetSnapshot()
         }
 
         // loggedOut only when there are zero usable sources (no fresh successful
@@ -989,6 +1002,7 @@ final class DeploymentStore {
                                        projects: unfilteredProjects,
                                        savedAt: Date())
         applyDisplayFilter()
+        publishWidgetSnapshot()
         for account in accountStore.accounts where added.contains(account.id) {
             await loadOrganizations(for: account)
             await loadIdentity(for: account)
@@ -1017,6 +1031,27 @@ final class DeploymentStore {
         }
     }
 
+    // MARK: - Widgets
+
+    /// Publishes what the widgets show: every followed project of an enabled
+    /// scope, regardless of the popover's current filter.
+    private func publishWidgetSnapshot() {
+        guard let widgetPublisher, let asOf = lastFreshPollAt else { return }
+        let projects = unfilteredProjects.filter { isScopeEnabled($0.scope) && isFollowed($0) }
+        widgetPublisher.publish(WidgetSnapshotBuilder.build(
+            projects: projects, deployments: unfilteredDeployments,
+            dashboardURL: { projectPageURL(for: $0) }, generatedAt: asOf))
+    }
+
+    /// The provider's page for a project. The owner label (e.g. a Vercel
+    /// username for personal projects) is what that provider's URLs are
+    /// scoped by; the scope name covers teams and organizations.
+    private func projectPageURL(for sp: SourcedProject) -> URL? {
+        let scope = projectOwnerLabel(accountId: sp.account.id, teamId: sp.teamId)
+            ?? scopeName(accountId: sp.account.id, teamId: sp.teamId) ?? ""
+        return registry.integration(for: sp.account.provider)?.presentation.projectPageURL(sp.project, scope)
+    }
+
     /// Resolve a deployment to its project id when the project is known, so the
     /// id-based follow key matches; falls back to the project name.
     private func projectId(for sd: SourcedDeployment) -> String {
@@ -1042,6 +1077,7 @@ final class DeploymentStore {
             .legacyFollowKey(for: sp.account, projectName: sp.project.name) {
             settings.setFollowed(legacy, followed)
         }
+        publishWidgetSnapshot()
     }
 
     /// Core follow check. The id-based key is primary; a source with legacy

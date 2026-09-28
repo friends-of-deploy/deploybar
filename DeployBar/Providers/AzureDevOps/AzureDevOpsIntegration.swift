@@ -24,8 +24,7 @@ struct AzureDevOpsIntegration: ProviderIntegration {
         tokenCreationURL: URL(string: "https://learn.microsoft.com/azure/devops/organizations/accounts/use-personal-access-tokens-to-authenticate")!,
         tokenHint: "Allow Build (Read), Code (Read) and Project and Team (Read). To follow every organization, also allow User Profile (Read).",
         projectMenuLinks: { project, organization in
-            // Project rows are named "<ADO project>/<repository>".
-            let adoProject = project.name.split(separator: "/", maxSplits: 1).first.map(String.init) ?? ""
+            let adoProject = AzureDevOpsIntegration.adoProject(of: project)
             var links: [ProjectLink] = []
             if let pipelines = AzureDevOpsIntegration.page(organization, adoProject, "_build") {
                 links.append(ProjectLink(title: "Pipelines", systemImage: "arrow.triangle.2.circlepath", url: pipelines))
@@ -38,6 +37,9 @@ struct AzureDevOpsIntegration: ProviderIntegration {
                 links.append(ProjectLink(title: "Repository settings", systemImage: "gearshape", url: settings))
             }
             return links
+        },
+        projectPageURL: { project, organization in
+            AzureDevOpsIntegration.page(organization, AzureDevOpsIntegration.adoProject(of: project), "_build")
         },
         // Repository names already carry their ADO project.
         ownerLabel: { _ in nil },
@@ -71,6 +73,12 @@ struct AzureDevOpsIntegration: ProviderIntegration {
         guard let organization = teamId else { throw ProviderClientError.http(-1) }
         return try await AzureDevOpsClient(organization: organization, token: credential.token,
                                            fetch: credential.transport).failureReport(for: deployment)
+    }
+
+    /// Project rows are named "<ADO project>/<repository>"; this extracts the
+    /// ADO project half, used to build both the project's menu links and its page.
+    static func adoProject(of project: Project) -> String {
+        project.name.split(separator: "/", maxSplits: 1).first.map(String.init) ?? ""
     }
 
     /// `https://dev.azure.com/{org}/{project}/{path}`, percent-encoded.

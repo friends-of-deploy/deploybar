@@ -47,6 +47,7 @@ struct GitHubIntegration: ProviderIntegration {
             }
             return links
         },
+        projectPageURL: { project, _ in LinkBuilder.githubActions(org: project.repoOrg, repo: project.repoName) },
         // Repository names already carry their owner.
         ownerLabel: { _ in nil })
 
