@@ -73,10 +73,13 @@ final class DeploymentStore {
     /// How long an account without organizations waits between discovery attempts.
     static let discoveryRetryInterval: TimeInterval = 300
 
-    /// An account that can only poll organizations and has none yet.
+    /// An account that can only poll organizations and has none yet, but could
+    /// fetch them. The credential check is last so accounts with an account
+    /// scope (Vercel, GitHub) never pay for an extra `resolve` call.
     private func awaitsOrganizations(_ account: Account) -> Bool {
         registry.integration(for: account.provider)?.hasAccountScope == false
             && organizations(for: account).isEmpty
+            && accountStore.resolve(account) != nil
     }
 
     var lastUpdated: Date?
@@ -481,7 +484,10 @@ final class DeploymentStore {
             if changed && repoll { await poll() }
         } catch {
             // Keep cached organizations during a transient discovery failure.
-            if awaitsOrganizations(account) { discoveryIssues[account.id] = .failed }
+            // The account may have been removed while the fetch was in flight.
+            if accountStore.accounts.contains(where: { $0.id == account.id }), awaitsOrganizations(account) {
+                discoveryIssues[account.id] = .failed
+            }
             os_log("organization fetch failed for %{public}@: %{public}@", account.label, error.localizedDescription)
         }
     }

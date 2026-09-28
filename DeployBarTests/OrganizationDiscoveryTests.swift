@@ -39,9 +39,10 @@ final class OrganizationDiscoveryTests: XCTestCase {
 
     private var clock = Date(timeIntervalSince1970: 1_000_000)
 
-    private func makeStore(_ discovery: Discovery, alsoGitHub: Bool = false) -> (DeploymentStore, AccountStore) {
+    private func makeStore(_ discovery: Discovery, alsoGitHub: Bool = false,
+                           credentials: InMemoryCredentialStore = InMemoryCredentialStore()) -> (DeploymentStore, AccountStore) {
         let accounts = AccountStore(defaults: UserDefaults(suiteName: UUID().uuidString)!,
-                                    credentials: InMemoryCredentialStore(),
+                                    credentials: credentials,
                                     detectCLI: { false }, detectGitHubCLI: { false })
         _ = accounts.addKeychainAccount(provider: .azureDevOps, label: "ADO", token: "pat")
         var integrations: [any ProviderIntegration] = [OrgsOnlyIntegration(discovery: discovery)]
@@ -101,7 +102,7 @@ final class OrganizationDiscoveryTests: XCTestCase {
         XCTAssertTrue(store.healthIssues.isEmpty)
     }
 
-    /// Review focus 5.
+    /// A waiting account's discovery issue must not read as a whole-app logout.
     func test_waitingAccountDoesNotLogOutOthers() async {
         let discovery = Discovery()
         let (store, _) = makeStore(discovery, alsoGitHub: true)
@@ -118,5 +119,22 @@ final class OrganizationDiscoveryTests: XCTestCase {
         accounts.removeAccount(accounts.accounts[0])
         await store.accountsChanged()
         XCTAssertTrue(store.discoveryIssues.isEmpty)
+    }
+
+    /// An orgs-only account with no resolvable credential (keychain token
+    /// missing) can't even attempt discovery: `awaitsOrganizations` must not
+    /// treat it as "still connected, just waiting", or the app would look
+    /// healthy while nothing works. Before this task, that account alone gave
+    /// the logged-out state, and this preserves it.
+    func test_accountWithoutACredentialIsALogout() async {
+        let credentials = InMemoryCredentialStore()
+        let discovery = Discovery()
+        let (store, accounts) = makeStore(discovery, credentials: credentials)
+        if case .keychain(let name) = accounts.accounts[0].source { credentials.removeToken(for: name) }
+
+        await store.poll()
+
+        XCTAssertEqual(store.iconState, .loggedOut)
+        XCTAssertEqual(discovery.calls, 0, "no credential: discovery is never attempted")
     }
 }
