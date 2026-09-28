@@ -2,6 +2,65 @@
 <rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle">
   <channel>
     <item>
+      <title>1.3.0-beta.1</title>
+      <pubDate>Mon, 28 Sep 2026 21:45:28 +0000</pubDate>
+      <sparkle:version>21</sparkle:version>
+      <sparkle:shortVersionString>1.3.0-beta.1</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <description sparkle:format="markdown"><![CDATA[
+DeployBar 1.3 beta 1 puts your deploys on the desktop and in Notification
+Center with two new widgets, and adds Azure DevOps Pipelines as a third
+source next to Vercel and GitHub Actions.
+
+### Widgets
+
+- New **Project** widget for the desktop and Notification Center: small shows the
+  project's status, medium its latest (or running) deploy, large its recent deploys.
+- New **Projects** widget: several chosen projects side by side, or your most
+  recently active ones.
+- A running deploy shows a live timer; clicking a deploy opens its page.
+- Widgets update while DeployBar is running. When it isn't, or when an account
+  stops refreshing, they mark that data as out of date instead of showing it
+  as current.
+
+### Azure DevOps
+
+- Add an Azure DevOps account in Settings with a personal access token
+  (Build, Code and Project and Team: Read; add User Profile: Read to follow
+  every organization). Pipeline runs show up alongside your Vercel
+  deployments and GitHub Actions runs, with notifications and a copyable
+  error report for failed runs.
+- Leave the organization empty to follow every organization the token can
+  see, or name one when the token is limited to it.
+- Repositories appear in the Projects list with links to Pipelines, pull
+  requests and repository settings.
+
+### Under the hood
+
+- Each provider now lives behind one integration, which prepares DeployBar
+  for new providers such as Azure DevOps.
+- Vercel accounts added with a token now show their username before personal
+  projects, as the Vercel CLI account already did.
+- Choosing a scope in the menu only filters the list. It no longer clears that
+  scope's warnings.
+- Until its teams have loaded, a Vercel CLI account shows its personal
+  projects first.
+
+### About this beta
+
+- Widgets show what DeployBar last fetched, so DeployBar has to be running
+  for them to stay current. macOS limits how often a widget can refresh; if a
+  widget lags behind the menu or clicks on it open the wrong page, please
+  [open an issue](https://github.com/friends-of-deploy/deploybar/issues).
+
+[Full changes since 1.2.2](https://github.com/friends-of-deploy/deploybar/compare/v1.2.2...v1.3.0-beta.1)
+]]></description>
+      <enclosure url="https://github.com/friends-of-deploy/deploybar/releases/download/v1.3.0-beta.1/DeployBar-1.3.0-beta.1.zip"
+                 length="5719046"
+                 type="application/octet-stream"
+                 sparkle:edSignature="DddfVI3xpcBrX+l79kiIgeU0iFpPp/AXIVS+hOf9NnqIZsuaaxl2+qndjOSykXujQFROuSFHfxn9Aa9cICDRAw==" />
+    </item>
+    <item>
       <title>1.2.2</title>
       <pubDate>Sun, 27 Sep 2026 18:36:14 +0000</pubDate>
       <sparkle:version>20</sparkle:version>
