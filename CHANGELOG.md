@@ -3,7 +3,11 @@
 Release notes for DeployBar. Earlier releases are available on
 [GitHub Releases](https://github.com/friends-of-deploy/deploybar/releases).
 
-## [Unreleased]
+## [1.3.0-beta.1] - 2026-09-28
+
+DeployBar 1.3 beta 1 puts your deploys on the desktop and in Notification
+Center with two new widgets, and adds Azure DevOps Pipelines as a third
+source next to Vercel and GitHub Actions.
 
 ### Widgets
 
@@ -12,8 +16,9 @@ Release notes for DeployBar. Earlier releases are available on
 - New **Projects** widget: several chosen projects side by side, or your most
   recently active ones.
 - A running deploy shows a live timer; clicking a deploy opens its page.
-- Widgets update while DeployBar is running and mark their data as out of date
-  when it isn't.
+- Widgets update while DeployBar is running. When it isn't, or when an account
+  stops refreshing, they mark that data as out of date instead of showing it
+  as current.
 
 ### Azure DevOps
 
@@ -37,6 +42,15 @@ Release notes for DeployBar. Earlier releases are available on
   scope's warnings.
 - Until its teams have loaded, a Vercel CLI account shows its personal
   projects first.
+
+### About this beta
+
+- Widgets show what DeployBar last fetched, so DeployBar has to be running
+  for them to stay current. macOS limits how often a widget can refresh; if a
+  widget lags behind the menu or clicks on it open the wrong page, please
+  [open an issue](https://github.com/friends-of-deploy/deploybar/issues).
+
+[Full changes since 1.2.2](https://github.com/friends-of-deploy/deploybar/compare/v1.2.2...v1.3.0-beta.1)
 
 ## [1.2.2] - 2026-09-27
 
