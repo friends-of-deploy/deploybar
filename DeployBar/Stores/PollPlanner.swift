@@ -33,6 +33,9 @@ final class PollPlanner {
     private(set) var inProgressAllowance: [UUID: Int] = [:]
 
     /// The scopes to fetch now. `now` is read once per account.
+    ///
+    /// Only advance an account's rotation when it can actually afford a fetch:
+    /// a tick then takes as many scopes, in rotation order, as its budget covers.
     func plan(_ loads: [AccountLoad], pollIntervalSeconds: Int, now: () -> Date) -> [Scope] {
         inProgressAllowance = [:]
         return loads.flatMap { load -> [Scope] in
@@ -69,7 +72,9 @@ final class PollPlanner {
         }
     }
 
-    /// How often any one of the account's scopes actually refreshes.
+    /// How often any one of the account's scopes actually refreshes. Surfaced
+    /// in Settings, so the user can see the real cadence rather than the
+    /// nominal poll interval when a provider's budget stretches it out.
     func effectiveRefreshInterval(for load: AccountLoad, pollIntervalSeconds: Int) -> Int {
         let interval = accountInterval(for: load, pollIntervalSeconds: pollIntervalSeconds)
         return interval * ScopePollBudget.ticksPerRotation(
@@ -112,7 +117,9 @@ final class PollPlanner {
     /// over the time since the account's last poll. Nil for a full tick.
     ///
     /// Refresh clicks, wakes and scope changes all poll off the timer. Each one
-    /// spending a full share took GitHub past 5,000 requests an hour.
+    /// spending a full share took GitHub past 5,000 requests an hour; this way
+    /// a click at t+15s leaves the next tick only half a share, so the hour
+    /// stays at about one share per interval however often the user refreshes.
     private func offCycleShare(for load: AccountLoad, interval: Int, since previous: Date?,
                                at timestamp: Date) -> Int? {
         guard load.cost.metersOffCyclePolls, let previous else { return nil }

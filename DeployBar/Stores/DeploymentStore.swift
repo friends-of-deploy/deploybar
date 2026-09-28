@@ -38,7 +38,7 @@ final class DeploymentStore {
     /// instead of "No projects", which reads as an empty account.
     private(set) var isLoadingInitial = true
 
-    // MARK: Legacy / shared surface (still consumed by the current app + tests)
+    // MARK: Aggregated surface (consumed by the app's views and tests)
 
     /// Organizations per account: Vercel teams and GitHub orgs alike. Replaces
     /// the single global team list, which could only ever describe one account.
@@ -61,7 +61,8 @@ final class DeploymentStore {
     var lastUpdated: Date?
     var scopeName: String
 
-    /// Legacy single-scope view of the merged data, for the not-yet-rewired app.
+    /// Flattened, single-source view of the merged data, for callers that don't
+    /// need per-scope attribution.
     var deployments: [Deployment] { sourcedDeployments.map(\.deployment) }
     var projects: [Project] { sourcedProjects.map(\.project) }
 
@@ -267,8 +268,9 @@ final class DeploymentStore {
     /// GitHub org alike). Includes disabled scopes; callers that only want
     /// polled scopes filter through `settings.isScopeEnabled`.
     ///
-    /// An account whose organizations haven't loaded yet polls only its own
-    /// scope.
+    /// An account whose organizations haven't loaded yet gets the account's
+    /// own scope (when its provider has one) plus one per known organization;
+    /// as organizations are discovered, their scopes join the rotation.
     private func allScopes(for account: Account) -> [Scope] {
         let organizations = organizations(for: account).map { org in
             Scope(account: account, teamId: org.id, teamName: org.slug ?? org.name)
@@ -478,8 +480,10 @@ final class DeploymentStore {
         applyDisplayFilter()
     }
 
-    /// Show every connected source at once. Widens `availableScopes` to all Vercel
-    /// teams, so this re-polls to pick up the teams a single-scope view never fetched.
+    /// Show every connected source at once. Every enabled scope is always
+    /// polled regardless of which one is displayed, so this only clears the
+    /// display filter; the poll is to get fresh rows on screen right away
+    /// rather than waiting for the next tick.
     func selectAll() async {
         guard filter != .all else { return }
         filter = .all
@@ -599,7 +603,8 @@ final class DeploymentStore {
 
     private struct ScopeResult {
         let account: Account
-        /// Vercel team the rows came from; nil for personal / non-Vercel.
+        /// Organization (Vercel team or GitHub org) the rows came from; nil for
+        /// the account's own scope, when its provider has one.
         let teamId: String?
         let deployments: [Deployment]
         let projects: [Project]
@@ -1040,7 +1045,7 @@ final class DeploymentStore {
         // Throttling is not an auth failure: leave the counter alone so a long
         // rate-limit window can't be mistaken for a logout, and say what is
         // actually happening instead of "stale".
-        if case VercelClientError.rateLimited(let retryAfter) = error {
+        if case ProviderClientError.rateLimited(let retryAfter) = error {
             if let retryAfter, retryAfter >= 60 {
                 let minutes = Int((retryAfter / 60).rounded(.up))
                 errors[ref] = "\(label): rate limited — retrying in ~\(minutes) min"
@@ -1049,7 +1054,7 @@ final class DeploymentStore {
             }
             return
         }
-        if case VercelClientError.unauthorized = error {
+        if case ProviderClientError.unauthorized = error {
             consecutiveAuthFailures[ref, default: 0] += 1
             if (consecutiveAuthFailures[ref] ?? 0) >= Self.authFailureThreshold {
                 errors[ref] = "Not logged in — reconnect \(label)"

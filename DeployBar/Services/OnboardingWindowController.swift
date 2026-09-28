@@ -27,7 +27,8 @@ final class OnboardingWindowController: NSWindowController, NSWindowDelegate {
                 state.complete()
                 self?.close()
             },
-            dismiss: { [weak self] in self?.close() })) }
+            dismiss: { [weak self] in self?.close() })
+            .environment(\.providerRegistry, store.registry)) }
         window.contentView = nil
         window.center()
     }

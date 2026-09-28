@@ -162,6 +162,45 @@ final class DemoEnvironmentTests: XCTestCase {
                         "so the frozen frame reflects the post-event state, not the fixture's base state")
     }
 
+    /// End-to-end regression: the tests above build a `DemoIntegration` and
+    /// call it directly with a made-up `.plain("demo-token")`, which never
+    /// exercises `AccountStore.resolve`. Demo polling and team discovery
+    /// actually depend on `DemoEnvironment.build` wiring `reloadCLIToken`/
+    /// `reloadGitHubToken` closures (both returning "demo-token") into the
+    /// CLI credential strategies, so `accountStore.resolve(account)` — which
+    /// is what `DeploymentStore` really calls — resolves to a credential at
+    /// all. Going through the production `DeploymentStore` init plus
+    /// `loadOrganizations()`/`poll()` proves that whole path, not just the
+    /// integration in isolation.
+    func test_demoEndToEndThroughAccountStoreResolve() async throws {
+        let built = DemoEnvironment.build(scenario: try DemoScenarioLoader.load(named: "default"),
+                                          clock: .frozen(at: DemoEnvironment.freezeOffsetSeconds))
+        let store = DeploymentStore(accountStore: built.accountStore, settings: built.settings,
+                                    registry: built.registry)
+        let cli = try XCTUnwrap(built.accountStore.cliAccount)
+        let gh = try XCTUnwrap(built.accountStore.githubCLIAccount)
+
+        await store.loadOrganizations()
+        // `loadOrganizations()` already triggers a `poll()` internally when an
+        // account's organizations change, but that race is an implementation
+        // detail; poll explicitly (twice, so a budget-gated first tick can't
+        // leave a scope unpolled) so this test doesn't depend on it.
+        await store.poll()
+        await store.poll()
+
+        let cliTeams = store.organizations(for: cli)
+        XCTAssertEqual(cliTeams.count, 2, "the default fixture gives the Vercel CLI account 2 teams")
+
+        let cliTeamIds = Set(cliTeams.map(\.id))
+        XCTAssertTrue(store.sourcedDeployments.contains { deployment in
+            guard let teamId = deployment.teamId else { return false }
+            return deployment.account.id == cli.id && cliTeamIds.contains(teamId)
+        }, "at least one polled row should come from one of the CLI account's teams")
+
+        XCTAssertTrue(store.organizations(for: gh).isEmpty,
+                     "the GitHub CLI demo account has no organizations in the default fixture")
+    }
+
     func test_reapsStaleDemoSuitesOnBuild() throws {
         let strayDomain = "io.eightlines.deploybar.demo.\(UUID().uuidString)"
         let strayDefaults = try XCTUnwrap(UserDefaults(suiteName: strayDomain))
