@@ -67,4 +67,19 @@ final class WidgetSnapshotBuilderTests: XCTestCase {
         let snap = build([sp(vercel, id: "p", name: "web"), sp(vercel, id: "p", name: "web")], [])
         XCTAssertEqual(snap.projects.count, 1)
     }
+
+    /// GitHub/Azure DevOps put the branch name into `target`; only Vercel's
+    /// "production"/"preview" are meaningful to `targetText`. Anything else
+    /// (a branch name) must publish as nil, not be shown as "Preview".
+    func test_targetIsPublishedOnlyForKnownValues() {
+        let branchDeployment = Deployment(uid: "d1", name: "web", stateRaw: "READY", target: "main",
+                                          url: "d1.vercel.app", createdAt: 1)
+        let branchSnap = build([sp(vercel, id: "p", name: "web")],
+                               [SourcedDeployment(deployment: branchDeployment, account: vercel)])
+        XCTAssertNil(branchSnap.projects.first?.deployments.first?.target)
+
+        let productionSnap = build([sp(vercel, id: "p", name: "web")],
+                                   [sd(vercel, project: "web", uid: "d2", ms: 1, state: "READY")])
+        XCTAssertEqual(productionSnap.projects.first?.deployments.first?.target, "production")
+    }
 }

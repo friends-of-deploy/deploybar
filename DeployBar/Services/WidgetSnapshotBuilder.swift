@@ -27,11 +27,19 @@ enum WidgetSnapshotBuilder {
     }
 
     private static func widgetDeployment(_ d: Deployment) -> WidgetDeployment {
-        WidgetDeployment(id: d.uid, stateRaw: d.stateRaw, target: d.target,
+        WidgetDeployment(id: d.uid, stateRaw: d.stateRaw, target: publishedTarget(d.target),
                          branch: d.commitRef, shortSha: d.commitSha.map { String($0.prefix(7)) },
                          message: d.commitMessage, author: d.commitAuthorLogin ?? d.creatorUsername,
                          createdAt: date(ms: d.createdAt), buildingAt: d.buildingAt.map(date(ms:)),
                          readyAt: d.ready.map(date(ms:)), url: LinkBuilder.deploymentPage(for: d))
+    }
+
+    /// GitHub and Azure DevOps clients put the branch name into `Deployment.target`,
+    /// which only means something for Vercel's "production"/"preview" values —
+    /// anything else must publish as nil rather than be mislabeled downstream
+    /// (`targetText` maps every non-"production" value to "Preview").
+    private static func publishedTarget(_ target: String?) -> String? {
+        target == "production" || target == "preview" ? target : nil
     }
 
     /// Provider timestamps are epoch milliseconds.
