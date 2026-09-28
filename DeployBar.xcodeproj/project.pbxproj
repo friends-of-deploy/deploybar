@@ -74,6 +74,7 @@
 		5843D7D1B8267565C73B5872 /* SettingsStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 689898515F337BEFDB922498 /* SettingsStoreTests.swift */; };
 		58C7973D9AB70312B3663E85 /* DeploymentProviderClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 74299387DF1EA4D4C946A81F /* DeploymentProviderClient.swift */; };
 		5B7FB94F8CE17B4A0162B32F /* DemoScenarioTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 908C842333BEA52F88B4AD69 /* DemoScenarioTests.swift */; };
+		5C3265C02474FF5A4B2FE3A1 /* AzureDevOpsLiveTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1606635BB170A71AD62778D2 /* AzureDevOpsLiveTests.swift */; };
 		6072BA3CB43FE941C73D85AA /* AzureDevOpsDTO.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA42A8FFCC9FA34C548742A9 /* AzureDevOpsDTO.swift */; };
 		63B2030E46EA6FB912E2ED08 /* ProviderIntegrationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8C071960D1FCA5243190F769 /* ProviderIntegrationTests.swift */; };
 		64575E9A8DCD043C94A7AACD /* MenuBarIcon.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5FAF19E220235027CEA50E14 /* MenuBarIcon.swift */; };
@@ -223,6 +224,7 @@
 		131BF5CDDE6315FDAC94ECC2 /* ScopeResolverTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScopeResolverTests.swift; sourceTree = "<group>"; };
 		15079017D2BD08DD3DA2B78B /* UpdateChannelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UpdateChannelTests.swift; sourceTree = "<group>"; };
 		153392136119AFC60AF57F59 /* GitHubActionsErrorReportTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GitHubActionsErrorReportTests.swift; sourceTree = "<group>"; };
+		1606635BB170A71AD62778D2 /* AzureDevOpsLiveTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AzureDevOpsLiveTests.swift; sourceTree = "<group>"; };
 		16ECF961AF63E983AF0B0995 /* DeploymentStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeploymentStoreTests.swift; sourceTree = "<group>"; };
 		171831EB706F154D65EC9487 /* ProviderClientError.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProviderClientError.swift; sourceTree = "<group>"; };
 		176FE250E8C527CAFCF05603 /* NotificationSettingsTab.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationSettingsTab.swift; sourceTree = "<group>"; };
@@ -509,6 +511,7 @@
 				FE128B253CBD435ADF3DE364 /* AllScopeTests.swift */,
 				21A8F8DF813B9E5FEA49A849 /* AzureDevOpsClientTests.swift */,
 				40D20581A2DFE33DEE9BA395 /* AzureDevOpsIntegrationTests.swift */,
+				1606635BB170A71AD62778D2 /* AzureDevOpsLiveTests.swift */,
 				A86A2B44C9D86BDEEF902853 /* BuildErrorReportTests.swift */,
 				7DD2B32A82C6D1DF17114707 /* ChangelogFeedTests.swift */,
 				6E209E87DAC8B3AAB1BA5534 /* CommitAuthorTests.swift */,
@@ -1016,6 +1019,7 @@
 				525D263819296EE5F859B164 /* AllScopeTests.swift in Sources */,
 				A72D55E37C5F60F4956DE595 /* AzureDevOpsClientTests.swift in Sources */,
 				54BBC0FBD9A343C6228882A6 /* AzureDevOpsIntegrationTests.swift in Sources */,
+				5C3265C02474FF5A4B2FE3A1 /* AzureDevOpsLiveTests.swift in Sources */,
 				5695AC61D01451B18BE31194 /* BuildErrorReportTests.swift in Sources */,
 				24F1347B4D18F3AA220E63F2 /* ChangelogFeedTests.swift in Sources */,
 				64A70D20133C1347CC797C83 /* CommitAuthorTests.swift in Sources */,
