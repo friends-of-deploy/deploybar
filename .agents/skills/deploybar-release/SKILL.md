@@ -73,3 +73,9 @@ secrets; never add them to the skill or release notes. Do not enable paid servic
 
 Return the version/build, commit and release links, a short user-facing change
 summary, and verified checks. Name any incomplete distribution step explicitly.
+
+Before tagging a release that touches the widgets, export a Developer ID build
+locally and check the embedded `DeployBarWidgets.appex`: its entitlements
+(`app-sandbox` + the `7S3F9767BM.io.eightlines.deploybar` application group),
+its `LC_BUILD_VERSION` SDK, and that both widgets appear in the widget gallery
+and update from the running app without a data-access prompt.

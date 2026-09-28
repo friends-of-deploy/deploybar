@@ -5,6 +5,16 @@ Release notes for DeployBar. Earlier releases are available on
 
 ## [Unreleased]
 
+### Widgets
+
+- New **Project** widget for the desktop and Notification Center: small shows the
+  project's status, medium its latest (or running) deploy, large its recent deploys.
+- New **Projects** widget: several chosen projects side by side, or your most
+  recently active ones.
+- A running deploy shows a live timer; clicking a deploy opens its page.
+- Widgets update while DeployBar is running and mark their data as out of date
+  when it isn't.
+
 ### Azure DevOps
 
 - Add an Azure DevOps account in Settings with a personal access token

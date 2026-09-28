@@ -57,6 +57,11 @@
 - Quick links: open production site, open repository
 - Overflow menu (⋯) — Vercel: environment variables, Analytics (when enabled), project settings, dashboard; GitHub: pull requests, issues, repository settings
 
+**Widgets**
+- **Desktop and Notification Center widgets** — pin one project (status, latest
+  deploy, or recent deploys depending on size) or several projects side by side.
+  Widgets show what DeployBar last fetched and say so when DeployBar isn't running.
+
 **Notifications**
 - System notifications on deployment/run events across all connected accounts
 - Failure and Success alerts on by default; Started and Canceled off by default
