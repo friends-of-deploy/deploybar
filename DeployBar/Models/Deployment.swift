@@ -66,6 +66,9 @@ struct Deployment: Decodable, Identifiable, Sendable {
     /// Vercel leaves this `nil` (its links derive from `url`/`inspectorUrl`);
     /// GitHub sets it to the workflow run's `html_url`.
     let webURL: URL?
+    /// The commit's web page, when the provider hands one over (Azure Repos).
+    /// GitHub commit pages are built from `commitOrg`/`commitRepo`/`commitSha`.
+    let commitURL: URL?
 
     var id: String { uid }
     var state: DeploymentState { DeploymentState(apiValue: stateRaw) }
@@ -88,7 +91,7 @@ struct Deployment: Decodable, Identifiable, Sendable {
          commitOrg: String? = nil, commitRepo: String? = nil, commitSha: String? = nil,
          commitRef: String? = nil, commitMessage: String? = nil,
          commitAuthorLogin: String? = nil, commitAuthorAvatarURL: String? = nil,
-         webURL: URL? = nil) {
+         webURL: URL? = nil, commitURL: URL? = nil) {
         self.uid = uid
         self.name = name
         self.stateRaw = stateRaw
@@ -107,12 +110,14 @@ struct Deployment: Decodable, Identifiable, Sendable {
         self.commitAuthorLogin = commitAuthorLogin
         self.commitAuthorAvatarURL = commitAuthorAvatarURL
         self.webURL = webURL
+        self.commitURL = commitURL
     }
 
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         uid = try c.decode(String.self, forKey: .uid)
         webURL = nil
+        commitURL = nil
         name = try c.decode(String.self, forKey: .name)
         stateRaw = try c.decode(String.self, forKey: .stateRaw)
         target = try c.decodeIfPresent(String.self, forKey: .target)

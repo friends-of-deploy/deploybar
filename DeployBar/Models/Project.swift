@@ -35,6 +35,9 @@ struct Project: Decodable, Identifiable, Sendable {
     /// Direct icon URL (e.g. a GitHub owner avatar), used when there is no
     /// production domain to derive a favicon from.
     let iconURL: String?
+    /// The repository's own web page, when the provider hands one over
+    /// (Azure Repos). GitHub pages are built from `repoOrg`/`repoName`.
+    let repoURL: URL?
 
     var latestState: DeploymentState {
         latestStateRaw.map { DeploymentState(apiValue: $0) } ?? .unknown
@@ -49,7 +52,7 @@ struct Project: Decodable, Identifiable, Sendable {
          envCount: Int = 0, cronCount: Int = 0, hasAnalytics: Bool = false,
          latestStateRaw: String? = nil, latestCreatedAt: Double? = nil,
          starCount: Int? = nil, openIssueCount: Int? = nil, isPrivate: Bool? = nil,
-         pushedAt: Double? = nil, iconURL: String? = nil) {
+         pushedAt: Double? = nil, iconURL: String? = nil, repoURL: URL? = nil) {
         self.id = id
         self.name = name
         self.repoType = repoType
@@ -70,6 +73,7 @@ struct Project: Decodable, Identifiable, Sendable {
         self.isPrivate = isPrivate
         self.pushedAt = pushedAt
         self.iconURL = iconURL
+        self.repoURL = repoURL
     }
 
     private enum CodingKeys: String, CodingKey {
@@ -131,6 +135,7 @@ struct Project: Decodable, Identifiable, Sendable {
 
         // Repo stats / icon are GitHub-only.
         starCount = nil; openIssueCount = nil; isPrivate = nil; pushedAt = nil; iconURL = nil
+        repoURL = nil
     }
 
     /// The best host for fetching a favicon / opening the live site: prefers a

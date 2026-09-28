@@ -40,7 +40,7 @@ struct VercelIntegration: ProviderIntegration {
         // Vercel scopes personal projects under the username, not the account label.
         ownerLabel: { $0?.username })
 
-    func identity(using credential: ResolvedCredential) async throws -> AccountIdentity {
+    func identity(for account: Account, using credential: ResolvedCredential) async throws -> AccountIdentity {
         let user = try await UserClient(token: credential.token, fetch: credential.transport).user()
         return AccountIdentity(username: user.username)
     }

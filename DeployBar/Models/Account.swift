@@ -11,6 +11,10 @@ struct Account: Codable, Identifiable, Equatable, Sendable {
     let provider: Provider
     var label: String
     let source: CredentialSource
+    /// The one organization a token is limited to, when the user named it
+    /// (Azure DevOps). Nil means the provider discovers organizations itself.
+    /// Optional, so accounts saved before this field existed decode unchanged.
+    var organization: String? = nil
 
     /// CLI-backed accounts are auto-detected and can't be removed in the UI.
     var isReadOnly: Bool {

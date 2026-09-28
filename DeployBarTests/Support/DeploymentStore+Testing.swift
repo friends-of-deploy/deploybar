@@ -20,8 +20,8 @@ struct OverridingIntegration: ProviderIntegration, @unchecked Sendable {
     var pollCost: PollCostModel { base.pollCost }
     var presentation: ProviderPresentation { base.presentation }
 
-    func identity(using credential: ResolvedCredential) async throws -> AccountIdentity {
-        try await base.identity(using: swapped(credential, discoveryFetch))
+    func identity(for account: Account, using credential: ResolvedCredential) async throws -> AccountIdentity {
+        try await base.identity(for: account, using: swapped(credential, discoveryFetch))
     }
 
     func organizations(for account: Account, using credential: ResolvedCredential) async throws -> [Team] {

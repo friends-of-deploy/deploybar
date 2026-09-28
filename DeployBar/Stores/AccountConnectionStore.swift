@@ -54,6 +54,8 @@ final class AccountConnectionStore {
         guard let integration = ProviderRegistry.live().integration(for: provider) else {
             throw URLError(.unsupportedURL)
         }
-        return try await integration.identity(using: .plain(token)).username
+        return try await integration.identity(
+            for: Account(id: UUID(), provider: provider, label: "", source: .keychain(account: "")),
+            using: .plain(token)).username
     }
 }

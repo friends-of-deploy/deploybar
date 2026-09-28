@@ -216,7 +216,7 @@ struct ProjectRow: View {
                 help: String(localized: "Open production site", comment: "Action tooltip")
             )
         }
-        if let repo = LinkBuilder.githubRepo(org: project.repoOrg, repo: project.repoName) {
+        if let repo = LinkBuilder.repository(for: project) {
             IconActionButton(
                 systemImage: "apple.terminal",
                 url: repo,

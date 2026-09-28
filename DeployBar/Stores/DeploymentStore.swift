@@ -456,7 +456,7 @@ final class DeploymentStore {
     func loadIdentity(for account: Account) async {
         guard let integration = registry.integration(for: account.provider),
               let credential = accountStore.resolve(account),
-              let identity = try? await integration.identity(using: credential),
+              let identity = try? await integration.identity(for: account, using: credential),
               accountStore.accounts.contains(where: { $0.id == account.id }) else { return }
         identities[account.id] = identity
     }

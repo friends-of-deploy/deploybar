@@ -215,11 +215,7 @@ struct DeploymentRow: View {
         if let logs = deployment.inspectorUrl.flatMap(URL.init(string:)) {
             actions.append(DeploymentRowAction(kind: .logs, url: logs))
         }
-        if let commit = LinkBuilder.githubCommit(
-            org: deployment.commitOrg,
-            repo: deployment.commitRepo,
-            sha: deployment.commitSha
-        ) {
+        if let commit = LinkBuilder.commit(for: deployment) {
             actions.append(DeploymentRowAction(kind: .commit, url: commit))
         }
 

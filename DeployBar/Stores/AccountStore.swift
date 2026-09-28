@@ -77,11 +77,12 @@ final class AccountStore {
     static let gitHubCLITokenFreshness = GitHubCLICredential.freshness
 
     @discardableResult
-    func addKeychainAccount(provider: Provider, label: String, token: String) -> Account {
+    func addKeychainAccount(provider: Provider, label: String, token: String,
+                            organization: String? = nil) -> Account {
         let kcName = "acct-\(UUID().uuidString)"
         credentials.setToken(token, for: kcName)
         let acct = Account(id: UUID(), provider: provider, label: label,
-                           source: .keychain(account: kcName))
+                           source: .keychain(account: kcName), organization: organization)
         accounts.append(acct)
         persist()
         return acct

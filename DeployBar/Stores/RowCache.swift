@@ -34,6 +34,7 @@ struct RowCache: Codable {
         var commitAuthorLogin: String?
         var commitAuthorAvatarURL: String?
         var webURL: URL?
+        var commitURL: URL?
 
         init(_ sd: SourcedDeployment) {
             let d = sd.deployment
@@ -57,6 +58,7 @@ struct RowCache: Codable {
             commitAuthorLogin = d.commitAuthorLogin
             commitAuthorAvatarURL = d.commitAuthorAvatarURL
             webURL = d.webURL
+            commitURL = d.commitURL
         }
 
         /// Rebuilds the row, or nil when its account is no longer connected.
@@ -68,7 +70,7 @@ struct RowCache: Codable {
                 ready: ready, creatorUsername: creatorUsername, commitOrg: commitOrg,
                 commitRepo: commitRepo, commitSha: commitSha, commitRef: commitRef,
                 commitMessage: commitMessage, commitAuthorLogin: commitAuthorLogin,
-                commitAuthorAvatarURL: commitAuthorAvatarURL, webURL: webURL)
+                commitAuthorAvatarURL: commitAuthorAvatarURL, webURL: webURL, commitURL: commitURL)
             return SourcedDeployment(deployment: deployment, account: account, teamId: teamId)
         }
     }
@@ -96,6 +98,7 @@ struct RowCache: Codable {
         var isPrivate: Bool?
         var pushedAt: Double?
         var iconURL: String?
+        var repoURL: URL?
 
         init(_ sp: SourcedProject) {
             let p = sp.project
@@ -121,6 +124,7 @@ struct RowCache: Codable {
             isPrivate = p.isPrivate
             pushedAt = p.pushedAt
             iconURL = p.iconURL
+            repoURL = p.repoURL
         }
 
         func restore(accounts: [UUID: Account]) -> SourcedProject? {
@@ -133,7 +137,7 @@ struct RowCache: Codable {
                 hasAnalytics: hasAnalytics, latestStateRaw: latestStateRaw,
                 latestCreatedAt: latestCreatedAt, starCount: starCount,
                 openIssueCount: openIssueCount, isPrivate: isPrivate, pushedAt: pushedAt,
-                iconURL: iconURL)
+                iconURL: iconURL, repoURL: repoURL)
             return SourcedProject(project: project, account: account, teamId: teamId)
         }
     }

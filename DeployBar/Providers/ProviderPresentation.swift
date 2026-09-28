@@ -13,6 +13,12 @@ struct ProjectLink: Sendable {
     let url: URL
 }
 
+/// Extra inputs a provider asks for when an account is added.
+enum AccountField: Sendable, Equatable {
+    /// An optional organization name (Azure DevOps).
+    case organization
+}
+
 /// What views need to know about a provider, as data rather than views.
 struct ProviderPresentation: Sendable {
     let vocabulary: RunVocabulary
@@ -21,4 +27,6 @@ struct ProviderPresentation: Sendable {
     let projectMenuLinks: @Sendable (_ project: Project, _ scopeName: String) -> [ProjectLink]
     /// The owner shown before a project name in the account's own scope.
     let ownerLabel: @Sendable (_ identity: AccountIdentity?) -> String?
+    /// Extra fields the add-account form shows for this provider.
+    var accountFields: [AccountField] = []
 }

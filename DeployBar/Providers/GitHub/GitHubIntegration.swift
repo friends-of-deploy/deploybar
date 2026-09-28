@@ -50,7 +50,7 @@ struct GitHubIntegration: ProviderIntegration {
         // Repository names already carry their owner.
         ownerLabel: { _ in nil })
 
-    func identity(using credential: ResolvedCredential) async throws -> AccountIdentity {
+    func identity(for account: Account, using credential: ResolvedCredential) async throws -> AccountIdentity {
         AccountIdentity(username: try await GitHubClient(token: credential.token, fetch: credential.transport)
             .authenticatedLogin())
     }

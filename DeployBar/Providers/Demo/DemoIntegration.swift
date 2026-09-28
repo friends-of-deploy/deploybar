@@ -15,7 +15,7 @@ struct DemoIntegration: ProviderIntegration {
     var presentation: ProviderPresentation { base.presentation }
 
     /// Demo accounts have no identity, as before: no owner prefix.
-    func identity(using credential: ResolvedCredential) async throws -> AccountIdentity {
+    func identity(for account: Account, using credential: ResolvedCredential) async throws -> AccountIdentity {
         throw URLError(.userAuthenticationRequired)
     }
 

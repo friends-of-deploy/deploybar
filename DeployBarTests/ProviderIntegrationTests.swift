@@ -33,7 +33,7 @@ final class ProviderIntegrationTests: XCTestCase {
     // MARK: Vercel
 
     func test_vercelIdentityIsTheUsername() async throws {
-        let identity = try await VercelIntegration().identity(using: credential("t", body: fixture("user")))
+        let identity = try await VercelIntegration().identity(for: vercelAccount, using: credential("t", body: fixture("user")))
         XCTAssertFalse(identity.username.isEmpty)
     }
 
@@ -97,7 +97,7 @@ final class ProviderIntegrationTests: XCTestCase {
     // MARK: GitHub
 
     func test_gitHubIdentityIsTheLogin() async throws {
-        let identity = try await GitHubIntegration().identity(using: credential("t", body: Data(#"{"login":"octo"}"#.utf8)))
+        let identity = try await GitHubIntegration().identity(for: githubAccount, using: credential("t", body: Data(#"{"login":"octo"}"#.utf8)))
         XCTAssertEqual(identity.username, "octo")
     }
 

@@ -25,6 +25,17 @@ enum LinkBuilder {
         guard let org, let repo, !org.isEmpty, !repo.isEmpty else { return nil }
         return URL(string: "https://github.com/\(org)/\(repo)")
     }
+    /// The repository page for a project row: the provider's own URL when it
+    /// has one, else the GitHub page built from the linked repository.
+    static func repository(for project: Project) -> URL? {
+        project.repoURL ?? githubRepo(org: project.repoOrg, repo: project.repoName)
+    }
+
+    /// The commit page for a deployment row, by the same rule.
+    static func commit(for deployment: Deployment) -> URL? {
+        deployment.commitURL
+            ?? githubCommit(org: deployment.commitOrg, repo: deployment.commitRepo, sha: deployment.commitSha)
+    }
     /// The repository's GitHub Actions overview page.
     static func githubActions(org: String?, repo: String?) -> URL? {
         githubPage(org: org, repo: repo, path: "/actions")

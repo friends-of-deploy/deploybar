@@ -30,8 +30,9 @@ protocol ProviderIntegration: Sendable {
     var pollCost: PollCostModel { get }
     var presentation: ProviderPresentation { get }
 
-    /// Validates the credential and names the account.
-    func identity(using credential: ResolvedCredential) async throws -> AccountIdentity
+    /// Validates the credential and names the account. `account` may be a
+    /// provisional one built from the add-account form.
+    func identity(for account: Account, using credential: ResolvedCredential) async throws -> AccountIdentity
     /// Teams / organizations the account can see, each polled as its own scope.
     func organizations(for account: Account, using credential: ResolvedCredential) async throws -> [Team]
     /// A client for one scope, or nil when there is nothing to poll there.
@@ -46,4 +47,10 @@ protocol ProviderIntegration: Sendable {
 extension ProviderIntegration {
     var hasAccountScope: Bool { true }
     func beginTick() async {}
+}
+
+/// Why a new account's credential can't be used as entered.
+enum AccountValidationError: Error, Equatable {
+    /// The token only works inside one organization, and none was named.
+    case organizationRequired
 }
