@@ -1,0 +1,26 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "%@" : { "shouldTranslate" : false },
+    "%@ (last known)" : { "comment" : "Widget: a state reported before DeployBar stopped updating, e.g. 'Building (last known)'", "localizations" : { "pl" : { "stringUnit" : { "state" : "translated", "value" : "%@ (ostatnio znany)" } } } },
+    "Building" : { "comment" : "Deployment state badge", "localizations" : { "pl" : { "stringUnit" : { "state" : "translated", "value" : "Budowanie" } } } },
+    "Canceled" : { "comment" : "Deployment state badge", "localizations" : { "pl" : { "stringUnit" : { "state" : "translated", "value" : "Anulowano" } } } },
+    "Error" : { "comment" : "Deployment state badge", "localizations" : { "pl" : { "stringUnit" : { "state" : "translated", "value" : "Błąd" } } } },
+    "Follow projects in DeployBar" : { "localizations" : { "pl" : { "stringUnit" : { "state" : "translated", "value" : "Obserwuj projekty w DeployBar" } } } },
+    "No deploys yet" : { "localizations" : { "pl" : { "stringUnit" : { "state" : "translated", "value" : "Brak deployów" } } } },
+    "Open DeployBar to see deploys" : { "localizations" : { "pl" : { "stringUnit" : { "state" : "translated", "value" : "Uruchom DeployBar, aby zobaczyć deploye" } } } },
+    "Preview" : { "comment" : "Deployment target", "localizations" : { "pl" : { "stringUnit" : { "state" : "translated", "value" : "Preview" } } } },
+    "Production" : { "comment" : "Deployment target", "localizations" : { "pl" : { "stringUnit" : { "state" : "translated", "value" : "Produkcja" } } } },
+    "Project" : { "comment" : "Widget name / configuration parameter", "localizations" : { "pl" : { "stringUnit" : { "state" : "translated", "value" : "Projekt" } } } },
+    "Project unavailable — edit the widget" : { "localizations" : { "pl" : { "stringUnit" : { "state" : "translated", "value" : "Projekt niedostępny — edytuj widżet" } } } },
+    "Projects" : { "comment" : "Widget name / configuration parameter", "localizations" : { "pl" : { "stringUnit" : { "state" : "translated", "value" : "Projekty" } } } },
+    "Projects unavailable — edit the widget" : { "localizations" : { "pl" : { "stringUnit" : { "state" : "translated", "value" : "Projekty niedostępne — edytuj widżet" } } } },
+    "Queued" : { "comment" : "Deployment state badge", "localizations" : { "pl" : { "stringUnit" : { "state" : "translated", "value" : "W kolejce" } } } },
+    "Ready" : { "comment" : "Deployment state badge", "localizations" : { "pl" : { "stringUnit" : { "state" : "translated", "value" : "Gotowe" } } } },
+    "Several projects side by side." : { "localizations" : { "pl" : { "stringUnit" : { "state" : "translated", "value" : "Kilka projektów obok siebie." } } } },
+    "The status and latest deploys of one project." : { "localizations" : { "pl" : { "stringUnit" : { "state" : "translated", "value" : "Status i ostatnie deploye jednego projektu." } } } },
+    "Unavailable project" : { "comment" : "Configuration picker entry for a project DeployBar no longer publishes", "localizations" : { "pl" : { "stringUnit" : { "state" : "translated", "value" : "Niedostępny projekt" } } } },
+    "Updated %@ ago" : { "comment" : "Widget footer when data is stale; %@ is a relative time", "localizations" : { "pl" : { "stringUnit" : { "state" : "translated", "value" : "Zaktualizowano %@ temu" } } } }
+  },
+  "version" : "1.0"
+}

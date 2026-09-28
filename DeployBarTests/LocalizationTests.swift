@@ -59,17 +59,31 @@ final class LocalizationTests: XCTestCase {
         }
     }
 
+    // MARK: - Widget catalog completeness
+
+    func test_everyWidgetKeyHasPolishTranslation() throws {
+        let catalog = try loadCatalog(directory: "DeployBarWidgets")
+        let strings = try XCTUnwrap(catalog["strings"] as? [String: Any])
+        XCTAssertFalse(strings.isEmpty, "Widget catalog has no strings")
+        let missing = strings.compactMap { key, entryAny -> String? in
+            guard let entry = entryAny as? [String: Any] else { return nil }
+            if let flag = entry["shouldTranslate"] as? Bool, flag == false { return nil }
+            return hasNonEmptyPolish(entry["localizations"] as? [String: Any] ?? [:]) ? nil : key
+        }
+        XCTAssertTrue(missing.isEmpty, "Widget keys missing Polish:\n" + missing.sorted().joined(separator: "\n"))
+    }
+
     // MARK: - Helpers
 
     /// Loads the raw String Catalog from the source tree. Xcode compiles
     /// `.xcstrings` into `.loctable` at build time, so the raw JSON is not in any
     /// bundle — we read it directly from disk relative to this test file instead.
-    private func loadCatalog() throws -> [String: Any] {
+    private func loadCatalog(directory: String = "DeployBar") throws -> [String: Any] {
         let testFile = URL(fileURLWithPath: #filePath)              // .../DeployBarTests/LocalizationTests.swift
         let repoRoot = testFile.deletingLastPathComponent()         // .../DeployBarTests
             .deletingLastPathComponent()                            // .../<repo root>
         let catalog = repoRoot
-            .appendingPathComponent("DeployBar")
+            .appendingPathComponent(directory)
             .appendingPathComponent("Localizable.xcstrings")
         let data = try Data(contentsOf: catalog)
         return try XCTUnwrap(try JSONSerialization.jsonObject(with: data) as? [String: Any])

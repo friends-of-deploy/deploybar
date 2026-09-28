@@ -74,4 +74,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     @MainActor @objc func openSettings() {
         SettingsNavigation.shared.open()
     }
+
+    /// A click on a widget link launches the containing app with the URL
+    /// instead of opening it (measured in the widget spike). Pass web links
+    /// straight to the browser; DeployBar registers no scheme of its own.
+    func application(_ application: NSApplication, open urls: [URL]) {
+        for url in urls where url.scheme == "https" || url.scheme == "http" {
+            NSWorkspace.shared.open(url)
+        }
+    }
 }
