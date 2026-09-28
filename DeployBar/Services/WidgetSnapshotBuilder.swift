@@ -1,0 +1,39 @@
+import Foundation
+
+/// Flattens the store's rows into what the widget extension renders.
+enum WidgetSnapshotBuilder {
+    static let maxDeploymentsPerProject = 6
+
+    /// - Parameter projects: already narrowed to followed projects of enabled
+    ///   scopes — the builder publishes whatever it's given.
+    /// - Parameter generatedAt: when the data was fetched, not "now".
+    static func build(projects: [SourcedProject],
+                      deployments: [SourcedDeployment],
+                      dashboardURL: (SourcedProject) -> URL?,
+                      generatedAt: Date) -> WidgetSnapshot {
+        let items = projects.deduplicated(by: \.key).map { sp in
+            // Same association as `DeploymentStore.latestDeployment(for:)`.
+            let deps = deployments
+                .filter { $0.account.id == sp.account.id && $0.deployment.name == sp.project.name }
+                .map(\.deployment)
+                .sorted { $0.createdAt > $1.createdAt }
+                .prefix(maxDeploymentsPerProject)
+                .map(widgetDeployment)
+            return WidgetProject(key: sp.key.storageString, name: sp.project.name,
+                                 provider: sp.account.provider,
+                                 dashboardURL: dashboardURL(sp), deployments: deps)
+        }
+        return WidgetSnapshot(generatedAt: generatedAt, projects: items)
+    }
+
+    private static func widgetDeployment(_ d: Deployment) -> WidgetDeployment {
+        WidgetDeployment(id: d.uid, stateRaw: d.stateRaw, target: d.target,
+                         branch: d.commitRef, shortSha: d.commitSha.map { String($0.prefix(7)) },
+                         message: d.commitMessage, author: d.commitAuthorLogin ?? d.creatorUsername,
+                         createdAt: date(ms: d.createdAt), buildingAt: d.buildingAt.map(date(ms:)),
+                         readyAt: d.ready.map(date(ms:)), url: LinkBuilder.deploymentPage(for: d))
+    }
+
+    /// Provider timestamps are epoch milliseconds.
+    private static func date(ms: Double) -> Date { Date(timeIntervalSince1970: ms / 1000) }
+}

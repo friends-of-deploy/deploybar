@@ -13,6 +13,15 @@ enum LinkBuilder {
             ?? deployment.inspectorUrl.flatMap(URL.init(string:))
     }
 
+    /// The deployment's own page — the Actions run or the Vercel inspector —
+    /// used by the widgets, where a click means "show me this deploy", not
+    /// "open the site it produced".
+    static func deploymentPage(for deployment: Deployment) -> URL? {
+        deployment.webURL
+            ?? deployment.inspectorUrl.flatMap(URL.init(string:))
+            ?? liveURL(host: deployment.url)
+    }
+
     static func liveURL(host: String?) -> URL? {
         guard let host, !host.isEmpty else { return nil }
         return URL(string: "https://\(host)")

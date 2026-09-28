@@ -53,4 +53,15 @@ final class LinkBuilderTests: XCTestCase {
         XCTAssertNil(LinkBuilder.projectEnv(scope: "", project: "dashboard"))
         XCTAssertNil(LinkBuilder.projectAnalytics(scope: "acme", project: ""))
     }
+
+    func test_deploymentPage_prefersProviderPageThenInspectorThenLive() {
+        let gh = Deployment(uid: "1", name: "r", stateRaw: "READY", url: "",
+                            createdAt: 0, webURL: URL(string: "https://github.com/o/r/actions/runs/1"))
+        XCTAssertEqual(LinkBuilder.deploymentPage(for: gh)?.absoluteString, "https://github.com/o/r/actions/runs/1")
+        let vercel = Deployment(uid: "2", name: "w", stateRaw: "READY", url: "w-abc.vercel.app",
+                                inspectorUrl: "https://vercel.com/acme/w/2", createdAt: 0)
+        XCTAssertEqual(LinkBuilder.deploymentPage(for: vercel)?.absoluteString, "https://vercel.com/acme/w/2")
+        let bare = Deployment(uid: "3", name: "w", stateRaw: "READY", url: "w-abc.vercel.app", createdAt: 0)
+        XCTAssertEqual(LinkBuilder.deploymentPage(for: bare)?.absoluteString, "https://w-abc.vercel.app")
+    }
 }
