@@ -13,6 +13,11 @@ settings:
   base:
     SWIFT_VERSION: "5.0"
     SWIFT_STRICT_CONCURRENCY: minimal
+    # Global so the app and its embedded widget extension can't drift: an
+    # appex whose version differs from its host fails bundle validation. The
+    # release flow still edits only these two lines.
+    MARKETING_VERSION: "1.2.2"
+    CURRENT_PROJECT_VERSION: "20"
 
 packages:
   Sentry:
@@ -35,11 +40,19 @@ targets:
       # would never reach the bundle. Mirrors the DeployBarTests/Fixtures setup.
       - path: DeployBar/Demo/Fixtures
         buildPhase: resources
+      - path: Shared
+    # XcodeGen regenerates this file's contents from `properties:` on every
+    # `xcodegen generate` (like the `info:` blocks below) — without it, an
+    # `entitlements:` target gets its plist silently wiped to an empty dict.
     entitlements:
       path: DeployBar/DeployBar.entitlements
+      properties:
+        com.apple.security.application-groups:
+          - 7S3F9767BM.io.eightlines.deploybar
     dependencies:
       - package: Sentry
       - package: Sparkle
+      - target: DeployBarWidgets
     # Sparkle needs custom Info.plist keys, and the INFOPLIST_KEY_ build
     # settings only carry Apple's own keys — anything else is dropped without
     # a warning. So the plist is generated here instead, and
@@ -74,8 +87,6 @@ targets:
         # Assets.xcassets is picked up automatically from the `DeployBar` source
         # directory; this names the app icon set inside it.
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
-        MARKETING_VERSION: "1.2.2"
-        CURRENT_PROJECT_VERSION: "20"
         # Sparkle's keys are set under `info:` below, not here: the
         # INFOPLIST_KEY_ prefix only carries Apple's known keys into a
         # generated plist, and silently drops anything else.
@@ -102,6 +113,49 @@ targets:
         # The signing identity is supplied at build time via xcodebuild
         # (CODE_SIGN_IDENTITY / DEVELOPMENT_TEAM), so local Release builds
         # without a cert still work by overriding CODE_SIGNING_ALLOWED=NO.
+        Release:
+          DEBUG_INFORMATION_FORMAT: dwarf-with-dsym
+          CODE_SIGNING_ALLOWED: "YES"
+          CODE_SIGN_STYLE: Manual
+          ENABLE_HARDENED_RUNTIME: "YES"
+          OTHER_CODE_SIGN_FLAGS: "--timestamp"
+
+  DeployBarWidgets:
+    type: app-extension
+    platform: macOS
+    sources:
+      - path: DeployBarWidgets
+      - path: Shared
+    entitlements:
+      path: DeployBarWidgets/DeployBarWidgets.entitlements
+      properties:
+        com.apple.security.app-sandbox: true
+        com.apple.security.application-groups:
+          - 7S3F9767BM.io.eightlines.deploybar
+    info:
+      path: DeployBarWidgets/Info.plist
+      properties:
+        CFBundleDisplayName: DeployBar
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        LSMinimumSystemVersion: $(MACOSX_DEPLOYMENT_TARGET)
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.widgetkit-extension
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: io.eightlines.deploybar.DeployBar.Widgets
+        GENERATE_INFOPLIST_FILE: "NO"
+        SKIP_INSTALL: "YES"
+        CODE_SIGN_STYLE: Automatic
+        CODE_SIGNING_ALLOWED: "NO"
+      configs:
+        # Mirrors the app: the host and its extension must be signed by the
+        # same team, or the system refuses to load the widget.
+        Debug:
+          CODE_SIGNING_ALLOWED: "YES"
+          CODE_SIGN_STYLE: Automatic
+          CODE_SIGN_IDENTITY: "Apple Development"
+          DEVELOPMENT_TEAM: 7S3F9767BM
         Release:
           DEBUG_INFORMATION_FORMAT: dwarf-with-dsym
           CODE_SIGNING_ALLOWED: "YES"
