@@ -31,6 +31,12 @@ final class WidgetPublisher {
     private var reloadPending = false
     private let log = Logger(subsystem: "io.eightlines.deploybar", category: "widgets")
 
+    /// Reload count for the beta's measurement, reset when the calendar day
+    /// (in the current time zone) changes. `private(set)` so tests can read
+    /// it without the publisher exposing a way to reset it from outside.
+    private(set) var reloadsToday = 0
+    private var reloadsTodayDate: Date?
+
     init(write: @escaping (WidgetSnapshot) throws -> Void = { try WidgetSnapshotFile.write($0) },
          reloader: WidgetTimelineReloading = SystemWidgetReloader(),
          now: @escaping () -> Date = Date.init) {
@@ -52,12 +58,23 @@ final class WidgetPublisher {
             }
             lastPublished = snapshot
             lastWriteAt = time
-            reloadPending = true
+            // A heartbeat-only write just keeps `generatedAt` fresh for a quiet
+            // app; nothing changed for the widget to show, so it earns no
+            // reload. Only real content changes mark one pending.
+            if changed { reloadPending = true }
         }
         guard reloadPending else { return }
         if let lastReloadAt, time.timeIntervalSince(lastReloadAt) < Self.minimumReloadInterval { return }
         reloader.reloadAllTimelines()
         lastReloadAt = time
         reloadPending = false
+        recordReload(at: time)
+    }
+
+    private func recordReload(at time: Date) {
+        let isNewDay = reloadsTodayDate.map { !Calendar.current.isDate($0, inSameDayAs: time) } ?? true
+        reloadsToday = isNewDay ? 1 : reloadsToday + 1
+        reloadsTodayDate = time
+        log.info("widget reload #\(self.reloadsToday) today (reason: content)")
     }
 }

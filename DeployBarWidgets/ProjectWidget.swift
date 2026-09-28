@@ -24,18 +24,23 @@ struct ProjectProvider: AppIntentTimelineProvider {
 
     func snapshot(for configuration: SelectProjectIntent, in context: Context) async -> ProjectEntry {
         if context.isPreview { return .sample() }
-        return entries(for: configuration, now: .now).first ?? .sample()
+        return entries(for: configuration, now: .now).0.first ?? .sample()
     }
 
     func timeline(for configuration: SelectProjectIntent, in context: Context) async -> Timeline<ProjectEntry> {
-        let entries = entries(for: configuration, now: .now)
+        let now = Date.now
+        let (entries, asOf) = entries(for: configuration, now: now)
         widgetTimelineLog.log("project timeline: \(entries.count) entries")
-        return Timeline(entries: entries, policy: .never)
+        let policy: TimelineReloadPolicy = WidgetSelection.refreshDate(asOf: asOf, now: now)
+            .map { .after($0) } ?? .never
+        return Timeline(entries: entries, policy: policy)
     }
 
-    private func entries(for configuration: SelectProjectIntent, now: Date) -> [ProjectEntry] {
+    /// - Returns: the entries, plus the `asOf` they were built from (nil when
+    ///   there's no data) — the timeline's own reload policy needs the same clock.
+    private func entries(for configuration: SelectProjectIntent, now: Date) -> ([ProjectEntry], Date?) {
         guard let snapshot = WidgetSnapshotFile.read() else {
-            return [ProjectEntry(date: now, content: .noSnapshot, generatedAt: nil, isStale: false)]
+            return ([ProjectEntry(date: now, content: .noSnapshot, generatedAt: nil, isStale: false)], nil)
         }
         let key = configuration.project?.id
         let content: ProjectEntry.Content
@@ -46,11 +51,12 @@ struct ProjectProvider: AppIntentTimelineProvider {
             content = key == nil ? .noProjects : .missing
         }
         guard let asOf = project?.updatedAt else {
-            return [ProjectEntry(date: now, content: content, generatedAt: nil, isStale: false)]
+            return ([ProjectEntry(date: now, content: content, generatedAt: nil, isStale: false)], nil)
         }
-        return WidgetSelection.timelineMarks(generatedAt: asOf, now: now).map {
+        let entries = WidgetSelection.timelineMarks(generatedAt: asOf, now: now).map {
             ProjectEntry(date: $0.date, content: content, generatedAt: asOf, isStale: $0.isStale)
         }
+        return (entries, asOf)
     }
 }
 

@@ -19,6 +19,19 @@ enum WidgetSelection {
         now.timeIntervalSince(generatedAt) >= staleAfter
     }
 
+    /// How soon a widget asks WidgetKit to re-read the snapshot on its own,
+    /// ahead of going stale — at least the heartbeat's 30 minutes (so a live
+    /// app's own writes land first) and short of `staleAfter`'s 60.
+    static let refreshAfter: TimeInterval = 45 * 60
+
+    /// When a timeline should schedule its own refresh: `refreshAfter` past
+    /// `asOf`, or nil when there's no data or it's already stale (nothing to
+    /// refresh into — the entry already reads as "stopped updating").
+    static func refreshDate(asOf: Date?, now: Date) -> Date? {
+        guard let asOf, !isStale(generatedAt: asOf, now: now) else { return nil }
+        return asOf.addingTimeInterval(refreshAfter)
+    }
+
     /// A widget's staleness clock covers several projects at once (the Projects
     /// widget's grid), so it uses the oldest of their `updatedAt` — the one
     /// most likely to be showing replayed data.

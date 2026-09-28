@@ -49,8 +49,9 @@ final class WidgetPublisherTests: XCTestCase {
         XCTAssertEqual(r.reloads, 1)
         clock += 60
         p.publish(snap("READY", at: clock))
-        XCTAssertEqual(r.reloads, 2, "heartbeat refreshes generatedAt after 30 min")
+        XCTAssertEqual(r.written.count, 2, "heartbeat refreshes generatedAt after 30 min")
         XCTAssertEqual(r.written.last?.generatedAt, clock)
+        XCTAssertEqual(r.reloads, 1, "a heartbeat write alone must not ask for a reload")
     }
 
     func test_changeInsideTheReloadWindowIsWrittenButItsReloadWaits() {
@@ -80,5 +81,21 @@ final class WidgetPublisherTests: XCTestCase {
         let r = Recorder()
         makePublisher(r, failWrites: true).publish(snap("READY", at: clock))
         XCTAssertEqual(r.reloads, 0, "the widget would re-read the old file")
+    }
+
+    // MARK: reloadsToday
+
+    func test_reloadsTodayCountsAndResetsOnANewDay() {
+        let r = Recorder()
+        let p = makePublisher(r)
+        p.publish(snap("BUILDING", at: clock))
+        XCTAssertEqual(p.reloadsToday, 1)
+        clock += 60
+        p.publish(snap("READY", at: clock))
+        XCTAssertEqual(p.reloadsToday, 2)
+
+        clock += 24 * 60 * 60
+        p.publish(snap("ERROR", at: clock))
+        XCTAssertEqual(p.reloadsToday, 1, "the count resets when the calendar day changes")
     }
 }

@@ -106,6 +106,21 @@ final class WidgetSelectionTests: XCTestCase {
         XCTAssertEqual(keys, ["new", "old"])
     }
 
+    // MARK: refreshDate
+
+    func test_refreshDate_freshDataSchedulesAfterRefreshAfter() {
+        XCTAssertEqual(WidgetSelection.refreshDate(asOf: t0, now: t0.addingTimeInterval(60)),
+                       t0.addingTimeInterval(WidgetSelection.refreshAfter))
+    }
+
+    func test_refreshDate_alreadyStaleIsNil() {
+        XCTAssertNil(WidgetSelection.refreshDate(asOf: t0, now: t0.addingTimeInterval(WidgetSelection.staleAfter)))
+    }
+
+    func test_refreshDate_nilAsOfIsNil() {
+        XCTAssertNil(WidgetSelection.refreshDate(asOf: nil, now: t0))
+    }
+
     // MARK: dataAsOf
 
     func test_dataAsOf_returnsOldestUpdatedAt() {

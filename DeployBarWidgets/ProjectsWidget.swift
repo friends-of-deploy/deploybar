@@ -34,19 +34,24 @@ struct ProjectsProvider: AppIntentTimelineProvider {
 
     func snapshot(for configuration: SelectProjectsIntent, in context: Context) async -> ProjectsEntry {
         if context.isPreview { return .sample() }
-        return entries(for: configuration, family: context.family, now: .now).first ?? .sample()
+        return entries(for: configuration, family: context.family, now: .now).0.first ?? .sample()
     }
 
     func timeline(for configuration: SelectProjectsIntent, in context: Context) async -> Timeline<ProjectsEntry> {
-        let entries = entries(for: configuration, family: context.family, now: .now)
+        let now = Date.now
+        let (entries, asOf) = entries(for: configuration, family: context.family, now: now)
         widgetTimelineLog.log("projects timeline: \(entries.count) entries")
-        return Timeline(entries: entries, policy: .never)
+        let policy: TimelineReloadPolicy = WidgetSelection.refreshDate(asOf: asOf, now: now)
+            .map { .after($0) } ?? .never
+        return Timeline(entries: entries, policy: policy)
     }
 
+    /// - Returns: the entries, plus the `asOf` they were built from (nil when
+    ///   there's no data) — the timeline's own reload policy needs the same clock.
     private func entries(for configuration: SelectProjectsIntent, family: WidgetFamily,
-                         now: Date) -> [ProjectsEntry] {
+                         now: Date) -> ([ProjectsEntry], Date?) {
         guard let snapshot = WidgetSnapshotFile.read() else {
-            return [ProjectsEntry(date: now, content: .noSnapshot, generatedAt: nil, isStale: false)]
+            return ([ProjectsEntry(date: now, content: .noSnapshot, generatedAt: nil, isStale: false)], nil)
         }
         let chosen = (configuration.projects ?? []).map(\.id)
         let projects = WidgetSelection.projects(chosenKeys: chosen, in: snapshot, limit: family.projectsLimit)
@@ -57,11 +62,12 @@ struct ProjectsProvider: AppIntentTimelineProvider {
             content = chosen.isEmpty ? .noProjects : .missing
         }
         guard let asOf = WidgetSelection.dataAsOf(projects) else {
-            return [ProjectsEntry(date: now, content: content, generatedAt: nil, isStale: false)]
+            return ([ProjectsEntry(date: now, content: content, generatedAt: nil, isStale: false)], nil)
         }
-        return WidgetSelection.timelineMarks(generatedAt: asOf, now: now).map {
+        let entries = WidgetSelection.timelineMarks(generatedAt: asOf, now: now).map {
             ProjectsEntry(date: $0.date, content: content, generatedAt: asOf, isStale: $0.isStale)
         }
+        return (entries, asOf)
     }
 }
 
