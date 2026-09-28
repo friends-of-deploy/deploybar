@@ -261,6 +261,30 @@ final class AzureDevOpsClientTests: XCTestCase {
         XCTAssertEqual(logRequest.value(forHTTPHeaderField: "Accept"), "text/plain")
     }
 
+    /// A job can fail before any task runs (no agent, job condition,
+    /// infrastructure timeout); the report must fall back to failed jobs.
+    func test_failureReportFallsBackToFailedJobWhenNoTaskFailed() async throws {
+        let server = Server()
+        server.route("/p1/_apis/build/builds/6/timeline", body: """
+        {"records":[
+          {"id":"s","type":"Stage","name":"Build","result":"failed","order":1},
+          {"id":"j","type":"Job","name":"Build job","result":"failed","order":1,
+           "log":{"id":21,"type":"Container","url":"u"},
+           "issues":[{"type":"error","category":"General","message":"No agent found in pool Default"}]}
+        ]}
+        """)
+        server.route("/p1/_apis/build/builds/6/logs/21", headers: ["Content-Type": "text/plain"],
+                     body: "##[error]No agent found in pool Default")
+        let failed = Deployment(uid: "p1:6", name: "Shop/web", stateRaw: "ERROR", url: "", createdAt: 1,
+                                commitRef: "main", commitMessage: "Fix the build",
+                                webURL: URL(string: "https://dev.azure.com/contoso/p1/_build/results?buildId=6"))
+        let report = try await client(server).failureReport(for: failed)
+        XCTAssertTrue(report.contains("Failed job: Build job"))
+        XCTAssertTrue(report.contains("✗ No agent found in pool Default"))
+        let logRequest = try XCTUnwrap(server.requests.first { $0.url!.path.hasSuffix("/logs/21") })
+        XCTAssertEqual(logRequest.value(forHTTPHeaderField: "Accept"), "text/plain")
+    }
+
     func test_authenticatedNameComesFromConnectionData() async throws {
         let server = Server()
         server.route("/_apis/connectionData", body: #"{"authenticatedUser":{"id":"u1","providerDisplayName":"Ada Lovelace"}}"#)

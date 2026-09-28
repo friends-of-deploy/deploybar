@@ -101,20 +101,26 @@ struct AzureDevOpsClient: Sendable {
     }
 
     /// Paste-ready failure report: failed tasks from the run's timeline plus
-    /// the tail of the first failed task's log (best-effort).
+    /// the tail of the first failed record's log (best-effort). Falls back to
+    /// failed jobs when no task failed — a job can fail before any task runs
+    /// (no agent, job condition, infrastructure timeout).
     func failureReport(for deployment: Deployment) async throws -> String {
         guard let ref = Self.buildRef(deployment) else { throw ProviderClientError.http(-1) }
         let data = try await get("\(ref.project)/_apis/build/builds/\(ref.buildId)/timeline")
-        let failedTasks = try Self.decoder.decode(ADOTimeline.self, from: data).records
+        let records = try Self.decoder.decode(ADOTimeline.self, from: data).records
+        let failedTasks = records
             .filter { $0.type == "Task" && $0.result == "failed" }
             .sorted { ($0.order ?? 0) < ($1.order ?? 0) }
+        let failed = failedTasks.isEmpty
+            ? records.filter { $0.type == "Job" && $0.result == "failed" }.sorted { ($0.order ?? 0) < ($1.order ?? 0) }
+            : failedTasks
         var logTail: String?
-        if let logId = failedTasks.first?.log?.id,
+        if let logId = failed.first(where: { $0.log != nil })?.log?.id,
            let log = try? await get("\(ref.project)/_apis/build/builds/\(ref.buildId)/logs/\(logId)",
                                     accept: "text/plain") {
             logTail = String(decoding: log, as: UTF8.self)
         }
-        return AzureDevOpsErrorReport.make(deployment: deployment, failedTasks: failedTasks, logTail: logTail)
+        return AzureDevOpsErrorReport.make(deployment: deployment, failedRecords: failed, logTail: logTail)
     }
 
     /// The display name the token belongs to, without loading anything else.

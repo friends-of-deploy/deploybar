@@ -4,7 +4,7 @@ import Foundation
 /// tasks with their error messages, and the tail of the first failed task's
 /// log. Pure so it's testable; mirrors `GitHubActionsErrorReport`.
 enum AzureDevOpsErrorReport {
-    static func make(deployment: Deployment, failedTasks: [ADOTimelineRecord], logTail: String?) -> String {
+    static func make(deployment: Deployment, failedRecords: [ADOTimelineRecord], logTail: String?) -> String {
         var lines: [String] = []
         lines.append("Azure DevOps run failed")
         lines.append("Repository: \(deployment.name)")
@@ -14,14 +14,15 @@ enum AzureDevOpsErrorReport {
         }
         if let url = deployment.webURL?.absoluteString { lines.append("Logs: \(url)") }
 
-        if failedTasks.isEmpty {
+        if failedRecords.isEmpty {
             lines.append("")
             lines.append("(no failed tasks reported)")
         } else {
-            for task in failedTasks {
+            for record in failedRecords {
                 lines.append("")
-                lines.append("Failed task: \(task.name ?? "unnamed")")
-                for issue in task.issues ?? [] where issue.type == "error" {
+                let label = record.type == "Job" ? "Failed job" : "Failed task"
+                lines.append("\(label): \(record.name ?? "unnamed")")
+                for issue in record.issues ?? [] where issue.type == "error" {
                     if let message = issue.message { lines.append("  ✗ \(message)") }
                 }
             }
