@@ -108,6 +108,7 @@
 		7AFA52ADBEBC2716036D8035 /* MarkdownDocument.swift in Sources */ = {isa = PBXBuildFile; fileRef = 43759C88385E4245973D1667 /* MarkdownDocument.swift */; };
 		7B5B214C13C36A5A4B8307D6 /* AppInfo.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A9A41B399199C4BEA314887 /* AppInfo.swift */; };
 		7BC287BA7E69894DB50839A0 /* Team.swift in Sources */ = {isa = PBXBuildFile; fileRef = 99CE42C7D6C12B7325A60F1D /* Team.swift */; };
+		7C10AB30EBA2E322AAD6E21A /* WidgetSelection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5DD24593FF0DFACE60ABDFB7 /* WidgetSelection.swift */; };
 		7D5875945050DAC70C139259 /* LinkBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = B015CC4FB573440F0554E492 /* LinkBuilder.swift */; };
 		7E8B23A1D5AA65DF359D4CD9 /* user.json in Resources */ = {isa = PBXBuildFile; fileRef = A81FC0F07E8FBD1545D310E0 /* user.json */; };
 		80B96109ACA736872E7B0742 /* NotificationSettingsTab.swift in Sources */ = {isa = PBXBuildFile; fileRef = 176FE250E8C527CAFCF05603 /* NotificationSettingsTab.swift */; };
@@ -131,6 +132,8 @@
 		9536605F66CE469E3CBA3849 /* GitHubClientTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C78421F137D7C180CDB1C9B1 /* GitHubClientTests.swift */; };
 		953BB1DB6885D669FFCF7AA4 /* RateLimitTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2D98CD1DA787CB017E6E1380 /* RateLimitTests.swift */; };
 		966900807BC98D14698FC12F /* SettingsStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF7365E6FD34AFF0BCAF17FD /* SettingsStore.swift */; };
+		9B1E17A15E9F4FB5B651BBAB /* WidgetSelection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5DD24593FF0DFACE60ABDFB7 /* WidgetSelection.swift */; };
+		9D5496E4F59539511481B7BA /* WidgetSelectionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = CAA07AE029D1A975473D44BE /* WidgetSelectionTests.swift */; };
 		9E399A10033027F71B48FE9A /* PopoverChromeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7D8EDE50B7520323CB8D8767 /* PopoverChromeTests.swift */; };
 		9EB913DB72C33D2CBD4C50D9 /* DeploymentState+Style.swift in Sources */ = {isa = PBXBuildFile; fileRef = C23322EDDD74C737C69EE197 /* DeploymentState+Style.swift */; };
 		A14097599D9F23EA187355AF /* GitHubActionsErrorReport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7DD458B00EA53255D53F877F /* GitHubActionsErrorReport.swift */; };
@@ -326,6 +329,7 @@
 		5C29717717C676DD2D14C378 /* UpdateChannel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UpdateChannel.swift; sourceTree = "<group>"; };
 		5C45520C48C2F7C0E83C4E00 /* GitHubClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GitHubClient.swift; sourceTree = "<group>"; };
 		5D852B6204688B79CB733233 /* DeploymentFavicon.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeploymentFavicon.swift; sourceTree = "<group>"; };
+		5DD24593FF0DFACE60ABDFB7 /* WidgetSelection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetSelection.swift; sourceTree = "<group>"; };
 		5EA45595184BB5C619B00160 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		5EE3D64675F6B5C3F2344672 /* ScopeDot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScopeDot.swift; sourceTree = "<group>"; };
 		5FAF19E220235027CEA50E14 /* MenuBarIcon.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuBarIcon.swift; sourceTree = "<group>"; };
@@ -415,6 +419,7 @@
 		C78421F137D7C180CDB1C9B1 /* GitHubClientTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GitHubClientTests.swift; sourceTree = "<group>"; };
 		C7EF9FB061427EC4E21C550E /* default.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = default.json; sourceTree = "<group>"; };
 		CA6B6CFE91A53E9E03D10304 /* ProviderIntegration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProviderIntegration.swift; sourceTree = "<group>"; };
+		CAA07AE029D1A975473D44BE /* WidgetSelectionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetSelectionTests.swift; sourceTree = "<group>"; };
 		CAAD06E612553CAA9FBDF63F /* HealthDot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthDot.swift; sourceTree = "<group>"; };
 		CB120BDAC0A9EA657E9556D2 /* Tooltip.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Tooltip.swift; sourceTree = "<group>"; };
 		CB443AD7E9305D7127C6B292 /* RowPrimaryActionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RowPrimaryActionTests.swift; sourceTree = "<group>"; };
@@ -637,6 +642,7 @@
 				A5E5C2ED9666F903534AFD74 /* UserLoadingTests.swift */,
 				975C49CE978B69146270A2D6 /* VercelClientTests.swift */,
 				A09C0975B240FDFA2C5C2518 /* VercelCLISessionTests.swift */,
+				CAA07AE029D1A975473D44BE /* WidgetSelectionTests.swift */,
 				BC00E7908B0430B12C9C8AC6 /* WidgetSnapshotTests.swift */,
 				ED25543EFCD38C54768D8A71 /* Fixtures */,
 				E8285F6B95BB9EC11D9D42A0 /* Support */,
@@ -772,6 +778,7 @@
 				DC15C06906554C6BBD1D0EBF /* DeploymentState.swift */,
 				C23322EDDD74C737C69EE197 /* DeploymentState+Style.swift */,
 				4800A8A2C66A8E390FB61D82 /* Provider.swift */,
+				5DD24593FF0DFACE60ABDFB7 /* WidgetSelection.swift */,
 				EC20D3482FA61BD1ABA19FB0 /* WidgetSnapshot.swift */,
 				E0D781FF5337E4B9C962C5C5 /* WidgetSnapshotFile.swift */,
 			);
@@ -1108,6 +1115,7 @@
 				A6420D2DE19628FA56D15373 /* VercelClient.swift in Sources */,
 				41F21229C49BBD4B2CF5BCC2 /* VercelIntegration.swift in Sources */,
 				798528DF547AA5A90B58FE94 /* VercelUser.swift in Sources */,
+				7C10AB30EBA2E322AAD6E21A /* WidgetSelection.swift in Sources */,
 				42A8EBD26BC6396A7DDF70AD /* WidgetSnapshot.swift in Sources */,
 				D35697979A036FDD16B07474 /* WidgetSnapshotFile.swift in Sources */,
 			);
@@ -1122,6 +1130,7 @@
 				698F4112A980A8A0A308D0E3 /* DeploymentState.swift in Sources */,
 				84B3B7F222738890498DBBA2 /* ProjectWidget.swift in Sources */,
 				53647A317A76844B3DC10BE2 /* Provider.swift in Sources */,
+				9B1E17A15E9F4FB5B651BBAB /* WidgetSelection.swift in Sources */,
 				DF3AB7BA9A2AC2B4456DAE5B /* WidgetSnapshot.swift in Sources */,
 				5CFE916F3555AD5E4538C7C6 /* WidgetSnapshotFile.swift in Sources */,
 			);
@@ -1207,6 +1216,7 @@
 				E8C88C6284FB182EB9D3D48F /* UserLoadingTests.swift in Sources */,
 				7438E3CC9A428E7326A7F107 /* VercelCLISessionTests.swift in Sources */,
 				4BF059240F92969CD0D72385 /* VercelClientTests.swift in Sources */,
+				9D5496E4F59539511481B7BA /* WidgetSelectionTests.swift in Sources */,
 				CB1D7E957D2CFC9208B0B200 /* WidgetSnapshotTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
