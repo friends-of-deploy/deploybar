@@ -21,13 +21,10 @@ final class ProviderIntegrationTests: XCTestCase {
 
     // MARK: Registry
 
-    func test_liveRegistryOffersVercelAndGitHubOnly() {
+    func test_liveRegistryOffersEveryProvider() {
         let registry = ProviderRegistry.live()
-        XCTAssertEqual(registry.all.map(\.provider), [.vercel, .github])
-        XCTAssertTrue(registry.isAvailable(.vercel))
-        XCTAssertTrue(registry.isAvailable(.github))
-        XCTAssertFalse(registry.isAvailable(.azureDevOps))
-        XCTAssertNil(registry.integration(for: .azureDevOps))
+        XCTAssertEqual(registry.all.map(\.provider), [.vercel, .github, .azureDevOps])
+        XCTAssertTrue(Provider.allCases.allSatisfy(registry.isAvailable))
     }
 
     // MARK: Vercel

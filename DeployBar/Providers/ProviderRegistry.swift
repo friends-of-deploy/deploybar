@@ -19,6 +19,6 @@ struct ProviderRegistry: Sendable {
     /// Fresh instances each call: an integration may hold per-store state
     /// (GitHub's per-tick repository listing).
     static func live() -> ProviderRegistry {
-        ProviderRegistry([VercelIntegration(), GitHubIntegration()])
+        ProviderRegistry([VercelIntegration(), GitHubIntegration(), AzureDevOpsIntegration()])
     }
 }

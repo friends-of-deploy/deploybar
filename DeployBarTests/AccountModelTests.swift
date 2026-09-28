@@ -6,7 +6,7 @@ final class AccountModelTests: XCTestCase {
         let registry = ProviderRegistry.live()
         XCTAssertTrue(registry.isAvailable(.vercel))
         XCTAssertTrue(registry.isAvailable(.github))
-        XCTAssertFalse(registry.isAvailable(.azureDevOps))
+        XCTAssertTrue(registry.isAvailable(.azureDevOps))
     }
 
     func test_provider_displayNames() {

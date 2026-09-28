@@ -942,6 +942,17 @@
         }
       }
     },
+    "Allow Build (Read) and Code (Read)." : {
+      "comment" : "Azure DevOps token hint",
+      "localizations" : {
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nadaj uprawnienia Build (Read) i Code (Read)."
+          }
+        }
+      }
+    },
     "Analytics" : {
       "localizations" : {
         "pl" : {
@@ -1464,6 +1475,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Dostawca"
+          }
+        }
+      }
+    },
+    "Pipelines" : {
+      "comment" : "Azure DevOps overflow menu item",
+      "localizations" : {
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pipeline'y"
           }
         }
       }
