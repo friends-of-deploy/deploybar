@@ -20,6 +20,7 @@
 		0DC0A4563D56EFBDE8ED2412 /* TokenProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 53BE5B3FDF2A642AB49455F0 /* TokenProvider.swift */; };
 		0FDB30858612F3BAF4C53328 /* projects.json in Resources */ = {isa = PBXBuildFile; fileRef = FAA8630778C2284CAF43DC0A /* projects.json */; };
 		11CB853BF9C2623B0453DA2E /* ProjectOwnerLabelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 21F7062B723C7BF18ED029D3 /* ProjectOwnerLabelTests.swift */; };
+		1293BAF9FD3DBC906D9618F2 /* OrganizationDiscoveryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BFC5DECD8768CE3A42D9455B /* OrganizationDiscoveryTests.swift */; };
 		134270AC4A293342B8D12F11 /* FollowSettingsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2889E76BF8CB729413458744 /* FollowSettingsTests.swift */; };
 		162C4AF5FE588BD77FBC3768 /* MarkdownDocumentTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = CF432C264A2359581E7F71BF /* MarkdownDocumentTests.swift */; };
 		163121D8D43345AC9382E75C /* AccountModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C3572794A64768D07CE7BA51 /* AccountModelTests.swift */; };
@@ -356,6 +357,7 @@
 		BA16B92773C8D917F0338CF4 /* AccountDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountDetailView.swift; sourceTree = "<group>"; };
 		BCA4BA9D9376E97271A39A18 /* VercelUser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VercelUser.swift; sourceTree = "<group>"; };
 		BE31FDA8E4BAF55EC2045852 /* PollPlanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PollPlanner.swift; sourceTree = "<group>"; };
+		BFC5DECD8768CE3A42D9455B /* OrganizationDiscoveryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OrganizationDiscoveryTests.swift; sourceTree = "<group>"; };
 		C3572794A64768D07CE7BA51 /* AccountModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountModelTests.swift; sourceTree = "<group>"; };
 		C57598226CA9E5B62C77E446 /* GitHubStateMappingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GitHubStateMappingTests.swift; sourceTree = "<group>"; };
 		C6A8B56E49A8EB58182D2975 /* FollowMigrationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FollowMigrationTests.swift; sourceTree = "<group>"; };
@@ -531,6 +533,7 @@
 				384A2C1C53973E006D759DD0 /* NotificationActionsTests.swift */,
 				2CE629B98A536D72C8515A98 /* NotificationGatingTests.swift */,
 				63911F07D74630586FCE2FEA /* OnboardingTests.swift */,
+				BFC5DECD8768CE3A42D9455B /* OrganizationDiscoveryTests.swift */,
 				1976D9F9B157C4C976137E6E /* PollCoalescingTests.swift */,
 				68A9E633C44C1B85C5A525A2 /* PollPlannerTests.swift */,
 				7D8EDE50B7520323CB8D8767 /* PopoverChromeTests.swift */,
@@ -1025,6 +1028,7 @@
 				2383AFC83B87C1001D74CC9A /* NotificationActionsTests.swift in Sources */,
 				49C2EE31CFAB1309715A1B50 /* NotificationGatingTests.swift in Sources */,
 				0CC8F316913AC5EDC62D5C48 /* OnboardingTests.swift in Sources */,
+				1293BAF9FD3DBC906D9618F2 /* OrganizationDiscoveryTests.swift in Sources */,
 				4EE42767F2527F6DD4216259 /* PollCoalescingTests.swift in Sources */,
 				A7B9F93ECD8C519D9345C981 /* PollPlannerTests.swift in Sources */,
 				9E399A10033027F71B48FE9A /* PopoverChromeTests.swift in Sources */,

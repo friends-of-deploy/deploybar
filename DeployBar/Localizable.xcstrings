@@ -812,6 +812,28 @@
         }
       }
     },
+    "%@: couldn’t load organizations — retrying" : {
+      "comment" : "Health issue: organization discovery failed and will be retried",
+      "localizations" : {
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@: nie udało się wczytać organizacji — ponawiam"
+          }
+        }
+      }
+    },
+    "%@: this token can’t see any organization" : {
+      "comment" : "Health issue: the token sees no organization",
+      "localizations" : {
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@: ten token nie widzi żadnej organizacji"
+          }
+        }
+      }
+    },
     "%lld crons" : {
       "comment" : "Cron job count on a project; pluralized",
       "localizations" : {

@@ -58,6 +58,27 @@ final class DeploymentStore {
         settings.cachedOrgs = cache
     }
 
+    /// Why an account that has no scope of its own (its provider polls only
+    /// organizations) has nothing to poll yet.
+    enum DiscoveryIssue: Equatable {
+        /// Organization discovery failed; it is retried.
+        case failed
+        /// Discovery worked but the token sees no organization.
+        case noneVisible
+    }
+
+    private(set) var discoveryIssues: [UUID: DiscoveryIssue] = [:]
+    /// When each such account last tried discovery, to pace retries.
+    @ObservationIgnored private var discoveryAttempts: [UUID: Date] = [:]
+    /// How long an account without organizations waits between discovery attempts.
+    static let discoveryRetryInterval: TimeInterval = 300
+
+    /// An account that can only poll organizations and has none yet.
+    private func awaitsOrganizations(_ account: Account) -> Bool {
+        registry.integration(for: account.provider)?.hasAccountScope == false
+            && organizations(for: account).isEmpty
+    }
+
     var lastUpdated: Date?
     var scopeName: String
 
@@ -247,7 +268,19 @@ final class DeploymentStore {
         let ordered = accountStore.accounts.compactMap { sourceErrors[$0.id] }
         let known = Set(accountStore.accounts.map(\.id))
         let orphans = sourceErrors.filter { !known.contains($0.key) }.values.sorted()
-        return ordered + orphans
+        let discovery = accountStore.accounts.compactMap { account -> String? in
+            switch discoveryIssues[account.id] {
+            case .failed?:
+                return String(localized: "\(account.label): couldn’t load organizations — retrying",
+                              comment: "Health issue: organization discovery failed and will be retried")
+            case .noneVisible?:
+                return String(localized: "\(account.label): this token can’t see any organization",
+                              comment: "Health issue: the token sees no organization")
+            case nil:
+                return nil
+            }
+        }
+        return discovery + ordered + orphans
     }
 
     /// Scopes the user can SELECT for an account, including disabled ones —
@@ -428,19 +461,41 @@ final class DeploymentStore {
 
     // MARK: - Account organization discovery
 
-    /// The same account-specific discovery path serves startup and account-add.
-    func loadOrganizations(for account: Account) async {
+    /// The same account-specific discovery path serves startup, account-add and
+    /// the retry for accounts still without organizations. `repoll: false` is
+    /// for callers already inside a poll.
+    func loadOrganizations(for account: Account, repoll: Bool = true) async {
         guard let integration = registry.integration(for: account.provider),
               let credential = accountStore.resolve(account) else { return }
+        // Only accounts that poll nothing without organizations are paced, so
+        // no other account ever reads the clock here.
+        if !integration.hasAccountScope { discoveryAttempts[account.id] = now() }
         do {
             let fetched = try await integration.organizations(for: account, using: credential)
             guard accountStore.accounts.contains(where: { $0.id == account.id }) else { return }
             let changed = fetched.map(\.id) != organizations(for: account).map(\.id)
             setOrganizations(fetched, for: account.id)
-            if changed { await poll() }
+            if !integration.hasAccountScope {
+                discoveryIssues[account.id] = fetched.isEmpty ? .noneVisible : nil
+            }
+            if changed && repoll { await poll() }
         } catch {
             // Keep cached organizations during a transient discovery failure.
+            if awaitsOrganizations(account) { discoveryIssues[account.id] = .failed }
             os_log("organization fetch failed for %{public}@: %{public}@", account.label, error.localizedDescription)
+        }
+    }
+
+    /// Retries discovery for accounts that still have nothing to poll, at most
+    /// once every `discoveryRetryInterval`. Runs inside a poll, so it never repolls.
+    private func retryOrganizationDiscovery() async {
+        let waiting = accountStore.accounts.filter(awaitsOrganizations)
+        guard !waiting.isEmpty else { return }       // nobody waiting: no clock read
+        let timestamp = now()
+        for account in waiting {
+            if let last = discoveryAttempts[account.id],
+               timestamp.timeIntervalSince(last) < Self.discoveryRetryInterval { continue }
+            await loadOrganizations(for: account, repoll: false)
         }
     }
 
@@ -663,8 +718,12 @@ final class DeploymentStore {
         // showing "Loading…" even when there is nothing to show.
         defer { isPollInFlight = false; isRefreshing = false; isLoadingInitial = false }
 
+        await retryOrganizationDiscovery()
+
         guard !availableScopes.isEmpty else {
-            isLoggedOut = true        // no connected accounts at all
+            // An account still waiting for its organizations is connected,
+            // not signed out; its health issue says what is going on.
+            isLoggedOut = !accountStore.accounts.contains(where: awaitsOrganizations)
             return
         }
 
@@ -820,6 +879,7 @@ final class DeploymentStore {
             return (consecutiveAuthFailures[ref] ?? 0) >= Self.authFailureThreshold
         }
         isLoggedOut = freshSuccessCount == 0 && allAuthFailing
+            && !accountStore.accounts.contains(where: awaitsOrganizations)
 
         // Prune per-account state for accounts that are no longer connected,
         // preventing unbounded growth when accounts are removed.
@@ -913,6 +973,8 @@ final class DeploymentStore {
         consecutiveAuthFailures = consecutiveAuthFailures.filter { live.contains($0.key.accountId) }
         scopeErrors = scopeErrors.filter { live.contains($0.key.accountId) }
         identities = identities.filter { live.contains($0.key) }
+        discoveryIssues = discoveryIssues.filter { live.contains($0.key) }
+        discoveryAttempts = discoveryAttempts.filter { live.contains($0.key) }
         unfilteredDeployments.removeAll { !live.contains($0.account.id) }
         unfilteredProjects.removeAll { !live.contains($0.account.id) }
         // Rewrite the snapshot now rather than waiting for a successful poll,
