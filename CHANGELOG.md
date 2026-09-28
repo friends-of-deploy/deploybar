@@ -3,6 +3,19 @@
 Release notes for DeployBar. Earlier releases are available on
 [GitHub Releases](https://github.com/friends-of-deploy/deploybar/releases).
 
+## [Unreleased]
+
+### Under the hood
+
+- Each provider now lives behind one integration, which prepares DeployBar
+  for new providers such as Azure DevOps.
+- Vercel accounts added with a token now show their username before personal
+  projects, as the Vercel CLI account already did.
+- Choosing a scope in the menu only filters the list. It no longer clears that
+  scope's warnings.
+- Until its teams have loaded, a Vercel CLI account shows its personal
+  projects first.
+
 ## [1.2.2] - 2026-09-27
 
 DeployBar 1.2.2 keeps the menu responsive while it refreshes and makes
