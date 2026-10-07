@@ -84,6 +84,7 @@ struct PopoverPanelStyler: NSViewRepresentable {
 
         override func viewDidMoveToWindow() {
             super.viewDidMoveToWindow()
+            guard !DiagnosticProbe.stylerDisabled else { return }
             styleWindow()
             refit()
             stopFollowing()
@@ -193,6 +194,7 @@ struct PopoverPanelStyler: NSViewRepresentable {
         }
 
         func refit() {
+            guard !DiagnosticProbe.stylerDisabled else { return }
             // After the in-flight layout pass: the superview's frame is stale
             // until SwiftUI has finished laying the new content out.
             DispatchQueue.main.async { [weak self] in

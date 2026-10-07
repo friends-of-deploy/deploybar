@@ -1,0 +1,44 @@
+# TEMPORARY — macOS 27 investigation. Builds the diag branch against the same
+# SDK the release workflow uses, so the panel can be checked on macOS 27 with
+# the linkage that actually ships. Delete with the diag branch.
+name: Diag build
+
+on:
+  push:
+    branches: ['diag/**']
+
+jobs:
+  build:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Select latest Xcode
+        run: |
+          latest="$(ls -d /Applications/Xcode_*.app 2>/dev/null | sort -V | tail -1)"
+          if [ -n "$latest" ]; then sudo xcode-select -s "$latest"; fi
+          xcodebuild -version
+          xcrun --sdk macosx --show-sdk-version
+
+      - name: Generate Xcode project
+        run: brew install xcodegen && xcodegen generate
+
+      - name: Build (Release, unsigned)
+        run: |
+          set -euo pipefail
+          xcodebuild build \
+            -project DeployBar.xcodeproj \
+            -scheme DeployBar \
+            -configuration Release \
+            -destination 'generic/platform=macOS' \
+            -derivedDataPath "$RUNNER_TEMP/dd" \
+            CODE_SIGNING_ALLOWED=NO
+          cd "$RUNNER_TEMP/dd/Build/Products/Release"
+          vtool -show-build DeployBar.app/Contents/MacOS/DeployBar
+          ditto -c -k --keepParent DeployBar.app "$RUNNER_TEMP/DeployBar-diag-ci.zip"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: DeployBar-diag-ci
+          path: ${{ runner.temp }}/DeployBar-diag-ci.zip
+          if-no-files-found: error

@@ -11,6 +11,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var rightClickMonitor: Any?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        DiagnosticProbe.install()
         // The status button isn't created until the first run-loop pass after
         // launch, so install on the next tick.
         DispatchQueue.main.async { [weak self] in
