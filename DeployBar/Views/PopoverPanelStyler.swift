@@ -18,7 +18,26 @@ import SwiftUI
 /// common was a missing `window.hasShadow = true` alongside the cleared
 /// background. See `styleWindow()`.
 ///
+/// None of this runs on macOS 27. See `stylesPanel(on:)`.
+///
 struct PopoverPanelStyler: NSViewRepresentable {
+    /// Whether the panel needs this styler at all.
+    ///
+    /// macOS 27 changed the panel underneath it. The window's content view
+    /// *is* the SwiftUI hosting view now, not a container around it, so the
+    /// backdrop `styleWindow()` adds landed inside the hosting view, on top of
+    /// the hit-testing order: every click and scroll went to the backdrop, and
+    /// only the row's link icon still responded. Measured on 27.0.1 by
+    /// hit-testing live events. The same OS also draws its own glass behind
+    /// the panel (an `SDFLayer`) for builds against both the 26.2 and 27 SDKs,
+    /// and with the styler off the panel scrolls, clicks and keeps its size.
+    /// So from 27 on, the panel is left to the system.
+    nonisolated static func stylesPanel(on version: OperatingSystemVersion) -> Bool {
+        version.majorVersion < 27
+    }
+
+    private static let isActive = stylesPanel(on: ProcessInfo.processInfo.operatingSystemVersion)
+
     /// The corrected window frame, or nil when the current one already fits.
     ///
     /// The top edge stays anchored: AppKit measures `origin.y` from the bottom
@@ -84,6 +103,7 @@ struct PopoverPanelStyler: NSViewRepresentable {
 
         override func viewDidMoveToWindow() {
             super.viewDidMoveToWindow()
+            guard PopoverPanelStyler.isActive else { return }
             styleWindow()
             refit()
             stopFollowing()
@@ -193,6 +213,7 @@ struct PopoverPanelStyler: NSViewRepresentable {
         }
 
         func refit() {
+            guard PopoverPanelStyler.isActive else { return }
             // After the in-flight layout pass: the superview's frame is stale
             // until SwiftUI has finished laying the new content out.
             DispatchQueue.main.async { [weak self] in

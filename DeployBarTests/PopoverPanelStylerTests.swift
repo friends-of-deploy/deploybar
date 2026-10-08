@@ -77,4 +77,21 @@ final class PopoverPanelStylerTests: XCTestCase {
         // window must not trip the breaker.
         XCTAssertFalse(PopoverPanelStyler.isOscillating([420, 420.2, 420, 420.1]))
     }
+
+    // MARK: - macOS 27
+
+    // On macOS 27 the backdrop landed inside the hosting view and took every
+    // click and scroll; the system draws the panel's glass itself there.
+
+    func test_stylesThePanelUpToMacOS26() {
+        XCTAssertTrue(PopoverPanelStyler.stylesPanel(
+            on: OperatingSystemVersion(majorVersion: 26, minorVersion: 6, patchVersion: 2)))
+    }
+
+    func test_leavesThePanelToTheSystemFromMacOS27() {
+        XCTAssertFalse(PopoverPanelStyler.stylesPanel(
+            on: OperatingSystemVersion(majorVersion: 27, minorVersion: 0, patchVersion: 1)))
+        XCTAssertFalse(PopoverPanelStyler.stylesPanel(
+            on: OperatingSystemVersion(majorVersion: 28, minorVersion: 0, patchVersion: 0)))
+    }
 }
