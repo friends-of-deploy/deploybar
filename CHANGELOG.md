@@ -3,6 +3,19 @@
 Release notes for DeployBar. Earlier releases are available on
 [GitHub Releases](https://github.com/friends-of-deploy/deploybar/releases).
 
+## [1.3.0-beta.3] - 2026-10-09
+
+DeployBar 1.3 beta 3 makes the menu bar panel work on macOS 27.
+
+### Menu bar panel
+
+- On macOS 27 the panel's list can be scrolled again, and its rows, tabs and
+  buttons respond to clicks. Before, only a row's open-deployment icon did.
+- On macOS 27 the panel uses the system's own background. macOS 26 and
+  earlier look the same as before.
+
+[Full changes since 1.3.0-beta.2](https://github.com/friends-of-deploy/deploybar/compare/v1.3.0-beta.2...v1.3.0-beta.3)
+
 ## [1.3.0-beta.2] - 2026-09-28
 
 DeployBar 1.3 beta 2 fixes where Azure DevOps organizations appear in the
