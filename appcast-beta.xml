@@ -2,6 +2,29 @@
 <rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle">
   <channel>
     <item>
+      <title>1.3.0-beta.3</title>
+      <pubDate>Fri, 09 Oct 2026 17:07:40 +0000</pubDate>
+      <sparkle:version>23</sparkle:version>
+      <sparkle:shortVersionString>1.3.0-beta.3</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <description sparkle:format="markdown"><![CDATA[
+DeployBar 1.3 beta 3 makes the menu bar panel work on macOS 27.
+
+### Menu bar panel
+
+- On macOS 27 the panel's list can be scrolled again, and its rows, tabs and
+  buttons respond to clicks. Before, only a row's open-deployment icon did.
+- On macOS 27 the panel uses the system's own background. macOS 26 and
+  earlier look the same as before.
+
+[Full changes since 1.3.0-beta.2](https://github.com/friends-of-deploy/deploybar/compare/v1.3.0-beta.2...v1.3.0-beta.3)
+]]></description>
+      <enclosure url="https://github.com/friends-of-deploy/deploybar/releases/download/v1.3.0-beta.3/DeployBar-1.3.0-beta.3.zip"
+                 length="5723950"
+                 type="application/octet-stream"
+                 sparkle:edSignature="F1hATsbdqGAhHrQT109w/zUcMUDNOZVsEQamxuNoOxC0tra1pj4EGyahf3P8gH7CnYeLNcnU1nuCd0SqlJbCDg==" />
+    </item>
+    <item>
       <title>1.3.0-beta.2</title>
       <pubDate>Mon, 28 Sep 2026 22:03:44 +0000</pubDate>
       <sparkle:version>22</sparkle:version>
