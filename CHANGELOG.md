@@ -3,6 +3,59 @@
 Release notes for DeployBar. Earlier releases are available on
 [GitHub Releases](https://github.com/friends-of-deploy/deploybar/releases).
 
+## [1.3.0] - 2026-10-11
+
+DeployBar 1.3 puts your deploys on the desktop and in Notification Center
+with two new widgets, adds Azure DevOps Pipelines as a third source next to
+Vercel and GitHub Actions, and makes the menu bar panel work on macOS 27.
+
+### Widgets
+
+- New **Project** widget for the desktop and Notification Center: small shows the
+  project's status, medium its latest (or running) deploy, large its recent deploys.
+- New **Projects** widget: several chosen projects side by side, or your most
+  recently active ones.
+- A running deploy shows a live timer; clicking a deploy opens its page.
+- Widgets show what DeployBar last fetched, so they update while DeployBar is
+  running. When it isn't, or when an account stops refreshing, they mark that
+  data as out of date instead of showing it as current. macOS limits how often
+  a widget can refresh, so a widget can briefly lag behind the menu.
+
+### Azure DevOps
+
+- Add an Azure DevOps account in Settings with a personal access token
+  (Build, Code and Project and Team: Read; add User Profile: Read to follow
+  every organization). Pipeline runs show up alongside your Vercel
+  deployments and GitHub Actions runs, with notifications and a copyable
+  error report for failed runs.
+- Leave the organization empty to follow every organization the token can
+  see, or name one when the token is limited to it.
+- An Azure DevOps account has its own row in the source menu with the Azure
+  DevOps icon, and its organizations are listed beneath it. Choosing the
+  account row shows all of its organizations at once.
+- Repositories appear in the Projects list with links to Pipelines, pull
+  requests and repository settings.
+
+### Menu bar panel on macOS 27
+
+- On macOS 27 the panel's list can be scrolled, and its rows, tabs and buttons
+  respond to clicks. Before, only a row's open-deployment icon did.
+- On macOS 27 the panel uses the system's own background. macOS 26 and
+  earlier look the same as before.
+
+### Under the hood
+
+- Each provider now lives behind one integration, which prepares DeployBar
+  for new providers such as Azure DevOps.
+- Vercel accounts added with a token now show their username before personal
+  projects, as the Vercel CLI account already did.
+- Choosing a scope in the menu only filters the list. It no longer clears that
+  scope's warnings.
+- Until its teams have loaded, a Vercel CLI account shows its personal
+  projects first.
+
+[Full changes since 1.2.2](https://github.com/friends-of-deploy/deploybar/compare/v1.2.2...v1.3.0)
+
 ## [1.3.0-beta.3] - 2026-10-09
 
 DeployBar 1.3 beta 3 makes the menu bar panel work on macOS 27.
