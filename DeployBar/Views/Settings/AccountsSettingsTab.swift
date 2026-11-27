@@ -78,9 +78,7 @@ struct AccountsSettingsTab: View {
             SettingsStripButton(
                 systemImage: "minus",
                 help: String(localized: "Remove account", comment: "Remove account tooltip"),
-                // CLI-backed accounts are auto-detected; removing them in the
-                // UI would just have them reappear on the next launch.
-                isDisabled: selectedAccount?.isReadOnly ?? true
+                isDisabled: selectedAccount == nil
             ) {
                 confirmingRemoval = true
             }
@@ -166,7 +164,7 @@ struct AccountsSettingsTab: View {
     }
 
     private func removeSelected() {
-        guard let account = selectedAccount, !account.isReadOnly else { return }
+        guard let account = selectedAccount else { return }
         accountStore.removeAccount(account)
         selection = accountStore.accounts.first.map { .account($0.id) }
         // The popover caches rows per source; without this the removed account's
@@ -188,6 +186,7 @@ private struct AddAccountForm: View {
     @State private var connection: AccountConnectionStore
     @State private var connectionTask: Task<Void, Never>?
     @State private var label = ""
+    @State private var restoreFailed: Provider?
     @Environment(\.providerRegistry) private var registry
 
     init(accountStore: AccountStore, registry: ProviderRegistry, onAdded: @escaping (Account) -> Void) {
@@ -198,6 +197,29 @@ private struct AddAccountForm: View {
 
     var body: some View {
         Form {
+            if !accountStore.dismissedCLIProviders.isEmpty {
+                Section {
+                    ForEach(accountStore.dismissedCLIProviders, id: \.self) { provider in
+                        LabeledContent {
+                            Button(String(localized: "Restore", comment: "Restore CLI account button")) {
+                                restore(provider)
+                            }
+                        } label: {
+                            Label(String(localized: "\(provider.displayName) CLI", comment: "Removed CLI account row"),
+                                  image: provider.iconAssetName)
+                        }
+                    }
+                } header: {
+                    Text(String(localized: "Removed CLI logins", comment: "Add account restore section header"))
+                } footer: {
+                    if let failed = restoreFailed {
+                        Text(String(localized: "\(failed.displayName) CLI isn’t signed in. Sign in in Terminal and try again.",
+                                    comment: "Restore CLI account failure"))
+                            .foregroundStyle(.red)
+                    }
+                }
+            }
+
             Section {
                 Picker(String(localized: "Provider", comment: "Add account provider picker"),
                        selection: $connection.provider) {
@@ -247,6 +269,15 @@ private struct AddAccountForm: View {
         .onDisappear {
             connectionTask?.cancel()
             connection.token = ""
+        }
+    }
+
+    private func restore(_ provider: Provider) {
+        if let account = accountStore.restoreCLIAccount(provider) {
+            restoreFailed = nil
+            onAdded(account)
+        } else {
+            restoreFailed = provider
         }
     }
 

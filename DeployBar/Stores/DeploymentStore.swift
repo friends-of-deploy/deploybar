@@ -512,6 +512,14 @@ final class DeploymentStore {
         }
     }
 
+    /// The user's "Refresh now": organizations are otherwise fetched only at
+    /// launch, so a renamed team kept its old name until a restart.
+    func refresh(_ account: Account) async {
+        await loadOrganizations(for: account, repoll: false)
+        await loadIdentity(for: account)
+        await poll()
+    }
+
     /// Retries discovery for accounts that still have nothing to poll, at most
     /// once every `discoveryRetryInterval`. Runs inside a poll, so it never repolls.
     private func retryOrganizationDiscovery() async {

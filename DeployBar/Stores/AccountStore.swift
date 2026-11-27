@@ -5,6 +5,8 @@ import Observation
 @MainActor
 final class AccountStore {
     private(set) var accounts: [Account] = []
+    /// CLI logins the user removed; detection skips them until restored.
+    private(set) var dismissedCLIProviders: [Provider] = []
     let hadPersistedAccounts: Bool
 
     @ObservationIgnored private let defaults: UserDefaults
@@ -12,7 +14,11 @@ final class AccountStore {
     /// One per credential source, in detection order.
     @ObservationIgnored let strategies: [CredentialStrategy]
 
-    private enum Keys { static let accounts = "connectedAccounts" }
+    private enum Keys {
+        static let accounts = "connectedAccounts"
+        /// Providers whose CLI login the user removed; detection skips them.
+        static let dismissedCLIProviders = "dismissedCLIProviders"
+    }
 
     /// Production and most tests: the three real sources, configured by closure.
     convenience init(defaults: UserDefaults = .standard,
@@ -38,14 +44,40 @@ final class AccountStore {
         self.accounts = savedAccounts
         self.hadPersistedAccounts = !savedAccounts.isEmpty
 
+        dismissedCLIProviders = (defaults.stringArray(forKey: Keys.dismissedCLIProviders) ?? [])
+            .compactMap(Provider.init(rawValue:))
         for strategy in strategies where !accounts.contains(where: { strategy.handles($0.source) }) {
-            guard let detected = strategy.detectAccount() else { continue }
-            switch detected.placement {
-            case .first: accounts.insert(detected.account, at: 0)
-            case .last:  accounts.append(detected.account)
-            }
-            persist()
+            guard let detected = strategy.detectAccount(),
+                  !dismissedCLIProviders.contains(detected.account.provider) else { continue }
+            insert(detected)
         }
+    }
+
+    private func insert(_ detected: DetectedAccount) {
+        switch detected.placement {
+        case .first: accounts.insert(detected.account, at: 0)
+        case .last:  accounts.append(detected.account)
+        }
+        persist()
+    }
+
+    /// Brings back a removed CLI login. Nil when that CLI is no longer
+    /// signed in, in which case it stays offered.
+    @discardableResult
+    func restoreCLIAccount(_ provider: Provider) -> Account? {
+        let detected = strategies
+            .filter { strategy in !accounts.contains(where: { strategy.handles($0.source) }) }
+            .lazy.compactMap { $0.detectAccount() }
+            .first { $0.account.provider == provider }
+        guard let detected else { return nil }
+        setDismissed(dismissedCLIProviders.filter { $0 != provider })
+        insert(detected)
+        return detected.account
+    }
+
+    private func setDismissed(_ providers: [Provider]) {
+        dismissedCLIProviders = providers
+        defaults.set(providers.map(\.rawValue), forKey: Keys.dismissedCLIProviders)
     }
 
     /// The detected Vercel CLI account, if present.
@@ -106,7 +138,14 @@ final class AccountStore {
     }
 
     func removeAccount(_ account: Account) {
-        if case .keychain(let name) = account.source { credentials.removeToken(for: name) }
+        switch account.source {
+        case .keychain(let name):
+            credentials.removeToken(for: name)
+        case .vercelCLI, .githubCLI:
+            if !dismissedCLIProviders.contains(account.provider) {
+                setDismissed(dismissedCLIProviders + [account.provider])
+            }
+        }
         accounts.removeAll { $0.id == account.id }
         persist()
     }

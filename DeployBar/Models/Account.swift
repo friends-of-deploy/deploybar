@@ -16,7 +16,7 @@ struct Account: Codable, Identifiable, Equatable, Sendable {
     /// Optional, so accounts saved before this field existed decode unchanged.
     var organization: String? = nil
 
-    /// CLI-backed accounts are auto-detected and can't be removed in the UI.
+    /// CLI-backed accounts are auto-detected; their credential can't be edited here.
     var isReadOnly: Bool {
         switch source {
         case .vercelCLI, .githubCLI: return true

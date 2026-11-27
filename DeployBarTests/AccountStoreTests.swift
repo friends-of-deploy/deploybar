@@ -85,6 +85,43 @@ final class AccountStoreTests: XCTestCase {
         if case .keychain(let name) = acct.source { XCTAssertNil(creds.token(for: name)) }
     }
 
+    func test_removedCLIAccount_staysRemovedAcrossLaunches() {
+        let d = UserDefaults(suiteName: UUID().uuidString)!
+        let s1 = AccountStore(defaults: d, credentials: InMemoryCredentialStore(), detectCLI: { true },
+                              detectGitHubCLI: { true })
+        s1.removeAccount(s1.cliAccount!)
+        XCTAssertNil(s1.cliAccount)
+        let s2 = AccountStore(defaults: d, credentials: InMemoryCredentialStore(), detectCLI: { true },
+                              detectGitHubCLI: { true })
+        XCTAssertNil(s2.cliAccount, "a removed CLI login must not be re-detected")
+        XCTAssertNotNil(s2.githubCLIAccount, "only the removed source is dismissed")
+    }
+
+    func test_restoreCLIAccount_bringsItBackAndSurvivesRelaunch() {
+        let d = UserDefaults(suiteName: UUID().uuidString)!
+        let s1 = AccountStore(defaults: d, credentials: InMemoryCredentialStore(), detectCLI: { true },
+                              detectGitHubCLI: { false })
+        s1.removeAccount(s1.cliAccount!)
+        XCTAssertEqual(s1.dismissedCLIProviders, [.vercel])
+        XCTAssertNotNil(s1.restoreCLIAccount(.vercel))
+        XCTAssertNotNil(s1.cliAccount)
+        XCTAssertTrue(s1.dismissedCLIProviders.isEmpty)
+        let s2 = AccountStore(defaults: d, credentials: InMemoryCredentialStore(), detectCLI: { true },
+                              detectGitHubCLI: { false })
+        XCTAssertEqual(s2.accounts.filter { $0.source == .vercelCLI }.count, 1)
+    }
+
+    func test_restoreCLIAccount_failsWhenCLISignedOut() {
+        let d = UserDefaults(suiteName: UUID().uuidString)!
+        var signedIn = true
+        let s = AccountStore(defaults: d, credentials: InMemoryCredentialStore(), detectCLI: { signedIn },
+                             detectGitHubCLI: { false })
+        s.removeAccount(s.cliAccount!)
+        signedIn = false
+        XCTAssertNil(s.restoreCLIAccount(.vercel))
+        XCTAssertEqual(s.dismissedCLIProviders, [.vercel], "still offered for a later retry")
+    }
+
     // MARK: - GitHub CLI (`gh`) reuse
 
     private func store(detectGH: Bool, ghToken: String? = "gho_test",

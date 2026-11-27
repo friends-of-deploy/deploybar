@@ -156,4 +156,17 @@ final class OrganizationDiscoveryTests: XCTestCase {
         XCTAssertEqual(store.iconState, .loggedOut)
         XCTAssertEqual(discovery.calls, 0, "no credential: discovery is never attempted")
     }
+
+    /// A renamed organization keeps its id, so only an explicit refresh picks
+    /// up the new name before the next launch.
+    func test_refreshPicksUpRenamedOrganization() async {
+        let discovery = Discovery()
+        discovery.answer = .success([Team(id: "t1", slug: "old", name: "Old")])
+        let (store, accounts) = makeStore(discovery)
+        let account = accounts.accounts[0]
+        await store.loadOrganizations(for: account)
+        discovery.answer = .success([Team(id: "t1", slug: "new", name: "New")])
+        await store.refresh(account)
+        XCTAssertEqual(store.organizations(for: account).map(\.name), ["New"])
+    }
 }

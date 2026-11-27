@@ -31,6 +31,7 @@ struct AccountDetailView: View {
     let onRename: (String) -> Void
 
     @State private var tab: AccountDetailTab = .information
+    @State private var isRefreshing = false
     @State private var name = ""
     @FocusState private var isNameFocused: Bool
     /// Mirrors the persisted overrides so a pick repaints the swatches at once;
@@ -85,10 +86,30 @@ struct AccountDetailView: View {
                                value: AccountsSettingsTab.sourceCaption(for: account, in: accountStore))
             } footer: {
                 Text(account.isReadOnly
-                     ? String(localized: "Detected from your CLI login. Sign out in Terminal to disconnect it.",
+                     ? String(localized: "Detected from your CLI login. Removing it here keeps your CLI signed in; restore it from “+”.",
                               comment: "Read-only account footer")
                      : String(localized: "Stored in your Keychain. To replace the token, remove this account and add it again.",
                               comment: "Keychain account footer"))
+                    .foregroundStyle(.secondary)
+            }
+
+            Section {
+                LabeledContent(String(localized: "Data", comment: "Account detail label")) {
+                    HStack(spacing: 8) {
+                        if isRefreshing { ProgressView().controlSize(.small) }
+                        Button(String(localized: "Refresh now", comment: "Account force refresh button")) {
+                            isRefreshing = true
+                            Task {
+                                await store.refresh(account)
+                                isRefreshing = false
+                            }
+                        }
+                        .disabled(isRefreshing)
+                    }
+                }
+            } footer: {
+                Text(String(localized: "Reloads organizations, their names and deployments now instead of waiting for the next refresh.",
+                            comment: "Account force refresh footer"))
                     .foregroundStyle(.secondary)
             }
 
