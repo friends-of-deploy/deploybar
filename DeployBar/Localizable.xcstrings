@@ -1037,17 +1037,6 @@
         }
       }
     },
-    "Canceled deployments" : {
-      "comment" : "Notification toggle",
-      "localizations" : {
-        "pl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Anulowane wdrożenia"
-          }
-        }
-      }
-    },
     "DeployBar reuses your Vercel CLI login. Run `vercel login` in Terminal to sign in." : {
       "localizations" : {
         "pl" : {
@@ -1058,46 +1047,46 @@
         }
       }
     },
-    "Deployment canceled" : {
-      "comment" : "Notification title",
+    "Pipeline canceled" : {
+      "comment" : "Notification title and its settings toggle",
       "localizations" : {
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Wdrożenie anulowane"
+            "value" : "Pipeline anulowany"
           }
         }
       }
     },
-    "Deployment failed" : {
-      "comment" : "Notification title",
+    "Pipeline failed" : {
+      "comment" : "Notification title and its settings toggle",
       "localizations" : {
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Wdrożenie nie powiodło się"
+            "value" : "Pipeline nie powiódł się"
           }
         }
       }
     },
-    "Deployment ready" : {
-      "comment" : "Notification title",
+    "Pipeline done" : {
+      "comment" : "Notification title and its settings toggle",
       "localizations" : {
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Wdrożenie gotowe"
+            "value" : "Pipeline ukończony"
           }
         }
       }
     },
-    "Deployment started" : {
-      "comment" : "Notification title",
+    "Pipeline started" : {
+      "comment" : "Notification title and its settings toggle",
       "localizations" : {
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Wdrożenie rozpoczęte"
+            "value" : "Pipeline uruchomiony"
           }
         }
       }
@@ -1181,17 +1170,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Co minutę"
-          }
-        }
-      }
-    },
-    "Failed deployments" : {
-      "comment" : "Notification toggle",
-      "localizations" : {
-        "pl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Nieudane wdrożenia"
           }
         }
       }
@@ -1390,12 +1368,12 @@
         }
       }
     },
-    "Notify me about" : {
+    "Notify me when" : {
       "localizations" : {
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Powiadamiaj mnie o"
+            "value" : "Powiadamiaj mnie, gdy"
           }
         }
       }
@@ -1564,13 +1542,13 @@
         }
       }
     },
-    "Ready" : {
+    "state.done" : {
       "comment" : "Deployment state badge",
       "localizations" : {
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Gotowe"
+            "value" : "Ukończono"
           }
         }
       }
@@ -1615,28 +1593,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Ustawienia"
-          }
-        }
-      }
-    },
-    "Started deployments" : {
-      "comment" : "Notification toggle",
-      "localizations" : {
-        "pl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Rozpoczęte wdrożenia"
-          }
-        }
-      }
-    },
-    "Successful deployments" : {
-      "comment" : "Notification toggle",
-      "localizations" : {
-        "pl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Udane wdrożenia"
           }
         }
       }

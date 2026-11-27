@@ -211,10 +211,10 @@ struct NotificationManager {
 
     private static func title(for e: DeploymentEvent) -> String {
         switch e {
-        case .failure:  return String(localized: "Deployment failed", comment: "Notification title")
-        case .success:  return String(localized: "Deployment ready", comment: "Notification title")
-        case .started:  return String(localized: "Deployment started", comment: "Notification title")
-        case .canceled: return String(localized: "Deployment canceled", comment: "Notification title")
+        case .failure:  return String(localized: "Pipeline failed", comment: "Notification title and its settings toggle")
+        case .success:  return String(localized: "Pipeline done", comment: "Notification title and its settings toggle")
+        case .started:  return String(localized: "Pipeline started", comment: "Notification title and its settings toggle")
+        case .canceled: return String(localized: "Pipeline canceled", comment: "Notification title and its settings toggle")
         }
     }
 }
