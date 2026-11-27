@@ -3,6 +3,24 @@
 Release notes for DeployBar. Earlier releases are available on
 [GitHub Releases](https://github.com/friends-of-deploy/deploybar/releases).
 
+## [1.3.1-beta.2] - 2026-11-27
+
+DeployBar 1.3.1 beta 2 lets you remove CLI logins and refresh an account on
+demand.
+
+### Accounts
+
+- Vercel CLI and GitHub CLI accounts can now be removed with "−" in Settings.
+  Your CLI stays signed in, and the account doesn't come back on the next
+  launch.
+- Removed CLI logins are listed under "+", with a Restore button to bring
+  them back.
+- A new "Refresh now" button in an account's Information tab reloads its
+  organizations and deployments right away. A renamed Vercel team or GitHub
+  organization used to keep its old name until DeployBar restarted.
+
+[Full changes since 1.3.1-beta.1](https://github.com/friends-of-deploy/deploybar/compare/v1.3.1-beta.1...v1.3.1-beta.2)
+
 ## [1.3.1-beta.1] - 2026-11-27
 
 DeployBar 1.3.1 beta 1 stops notifications about runs that finished long ago
