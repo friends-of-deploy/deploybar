@@ -3,6 +3,23 @@
 Release notes for DeployBar. Earlier releases are available on
 [GitHub Releases](https://github.com/friends-of-deploy/deploybar/releases).
 
+## [1.3.1-beta.1] - 2026-11-27
+
+DeployBar 1.3.1 beta 1 stops notifications about runs that finished long ago
+and names notifications after pipelines.
+
+### Notifications
+
+- No more "done" notifications about old runs. When GitHub or Azure DevOps
+  briefly failed to return a repository's runs, DeployBar forgot them and
+  announced them again once they came back, even weeks after anything ran.
+- Notifications now say "Pipeline done", "Pipeline failed", "Pipeline started"
+  and "Pipeline canceled", since a run isn't always a deployment. The toggles
+  in Settings use the same names.
+- A finished run's badge says "Done" instead of "Ready".
+
+[Full changes since 1.3.0](https://github.com/friends-of-deploy/deploybar/compare/v1.3.0...v1.3.1-beta.1)
+
 ## [1.3.0] - 2026-10-11
 
 DeployBar 1.3 puts your deploys on the desktop and in Notification Center
