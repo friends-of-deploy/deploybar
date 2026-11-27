@@ -8,16 +8,16 @@ struct NotificationSettingsTab: View {
         Form {
             Section { NotificationPermissionRow() }
             Section {
-                Toggle(String(localized: "Failed deployments", comment: "Notification toggle"),
+                Toggle(String(localized: "Pipeline failed", comment: "Notification title and its settings toggle"),
                        isOn: bind(\.notifyOnFailure))
-                Toggle(String(localized: "Successful deployments", comment: "Notification toggle"),
+                Toggle(String(localized: "Pipeline done", comment: "Notification title and its settings toggle"),
                        isOn: bind(\.notifyOnSuccess))
-                Toggle(String(localized: "Started deployments", comment: "Notification toggle"),
+                Toggle(String(localized: "Pipeline started", comment: "Notification title and its settings toggle"),
                        isOn: bind(\.notifyOnStarted))
-                Toggle(String(localized: "Canceled deployments", comment: "Notification toggle"),
+                Toggle(String(localized: "Pipeline canceled", comment: "Notification title and its settings toggle"),
                        isOn: bind(\.notifyOnCanceled))
             } header: {
-                Text("Notify me about")
+                Text("Notify me when")
             } footer: {
                 Text(String(localized: "Notifications only arrive for projects you follow.",
                             comment: "Notifications tab footer"))

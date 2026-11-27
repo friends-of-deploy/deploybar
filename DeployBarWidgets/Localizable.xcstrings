@@ -16,7 +16,7 @@
     "Projects" : { "comment" : "Widget name / configuration parameter", "localizations" : { "pl" : { "stringUnit" : { "state" : "translated", "value" : "Projekty" } } } },
     "Projects unavailable — edit the widget" : { "localizations" : { "pl" : { "stringUnit" : { "state" : "translated", "value" : "Projekty niedostępne — edytuj widżet" } } } },
     "Queued" : { "comment" : "Deployment state badge", "localizations" : { "pl" : { "stringUnit" : { "state" : "translated", "value" : "W kolejce" } } } },
-    "Ready" : { "comment" : "Deployment state badge", "localizations" : { "pl" : { "stringUnit" : { "state" : "translated", "value" : "Gotowe" } } } },
+    "state.done" : { "comment" : "Deployment state badge", "localizations" : { "pl" : { "stringUnit" : { "state" : "translated", "value" : "Ukończono" } } } },
     "Several projects side by side." : { "localizations" : { "pl" : { "stringUnit" : { "state" : "translated", "value" : "Kilka projektów obok siebie." } } } },
     "The status and latest deploys of one project." : { "localizations" : { "pl" : { "stringUnit" : { "state" : "translated", "value" : "Status i ostatnie deploye jednego projektu." } } } },
     "Unavailable project" : { "comment" : "Configuration picker entry for a project DeployBar no longer publishes", "localizations" : { "pl" : { "stringUnit" : { "state" : "translated", "value" : "Niedostępny projekt" } } } },

@@ -22,7 +22,8 @@ enum DeploymentState: String, Sendable {
     /// Human-readable, localized label for badges and status text.
     var label: String {
         switch self {
-        case .ready:    return String(localized: "Ready", comment: "Deployment state badge")
+        // A key, not "Done": the bare word is the changelog close button, whose Polish differs.
+        case .ready:    return String(localized: "state.done", defaultValue: "Done", comment: "Deployment state badge")
         case .building: return String(localized: "Building", comment: "Deployment state badge")
         case .queued:   return String(localized: "Queued", comment: "Deployment state badge")
         case .error:    return String(localized: "Error", comment: "Deployment state badge")

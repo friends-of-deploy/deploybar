@@ -44,10 +44,10 @@ struct MenuBarIcon: View {
 
     private static func label(for state: IconState) -> String {
         switch state {
-        case .idle:      return "DeployBar — no recent deploys"
-        case .building:  return "DeployBar — deploy in progress"
-        case .success:   return "DeployBar — a deploy succeeded"
-        case .failure:   return "DeployBar — a deploy failed"
+        case .idle:      return "DeployBar — no recent pipelines"
+        case .building:  return "DeployBar — pipeline running"
+        case .success:   return "DeployBar — a pipeline is done"
+        case .failure:   return "DeployBar — a pipeline failed"
         case .loggedOut: return "DeployBar — not signed in"
         }
     }
