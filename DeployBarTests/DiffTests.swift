@@ -94,4 +94,38 @@ final class DiffTests: XCTestCase {
         XCTAssertEqual(snapshot.destinationURL, runURL)
         XCTAssertNil(snapshot.siteURL)
     }
+
+    // MARK: - Baseline across ticks
+
+    /// Runs `ticks` through the store's diff loop and returns every transition raised.
+    private func events(over ticks: [[DeploymentSnapshot]]) -> [DeploymentEvent] {
+        var baseline: [DeploymentSnapshot]?
+        var events: [DeploymentEvent] = []
+        for current in ticks {
+            events += DeploymentDiffer.transitions(previous: baseline, current: current).map(\.event)
+            baseline = DeploymentDiffer.baseline(previous: baseline, current: current)
+        }
+        return events
+    }
+
+    /// A repo whose runs failed to load for one tick drops out of the result;
+    /// its old run coming back is not a new deployment.
+    func test_rowMissingForATickDoesNotRenotifyWhenItReturns() {
+        XCTAssertEqual(events(over: [[dep("old", "READY")], [], [dep("old", "READY")]]), [])
+    }
+
+    func test_rowThatChangedWhileMissingStillNotifies() {
+        XCTAssertEqual(events(over: [[dep("1", "BUILDING")], [], [dep("1", "READY")]]), [.success])
+    }
+
+    func test_genuinelyNewRowStillNotifies() {
+        XCTAssertEqual(events(over: [[dep("1", "READY")], [], [dep("2", "READY")]]), [.success])
+    }
+
+    func test_baselineForgetsTheOldestMissingRowsPastTheCap() {
+        let vanished = (0..<(DeploymentDiffer.maxRememberedMissing + 10)).map { dep("v\($0)", "READY") }
+        let baseline = DeploymentDiffer.baseline(previous: vanished, current: [dep("new", "READY")])
+        XCTAssertEqual(baseline.count, DeploymentDiffer.maxRememberedMissing + 1)
+        XCTAssertEqual(baseline.last?.uid, "v\(DeploymentDiffer.maxRememberedMissing - 1)")
+    }
 }

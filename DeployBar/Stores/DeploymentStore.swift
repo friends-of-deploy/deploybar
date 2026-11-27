@@ -867,16 +867,17 @@ final class DeploymentStore {
         // Each scope gets a silent first-success baseline, even if another
         // rotation slice completed earlier. Cached scopes already have a
         // baseline, so real changes since the cache still raise alerts.
+        // Prepended because the differ reads the first entry per uid: a re-enabled
+        // scope's rows override what the baseline remembered from before.
         if previousSnapshots != nil {
-            let known = Set(previousSnapshots!.map(\.uid))
-            previousSnapshots!.append(contentsOf: unfilteredDeployments
+            previousSnapshots = unfilteredDeployments
                 .filter { firstSuccessScopes.contains($0.scope) }
                 .map { DeploymentSnapshot($0.deployment, key: deploymentKey(for: $0)) }
-                .filter { !known.contains($0.uid) })
+                + previousSnapshots!
         }
         let transitions = DeploymentDiffer.transitions(previous: previousSnapshots, current: snapshots)
         notifier.handle(transitions)
-        previousSnapshots = snapshots
+        previousSnapshots = DeploymentDiffer.baseline(previous: previousSnapshots, current: snapshots)
 
         // A fresh success/failure re-raises the outcome badge the user
         // last acknowledged by opening the popover.
